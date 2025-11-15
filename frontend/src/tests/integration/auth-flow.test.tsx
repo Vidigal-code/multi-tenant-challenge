@@ -7,7 +7,6 @@ import LoginPage from '../../app/login/page';
 import SignupPage from '../../app/signup/page';
 import DashboardPage from '../../app/dashboard/page';
 import {http} from '../../lib/http';
-import {ThemeProvider} from '../../contexts/ThemeContext';
 
 jest.mock('../../lib/http', () => ({
     http: {
@@ -41,13 +40,11 @@ describe('Auth Flow Integration', () => {
 
     const renderWithProviders = (component: React.ReactElement) => {
         return render(
-            <ThemeProvider>
-                <ReduxProvider store={store}>
-                    <QueryClientProvider client={queryClient}>
-                        {component}
-                    </QueryClientProvider>
-                </ReduxProvider>
-            </ThemeProvider>
+            <ReduxProvider store={store}>
+                <QueryClientProvider client={queryClient}>
+                    {component}
+                </QueryClientProvider>
+            </ReduxProvider>
         );
     };
 

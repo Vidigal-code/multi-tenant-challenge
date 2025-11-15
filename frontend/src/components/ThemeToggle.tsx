@@ -1,13 +1,16 @@
 "use client";
 import React from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState } from '../store';
+import { toggleTheme } from '../store/slices/themeSlice';
 
 export function ThemeToggle() {
-    const { theme, toggleTheme } = useTheme();
+    const theme = useSelector((state: RootState) => state.theme.theme);
+    const dispatch = useDispatch();
 
     return (
         <button
-            onClick={toggleTheme}
+            onClick={() => dispatch(toggleTheme())}
             className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             aria-label="Toggle theme"
             type="button"

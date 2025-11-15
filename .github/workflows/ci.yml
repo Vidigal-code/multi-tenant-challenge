@@ -37,7 +37,12 @@ jobs:
 
       - name: Backend - Install
         working-directory: backend
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install
+          fi
 
       - name: Backend - Lint
         working-directory: backend
@@ -53,7 +58,12 @@ jobs:
 
       - name: Frontend - Install
         working-directory: frontend
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install
+          fi
 
       - name: Frontend - Lint
         working-directory: frontend

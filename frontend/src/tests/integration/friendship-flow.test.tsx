@@ -5,7 +5,6 @@ import {Provider as ReduxProvider} from 'react-redux';
 import {store} from '../../store';
 import FriendsPage from '../../app/friends/page';
 import {http} from '../../lib/http';
-import {ThemeProvider} from '../../contexts/ThemeContext';
 
 jest.mock('../../lib/http', () => ({
     http: {
@@ -49,13 +48,11 @@ describe('Friendship Flow Integration', () => {
 
     const renderWithProviders = (component: React.ReactElement) => {
         return render(
-            <ThemeProvider>
-                <ReduxProvider store={store}>
-                    <QueryClientProvider client={queryClient}>
-                        {component}
-                    </QueryClientProvider>
-                </ReduxProvider>
-            </ThemeProvider>
+            <ReduxProvider store={store}>
+                <QueryClientProvider client={queryClient}>
+                    {component}
+                </QueryClientProvider>
+            </ReduxProvider>
         );
     };
 
