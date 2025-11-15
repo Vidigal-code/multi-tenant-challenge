@@ -7,6 +7,7 @@ import {ListPrimaryOwnerCompaniesUseCase} from '@application/use-cases/companys/
 import {USER_REPOSITORY} from '@domain/repositories/users/user.repository';
 import {COMPANY_REPOSITORY} from '@domain/repositories/companys/company.repository';
 import {MEMBERSHIP_REPOSITORY} from '@domain/repositories/memberships/membership.repository';
+import {PrismaService} from '@infrastructure/prisma/services/prisma.service';
 
 @Module({
     imports: [InfrastructureModule],
@@ -19,9 +20,9 @@ import {MEMBERSHIP_REPOSITORY} from '@domain/repositories/memberships/membership
         },
         {
             provide: ListPrimaryOwnerCompaniesUseCase,
-            useFactory: (membershipRepo, companyRepo) =>
-                new ListPrimaryOwnerCompaniesUseCase(membershipRepo, companyRepo),
-            inject: [MEMBERSHIP_REPOSITORY, COMPANY_REPOSITORY],
+            useFactory: (membershipRepo, companyRepo, userRepo) =>
+                new ListPrimaryOwnerCompaniesUseCase(membershipRepo, companyRepo, userRepo),
+            inject: [MEMBERSHIP_REPOSITORY, COMPANY_REPOSITORY, USER_REPOSITORY],
         },
         {
             provide: DeleteAccountUseCase,
@@ -31,6 +32,7 @@ import {MEMBERSHIP_REPOSITORY} from '@domain/repositories/memberships/membership
                 memberships,
                 domainEvents,
                 listPrimaryOwnerCompanies,
+                prisma,
             ) =>
                 new DeleteAccountUseCase(
                     users,
@@ -38,6 +40,7 @@ import {MEMBERSHIP_REPOSITORY} from '@domain/repositories/memberships/membership
                     memberships,
                     domainEvents,
                     listPrimaryOwnerCompanies,
+                    prisma,
                 ),
             inject: [
                 USER_REPOSITORY,
@@ -45,6 +48,7 @@ import {MEMBERSHIP_REPOSITORY} from '@domain/repositories/memberships/membership
                 MEMBERSHIP_REPOSITORY,
                 'DOMAIN_EVENTS_SERVICE',
                 ListPrimaryOwnerCompaniesUseCase,
+                PrismaService,
             ],
         },
     ],

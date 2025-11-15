@@ -1,34 +1,23 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import {http} from '../../lib/http';
 import {getErrorMessage} from '../../lib/error';
 import {useToast} from '../../hooks/useToast';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import Skeleton from '../../components/skeleton/Skeleton';
-import { queryKeys } from '../../lib/queryKeys';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { subscribe, whenReady, RT_EVENTS } from '../../lib/realtime';
 import { DEFAULT_COMPANY_LOGO } from '../../types';
+import {
+    useInvitesCreated,
+    useInvitesReceived,
+    useAcceptInvite,
+    useRejectInvite,
+    useDeleteInvite,
+    useDeleteInvites,
+    type Invite,
+} from '../../services/api/invite.api';
+import { useProfile } from '../../services/api/auth.api';
 
-type Invite = {
-    id: string;
-    companyId: string;
-    email: string;
-    role: string;
-    status: string;
-    token: string;
-    inviterId?: string | null;
-    inviterName?: string | null;
-    inviterEmail?: string | null;
-    recipientName?: string | null;
-    recipientEmail?: string | null;
-    inviteUrl?: string;
-    createdAt: string;
-    expiresAt: string | null;
-    name?: string;
-    description?: string;
-    logoUrl?: string | null;
-};
 
 function truncate(text: string, max: number) {
     if (!text) return '';
@@ -78,14 +67,7 @@ function InvitesPageInner() {
     const {show} = useToast();
     const qc = useQueryClient();
 
-    const profileQuery = useQuery({
-        queryKey: ['profile'],
-        queryFn: async () => {
-            const { data } = await http.get('/auth/profile');
-            return data;
-        },
-        staleTime: 60_000,
-    });
+    const profileQuery = useProfile();
 
     useEffect(() => {
         if (profileQuery.data) {
@@ -94,91 +76,69 @@ function InvitesPageInner() {
         }
     }, [profileQuery.data]);
 
-    const createdQuery = useQuery<{ data: Invite[]; total: number }>({
-        queryKey: ['invites-created', page, pageSize],
-        queryFn: async () => {
-            const { data } = await http.get('/invites/created', { params: { page, pageSize } });
-            return { data: data.data as Invite[], total: data.total as number };
-        },
-        enabled: tab === 'created',
-        staleTime: 30_000,
-    });
+    const createdQuery = useInvitesCreated(page, pageSize, tab === 'created');
+    const receivedQuery = useInvitesReceived(page, pageSize, tab === 'received');
 
-    const receivedQuery = useQuery<{ data: Invite[]; total: number }>({
-        queryKey: queryKeys.invites(page, pageSize),
-        queryFn: async () => {
-            const { data } = await http.get('/invites', { params: { page, pageSize } });
-            const pendingInvites = (data.data as Invite[]).filter(inv => inv.status === 'PENDING');
-            return { data: pendingInvites, total: pendingInvites.length };
-        },
-        enabled: tab === 'received',
-        staleTime: 30_000,
-    });
+    useEffect(() => {
+        if (createdQuery.isError || receivedQuery.isError) {
+            const err = createdQuery.error || receivedQuery.error;
+            const m = getErrorMessage((err as any), 'Falha ao carregar convites');
+            show({ type: 'error', message: m });
+        }
+    }, [createdQuery.isError, receivedQuery.isError, createdQuery.error, receivedQuery.error, show]);
 
-    if (createdQuery.isError || receivedQuery.isError) {
-        const err = createdQuery.error || receivedQuery.error;
-        const m = getErrorMessage((err as any), 'Falha ao carregar dados');
-        if (!error) { setError(m); show({ type: 'error', message: m }); }
-    }
-
-    const acceptMutation = useMutation({
-        mutationFn: async (token: string) => { await http.post('/auth/accept-invite', { token }); },
-        onSuccess: async () => {
-            setMessage('Convite aceito');
-            show({ type:'success', message:'Convite aceito com sucesso' });
-            await qc.invalidateQueries({ queryKey: queryKeys.invites(page, pageSize) });
-            await qc.invalidateQueries({ queryKey: ['invites-created', page, pageSize] });
-        },
-        onError: (err: any) => { 
-            const m = getErrorMessage(err,'Não foi possível aceitar o convite'); 
-            setError(m); 
-            show({ type:'error', message:m }); 
-        },
-    });
+    const acceptMutation = useAcceptInvite();
+    const rejectMutation = useRejectInvite();
+    const deleteInviteMutation = useDeleteInvite();
+    const deleteInvitesMutation = useDeleteInvites();
 
     function accept(token: string) { 
         setError(null); 
         setMessage(null); 
-        acceptMutation.mutate(token); 
+        acceptMutation.mutate(token, {
+            onSuccess: () => {
+                setMessage('Convite aceito');
+                show({ type:'success', message:'Convite aceito com sucesso' });
+            },
+            onError: (err: any) => { 
+                const m = getErrorMessage(err,'Não foi possível aceitar o convite'); 
+                setError(m); 
+                show({ type:'error', message:m }); 
+            },
+        });
     }
-
-    const rejectMutation = useMutation({
-        mutationFn: async (token: string) => { await http.post(`/invites/${token}/reject`); },
-        onSuccess: async () => { 
-            await qc.invalidateQueries({ queryKey: queryKeys.invites(page, pageSize) }); 
-            await qc.invalidateQueries({ queryKey: ['invites-created', page, pageSize] });
-            show({type:'info', message:'Convite rejeitado'});
-        },
-        onError: (err:any) => { 
-            const m = getErrorMessage(err,'Não foi possível rejeitar o convite'); 
-            setError(m);
-            show({type:'error', message:m}); 
-        }
-    });
 
     function reject(token: string){ 
         setError(null); 
         setMessage(null); 
-        rejectMutation.mutate(token); 
+        rejectMutation.mutate(token, {
+            onSuccess: () => {
+                show({type:'info', message:'Convite rejeitado'});
+            },
+            onError: (err:any) => { 
+                const m = getErrorMessage(err,'Não foi possível rejeitar o convite'); 
+                setError(m);
+                show({type:'error', message:m}); 
+            },
+        });
     }
 
     async function handleRejectAll() {
         setRejectModal(false);
-        try {
-            const tokens = rejectIds.map(id => {
-                const invite = tab === 'received' 
-                    ? receivedQuery.data?.data.find(i => i.id === id)
-                    : null;
-                return invite?.token;
-            }).filter(Boolean) as string[];
+        const tokens = rejectIds.map(id => {
+            const invite = tab === 'received' 
+                ? receivedQuery.data?.data.find(i => i.id === id)
+                : null;
+            return invite?.token;
+        }).filter(Boolean) as string[];
 
+        try {
             for (const token of tokens) {
-                await http.post(`/invites/${token}/reject`);
+                await rejectMutation.mutateAsync(token);
             }
             setRejectIds([]);
             setSelected([]);
             setMessage('Convites rejeitados');
-            await qc.invalidateQueries();
         } catch (err: any) {
             const m = getErrorMessage(err, 'Não foi possível rejeitar os convites');
             setError(m); 
@@ -186,22 +146,34 @@ function InvitesPageInner() {
         }
     }
 
-    async function handleDelete(ids: string[]) {
+    function handleDelete(ids: string[]) {
         setShowModal(false);
-        try {
-            if (ids.length === 1) {
-                await http.delete(`/invites/${ids[0]}`);
-            } else {
-                await http.delete('/invites', { data: { inviteIds: ids } });
-            }
-            setSelected([]);
-            setDeleteIds([]);
-            setMessage('Convite(s) deletado(s)');
-            await qc.invalidateQueries();
-        } catch (err: any) {
-            const m = getErrorMessage(err, 'Não foi possível deletar o convite');
-            setError(m); 
-            show({ type: 'error', message: m }); 
+        if (ids.length === 1) {
+            deleteInviteMutation.mutate(ids[0], {
+                onSuccess: () => {
+                    setSelected([]);
+                    setDeleteIds([]);
+                    setMessage('Convite deletado');
+                },
+                onError: (err: any) => {
+                    const m = getErrorMessage(err, 'Não foi possível deletar o convite');
+                    setError(m); 
+                    show({ type: 'error', message: m }); 
+                },
+            });
+        } else {
+            deleteInvitesMutation.mutate(ids, {
+                onSuccess: () => {
+                    setSelected([]);
+                    setDeleteIds([]);
+                    setMessage('Convites deletados');
+                },
+                onError: (err: any) => {
+                    const m = getErrorMessage(err, 'Não foi possível deletar os convites');
+                    setError(m); 
+                    show({ type: 'error', message: m }); 
+                },
+            });
         }
     }
 

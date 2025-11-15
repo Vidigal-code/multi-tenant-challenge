@@ -9,11 +9,13 @@ import {LoginUseCase} from "@application/use-cases/auths/login.usecase";
 import {AcceptInviteUseCase} from "@application/use-cases/memberships/accept-invite.usecase";
 import {DeleteAccountUseCase} from "@application/use-cases/users/delete-account.usecase";
 import {ListPrimaryOwnerCompaniesUseCase} from "@application/use-cases/companys/list-primary-owner-companies.usecase";
+import {ListMemberCompaniesUseCase} from "@application/use-cases/companys/list-member-companies.usecase";
 import {USER_REPOSITORY} from "@domain/repositories/users/user.repository";
 import {INVITE_REPOSITORY} from "@domain/repositories/invites/invite.repository";
 import {MEMBERSHIP_REPOSITORY} from "@domain/repositories/memberships/membership.repository";
 import {HASHING_SERVICE} from "@application/ports/hashing.service";
 import {COMPANY_REPOSITORY} from "@domain/repositories/companys/company.repository";
+import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
 
 @Module({
     imports: [ConfigModule, AuthInfraModule, InfrastructureModule],
@@ -49,9 +51,15 @@ import {COMPANY_REPOSITORY} from "@domain/repositories/companys/company.reposito
         },
         {
             provide: ListPrimaryOwnerCompaniesUseCase,
-            useFactory: (membershipRepo, companyRepo) =>
-                new ListPrimaryOwnerCompaniesUseCase(membershipRepo, companyRepo),
-            inject: [MEMBERSHIP_REPOSITORY, COMPANY_REPOSITORY],
+            useFactory: (membershipRepo, companyRepo, userRepo) =>
+                new ListPrimaryOwnerCompaniesUseCase(membershipRepo, companyRepo, userRepo),
+            inject: [MEMBERSHIP_REPOSITORY, COMPANY_REPOSITORY, USER_REPOSITORY],
+        },
+        {
+            provide: ListMemberCompaniesUseCase,
+            useFactory: (membershipRepo, companyRepo, userRepo) =>
+                new ListMemberCompaniesUseCase(membershipRepo, companyRepo, userRepo),
+            inject: [MEMBERSHIP_REPOSITORY, COMPANY_REPOSITORY, USER_REPOSITORY],
         },
         {
             provide: DeleteAccountUseCase,
@@ -61,6 +69,7 @@ import {COMPANY_REPOSITORY} from "@domain/repositories/companys/company.reposito
                 membershipRepo,
                 domainEvents,
                 listPrimaryOwnerCompanies,
+                prisma,
             ) =>
                 new DeleteAccountUseCase(
                     userRepo,
@@ -68,6 +77,7 @@ import {COMPANY_REPOSITORY} from "@domain/repositories/companys/company.reposito
                     membershipRepo,
                     domainEvents,
                     listPrimaryOwnerCompanies,
+                    prisma,
                 ),
             inject: [
                 USER_REPOSITORY,
@@ -75,10 +85,11 @@ import {COMPANY_REPOSITORY} from "@domain/repositories/companys/company.reposito
                 MEMBERSHIP_REPOSITORY,
                 "DOMAIN_EVENTS_SERVICE",
                 ListPrimaryOwnerCompaniesUseCase,
+                PrismaService,
             ],
         },
     ],
-    exports: [SignupUseCase, LoginUseCase, AcceptInviteUseCase, DeleteAccountUseCase, ListPrimaryOwnerCompaniesUseCase],
+    exports: [SignupUseCase, LoginUseCase, AcceptInviteUseCase, DeleteAccountUseCase, ListPrimaryOwnerCompaniesUseCase, ListMemberCompaniesUseCase],
 })
 export class AuthModule {
 }

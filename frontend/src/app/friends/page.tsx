@@ -1,29 +1,25 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { http } from '../../lib/http';
 import { getErrorMessage } from '../../lib/error';
 import { getSuccessMessage } from '../../lib/messages';
 import { useToast } from '../../hooks/useToast';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import Skeleton from '../../components/skeleton/Skeleton';
-import { queryKeys } from '../../lib/queryKeys';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { Modal } from '../../components/modals/Modal';
 import { subscribe, whenReady, RT_EVENTS } from '../../lib/realtime';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface Friendship {
-  id: string;
-  requester: User;
-  addressee: User;
-  status: string;
-  createdAt: string;
-}
+import {
+    useFriendships,
+    useFriendRequests,
+    useSearchUsers,
+    useSendFriendRequest,
+    useAcceptFriendRequest,
+    useRemoveFriend,
+    useSendFriendNotification,
+    type User,
+    type Friendship,
+} from '../../services/api/friendship.api';
+import { useProfile } from '../../services/api/auth.api';
 
 export default function FriendsPage() {
 
@@ -40,104 +36,43 @@ export default function FriendsPage() {
   const { show } = useToast();
   const queryClient = useQueryClient();
 
-  const profileQuery = useQuery({
-    queryKey: [queryKeys.profile()],
-    queryFn: async () => {
-      const { data } = await http.get('/auth/profile');
-      return data;
-    },
-    staleTime: 60_000,
-  });
+  const profileQuery = useProfile();
   const currentUserId = profileQuery.data?.id;
   const currentUserEmail = profileQuery.data?.email?.toLowerCase?.();
 
-  const { data: friends = [], isLoading: friendsLoading } = useQuery({
-    queryKey: queryKeys.friendships(),
-    queryFn: async () => {
-      const response = await http.get('/friendships?status=ACCEPTED');
-      return response.data.data as Friendship[];
-    },
+  const { data: friends = [], isLoading: friendsLoading } = useFriendships('ACCEPTED');
+  const { data: allRequests = [], isLoading: requestsLoading } = useFriendRequests();
+  
+  // Filter requests to only show those addressed to current user
+  const requests = allRequests.filter((req) => {
+    if (!req.addressee || !req.requester) return false;
+    return req.addressee.id === currentUserId;
   });
 
-  const { data: requests = [], isLoading: requestsLoading } = useQuery({
-    queryKey: ['friend-requests'],
-    queryFn: async () => {
-      const response = await http.get('/friendships?status=PENDING');
-      const allRequests = response.data.data as Friendship[];
-      return allRequests.filter((req) => {
-        if (!req.addressee || !req.requester) return false;
-        return req.addressee.id === currentUserId;
-      });
-    },
-  });
-
-  const searchMutation = useMutation({
-    mutationFn: async (query: string) => {
-      const response = await http.get(`/friendships/search?q=${encodeURIComponent(query)}`);
-      return response.data as User[];
-    },
-    onSuccess: (results) => {
-      const filtered = results.filter(
-        (user) =>
-          user.id !== currentUserId &&
-          user.email.toLowerCase() !== currentUserEmail,
-      );
-      setSearchResults(filtered);
-      if (filtered.length === 0) {
-        show({ message: 'Usuário não encontrado', type: 'error' });
-      }
-    },
-    onError: (error) => {
-      show({ message: getErrorMessage(error), type: 'error' });
-    },
-  });
-
-  const sendRequestMutation = useMutation({
-    mutationFn: async (email: string) => {
-      await http.post('/friendships/request', { email });
-    },
-    onSuccess: () => {
-      show({ message: getSuccessMessage('FRIEND_REQUEST_SENT'), type: 'success' });
-      setSearchQuery('');
-      setSearchResults([]);
-      queryClient.invalidateQueries({ queryKey: ['friend-requests'] });
-    },
-    onError: (error) => {
-      const errorMsg = getErrorMessage(error);
-      show({ message: errorMsg, type: 'error' });
-    },
-  });
-
-  const acceptRequestMutation = useMutation({
-    mutationFn: async (friendshipId: string) => {
-      await http.post(`/friendships/${friendshipId}/accept`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.friendships() });
-      queryClient.invalidateQueries({ queryKey: ['friend-requests'] });
-      show({ message: 'Solicitação de amizade aceita', type: 'success' });
-    },
-    onError: (error) => {
-      show({ message: getErrorMessage(error), type: 'error' });
-    },
-  });
-
-  const removeFriendMutation = useMutation({
-    mutationFn: async (friendshipId: string) => {
-      await http.delete(`/friendships/${friendshipId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.friendships() });
-      show({ message: 'Amigo removido', type: 'success' });
-    },
-    onError: (error) => {
-      show({ message: getErrorMessage(error), type: 'error' });
-    },
-  });
+  const searchMutation = useSearchUsers();
+  const sendRequestMutation = useSendFriendRequest();
+  const acceptRequestMutation = useAcceptFriendRequest();
+  const removeFriendMutation = useRemoveFriend();
+  const sendMessageMutation = useSendFriendNotification();
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      searchMutation.mutate(searchQuery.trim());
+      searchMutation.mutate(searchQuery.trim(), {
+        onSuccess: (results) => {
+          const filtered = results.filter(
+            (user) =>
+              user.id !== currentUserId &&
+              user.email.toLowerCase() !== currentUserEmail,
+          );
+          setSearchResults(filtered);
+          if (filtered.length === 0) {
+            show({ message: 'Usuário não encontrado', type: 'error' });
+          }
+        },
+        onError: (error) => {
+          show({ message: getErrorMessage(error), type: 'error' });
+        },
+      });
     }
   };
 
@@ -146,59 +81,54 @@ export default function FriendsPage() {
       show({ message: 'Você não pode enviar uma solicitação de amizade para si mesmo.', type: 'error' });
       return;
     }
-    sendRequestMutation.mutate(email);
+    sendRequestMutation.mutate(email, {
+      onSuccess: () => {
+        show({ message: getSuccessMessage('FRIEND_REQUEST_SENT'), type: 'success' });
+        setSearchQuery('');
+        setSearchResults([]);
+      },
+      onError: (error) => {
+        const errorMsg = getErrorMessage(error);
+        show({ message: errorMsg, type: 'error' });
+      },
+    });
   };
 
   const handleAcceptRequest = (friendshipId: string) => {
-    acceptRequestMutation.mutate(friendshipId);
+    acceptRequestMutation.mutate(friendshipId, {
+      onSuccess: () => {
+        show({ message: 'Solicitação de amizade aceita', type: 'success' });
+      },
+      onError: (error) => {
+        show({ message: getErrorMessage(error), type: 'error' });
+      },
+    });
   };
 
   const handleRejectRequest = (friendshipId: string) => {
-    removeFriendMutation.mutate(friendshipId);
+    removeFriendMutation.mutate(friendshipId, {
+      onSuccess: () => {
+        show({ message: 'Solicitação rejeitada', type: 'success' });
+      },
+      onError: (error) => {
+        show({ message: getErrorMessage(error), type: 'error' });
+      },
+    });
   };
 
   const handleRemoveFriend = () => {
     if (removeConfirm) {
-      removeFriendMutation.mutate(removeConfirm);
-      setRemoveConfirm(null);
+      removeFriendMutation.mutate(removeConfirm, {
+        onSuccess: () => {
+          setRemoveConfirm(null);
+          show({ message: 'Amigo removido', type: 'success' });
+        },
+        onError: (error) => {
+          show({ message: getErrorMessage(error), type: 'error' });
+        },
+      });
     }
   };
-
-  const sendMessageMutation = useMutation({
-    mutationFn: async ({ friendEmails, title, body }: { friendEmails: string[]; title: string; body: string }) => {
-      const results = [];
-      for (let i = 0; i < friendEmails.length; i++) {
-        try {
-          await http.post('/notifications/friend', { friendEmail: friendEmails[i], title, body });
-          results.push({ email: friendEmails[i], status: 'sent' });
-          if (i < friendEmails.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-        } catch (err: any) {
-          results.push({ email: friendEmails[i], status: 'failed', error: getErrorMessage(err) });
-        }
-      }
-      return results;
-    },
-    onSuccess: (results) => {
-      const sent = results.filter(r => r.status === 'sent').length;
-      const failed = results.filter(r => r.status === 'failed').length;
-      if (failed === 0) {
-        show({ type: 'success', message: `Mensagem enviada para ${sent} amigo(s)` });
-      } else {
-        show({ type: 'warning', message: `Enviado para ${sent}, falhou para ${failed}` });
-      }
-      setShowMessageModal(false);
-      setSelectedFriend(null);
-      setSelectedFriends([]);
-      setMessageTitle('');
-      setMessageBody('');
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-    onError: (err: any) => {
-      show({ type: 'error', message: getErrorMessage(err, 'Falha ao enviar mensagem') });
-    },
-  });
 
   const handleSendMessage = (friend: User) => {
     setSelectedFriend(friend);
@@ -232,11 +162,36 @@ export default function FriendsPage() {
       return;
     }
     
-    await sendMessageMutation.mutateAsync({
-      friendEmails,
-      title: messageTitle,
-      body: messageBody,
-    });
+    // Send messages one by one
+    const results = [];
+    for (let i = 0; i < friendEmails.length; i++) {
+      try {
+        await sendMessageMutation.mutateAsync({
+          friendEmail: friendEmails[i],
+          title: messageTitle,
+          body: messageBody,
+        });
+        results.push({ email: friendEmails[i], status: 'sent' });
+        if (i < friendEmails.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (err: any) {
+        results.push({ email: friendEmails[i], status: 'failed', error: getErrorMessage(err) });
+      }
+    }
+    
+    const sent = results.filter(r => r.status === 'sent').length;
+    const failed = results.filter(r => r.status === 'failed').length;
+    if (failed === 0) {
+      show({ type: 'success', message: `Mensagem enviada para ${sent} amigo(s)` });
+    } else {
+      show({ type: 'warning', message: `Enviado para ${sent}, falhou para ${failed}` });
+    }
+    setShowMessageModal(false);
+    setSelectedFriend(null);
+    setSelectedFriends([]);
+    setMessageTitle('');
+    setMessageBody('');
   };
 
   useEffect(() => {
@@ -245,7 +200,7 @@ export default function FriendsPage() {
 
     whenReady().then(() => {
       if (!active) return;
-      const refetchFriendships = () => queryClient.invalidateQueries({ queryKey: queryKeys.friendships() });
+      const refetchFriendships = () => queryClient.invalidateQueries({ queryKey: ['friendships'] });
       const refetchRequests = () => queryClient.invalidateQueries({ queryKey: ['friend-requests'] });
 
       unsubscribers.push(

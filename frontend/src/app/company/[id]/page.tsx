@@ -9,20 +9,35 @@ import { MemberList } from '../../../components/members/MemberList';
 import { getErrorMessage } from '../../../lib/error';
 import { getSuccessMessage, getErrorMessage as getErrorMessageByCode } from '../../../lib/messages';
 import { useToast } from '../../../hooks/useToast';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import Skeleton from '../../../components/skeleton/Skeleton';
 import { queryKeys } from '../../../lib/queryKeys';
 import { Modal } from '../../../components/modals/Modal';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
 import { subscribe, whenReady, RT_EVENTS } from '../../../lib/realtime';
 import { formatDate, formatDateOnly } from '../../../lib/date-utils';
-import { MdNotifications, MdSupervisorAccount } from 'react-icons/md';
-import { FiStar, FiTrash2, FiEdit } from 'react-icons/fi';
-import { BiUser } from 'react-icons/bi';
 import { DEFAULT_COMPANY_LOGO } from '../../../types';
-
-interface Member { id: string; userId: string; role: string; name?: string; email?: string; joinedAt?: string; }
-interface Company { id: string; name: string; logoUrl?: string; description?: string; is_public: boolean; createdAt?: string; }
+import {
+    useCompany,
+    useCompanyPublicInfo,
+    useCompanyRole,
+    useCompanyMembers,
+    useCompanyPrimaryOwner,
+    useSelectCompany,
+    useUpdateCompany,
+    useDeleteCompany,
+    useRemoveMember,
+    useChangeMemberRole,
+    useLeaveCompany,
+    useTransferOwnership,
+    type Member,
+    type Company,
+} from '../../../services/api/company.api';
+import { useProfile } from '../../../services/api/auth.api';
+import { useCreateNotification } from '../../../services/api/notification.api';
+import { MdNotifications, MdSupervisorAccount } from 'react-icons/md';
+import {FiEdit, FiStar, FiTrash2} from "react-icons/fi";
+import {BiUser} from "react-icons/bi";
 
 function truncate(text: string, max: number) {
     if (!text) return '';
@@ -33,7 +48,6 @@ export default function CompanyPage() {
 
     const params = useParams();
     const id = params?.id as string;
-    const [members, setMembers] = useState<Member[]>([]);
     const [inviteToken, setInviteToken] = useState<string | null>(null);
     const [showInvite, setShowInvite] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -62,205 +76,30 @@ export default function CompanyPage() {
     const [actionType, setActionType] = useState<'delete' | 'changeRole' | null>(null);
     const [actionMember, setActionMember] = useState<Member | null>(null);
     const [newRole, setNewRole] = useState<'OWNER' | 'ADMIN' | 'MEMBER' | ''>('');
+    const [removeMemberConfirm, setRemoveMemberConfirm] = useState<Member | null>(null);
     const { show } = useToast();
     const qc = useQueryClient();
 
-    const profileQuery = useQuery({
-        queryKey: [queryKeys.profile()],
-        queryFn: async () => {
-            const { data } = await http.get('/auth/profile');
-            return data;
-        },
-        staleTime: 60_000,
-    });
+    const profileQuery = useProfile();
+    const companyQuery = useCompany(id);
+    const publicCompanyInfoQuery = useCompanyPublicInfo(
+        id,
+        companyQuery.isError && ((companyQuery.error as any)?.response?.status === 403 || (companyQuery.error as any)?.response?.status === 401)
+    );
+    const roleQuery = useCompanyRole(id);
+    const membersQuery = useCompanyMembers(id);
+    const primaryOwnerQuery = useCompanyPrimaryOwner(id, !!roleQuery.data?.role);
 
-    const selectMutation =
-        useMutation({
-            mutationFn: async () => {
-                if (!id || id === 'undefined') {
-                    redirect('/dashboard');
-                    return;
-                }
-                await http.post(`/company/${id}/select`);
-            },
-            onSuccess: async () => {
-                setMessage('Empresas ativas definidas');
-                show({ type: 'success', message: 'Empresas ativas atualizadas' });
-            },
-            onError: (err: any) => {
-                const m = getErrorMessage(err, 'Não foi possível atualizar as empresas ativas.');
-                setError(m);
-                show({ type: 'error', message: m });
-            }
-        });
-
-    const membersQuery =
-        useQuery<{ members: Member[]; total: number; currentUserRole: string | null }>({
-            queryKey: queryKeys.companyMembers(id),
-            queryFn: async () => {
-                const { data } = await http.get(`/companys/${id}/members`);
-                return {
-                    members: (data.members || data.data || []) as Member[],
-                    total: data.total || (data.data || []).length,
-                    currentUserRole: data.currentUserRole || null
-                };
-            },
-            enabled: Boolean(id),
-            staleTime: 30_000,
-        });
-
-    const [removeMemberConfirm, setRemoveMemberConfirm] = useState<Member | null>(null);
-
-    const removeMemberMutation = useMutation({
-        mutationFn: async (member: Member) => {
-            await http.delete(`/companys/${id}/members/${member.userId}`);
-        },
-        onSuccess: async () => {
-            await qc.invalidateQueries({ queryKey: queryKeys.companyMembers(id) });
-            setRemoveMemberConfirm(null);
-            show({ type: 'success', message: 'Membro removido com sucesso' });
-        },
-        onError: (err: any) => {
-            const m = getErrorMessage(err, 'Não foi possível remover membro');
-            setError(m);
-            show({ type: 'error', message: m });
-            setRemoveMemberConfirm(null);
-        },
-    });
-
-    const changeRoleMutation = useMutation({
-        mutationFn: async ({ member, role }: { member: Member; role: 'OWNER' | 'ADMIN' | 'MEMBER' }) => {
-            await http.patch(`/companys/${id}/members/${member.userId}/role`, { role });
-        },
-        onSuccess: async () => {
-            await qc.invalidateQueries({ queryKey: queryKeys.companyMembers(id) });
-        },
-        onError: (err: any) => {
-            const m = getErrorMessage(err, 'Não foi possível atualizar papel');
-            setError(m);
-            show({ type: 'error', message: m });
-        },
-    });
-
-    const leaveMutation = useMutation({
-        mutationFn: async () => {
-            if (!profileQuery.data?.id) {
-                throw new Error('Não foi possível determinar o usuário atual');
-            }
-            await http.post(`/companys/${id}/members/${profileQuery.data.id}/leave`);
-        },
-        onSuccess: async () => {
-            show({ type: 'success', message: 'Você saiu da empresa' });
-            window.location.href = '/dashboard';
-        },
-        onError: (err: any) => {
-            const m = getErrorMessage(err, 'Não foi possível sair da empresa');
-            setError(m);
-            show({ type: 'error', message: m });
-        },
-    });
-
-    const sendNotificationMutation = useMutation({
-        mutationFn: async ({ title, body, emails }: { title: string; body: string; emails: string }) => {
-            const recipientsEmails = emails ? emails.split(',').map(e => e.trim()) : null;
-            const result = await http.post('/notifications', { companyId: id, title, body, recipientsEmails });
-            return result.data;
-        },
-        onSuccess: async (result) => {
-            show({ type: 'success', message: 'Mensagem global enviada' });
-            setShowNotificationModal(false);
-            setNotificationTitle('');
-            setNotificationBody('');
-            setNotificationEmails('');
-
-            if (result.validationResults && result.validationResults.length > 0) {
-                result.validationResults.forEach((entry: any) => {
-                    const tone = entry.status === 'sent' ? 'success' : 'error';
-                    const label = entry.email === '*' ? 'Membros da empresa' : entry.email;
-                    const message = entry.status === 'sent'
-                        ? getSuccessMessage(entry.code, { count: entry.count })
-                        : getErrorMessageByCode(entry.code);
-                    show({ type: tone, message: `${label}: ${message}` });
-                });
-            }
-        },
-        onError: (err: any) => {
-            const m = getErrorMessage(err, 'Não foi possível enviar notificações');
-            setError(m);
-            show({ type: 'error', message: m });
-        },
-    });
-
-    const roleQuery = useQuery<{ role: 'OWNER' | 'ADMIN' | 'MEMBER' | null }>({
-        queryKey: ['companys-role', id],
-        queryFn: async () => {
-            const { data } = await http.get(`/companys/${id}/members/role`);
-            return data;
-        },
-        enabled: Boolean(id),
-        staleTime: 30_000,
-    });
-
-    const companyQuery = useQuery<Company>({
-        queryKey: ['company', id],
-        queryFn: async () => {
-            try {
-                const { data } = await http.get(`/company/${id}`);
-                return data;
-            } catch (err: any) {
-                if (err?.response?.status === 403 || err?.response?.status === 401) {
-                    const { data } = await http.get(`/company/${id}/public-info`);
-                    return {
-                        id: data.id,
-                        name: data.name,
-                        logoUrl: data.logoUrl,
-                        description: data.description,
-                        is_public: data.is_public,
-                        createdAt: data.createdAt,
-                    };
-                }
-                throw err;
-            }
-        },
-        enabled: Boolean(id),
-        staleTime: 30_000,
-    });
+    const selectMutation = useSelectCompany();
+    const updateCompanyMutation = useUpdateCompany(id);
+    const deleteCompanyMutation = useDeleteCompany();
+    const removeMemberMutation = useRemoveMember(id);
+    const changeRoleMutation = useChangeMemberRole(id);
+    const leaveMutation = useLeaveCompany(id);
+    const transferOwnershipMutation = useTransferOwnership(id);
+    const sendNotificationMutation = useCreateNotification();
 
     const isMember = !!roleQuery.data?.role;
-
-    const primaryOwnerQuery = useQuery<{
-        primaryOwnerUserId: string | null;
-        primaryOwnerName: string; primaryOwnerEmail: string
-    }>({
-        queryKey: ['primary-owner', id],
-        queryFn: async () => {
-            const { data } = await http.get(`/companys/${id}/members/primary-owner`);
-            return data;
-        },
-        enabled: Boolean(id) && isMember,
-        staleTime: 60_000,
-    });
-
-    const publicCompanyInfoQuery = useQuery<{
-        memberCount: number;
-        primaryOwnerName: string; primaryOwnerEmail: string
-    }>({
-        queryKey: ['public-companys-info', id],
-        queryFn: async () => {
-            try {
-                const publicInfo = await http.get(`/company/${id}/public-info`);
-                return {
-                    memberCount: publicInfo.data?.memberCount || 0,
-                    primaryOwnerName: publicInfo.data?.primaryOwnerName || 'N/A',
-                    primaryOwnerEmail: publicInfo.data?.primaryOwnerEmail || 'N/A',
-                };
-            } catch {
-                return { memberCount: 0, primaryOwnerName: 'N/A', primaryOwnerEmail: 'N/A' };
-            }
-        },
-        enabled: Boolean(id) && companyQuery.data?.is_public && !isMember,
-        staleTime: 60_000,
-    });
 
     const canEdit = useMemo(() => roleQuery.data?.role === 'OWNER' || roleQuery.data?.role === 'ADMIN', [roleQuery.data]);
     const canManage = canEdit;
@@ -269,38 +108,22 @@ export default function CompanyPage() {
     const canSendNotification = canEdit;
     const canTransferOwnership = useMemo(() => roleQuery.data?.role === 'OWNER', [roleQuery.data]);
 
-    const transferOwnershipMutation = useMutation({
-        mutationFn: async (newOwnerId: string) => {
-            await http.post(`/companys/${id}/members/transfer-ownership`, { newOwnerId });
-        },
-        onSuccess: async () => {
-            show({ type: 'success', message: 'Propriedade transferida com sucesso' });
-            setShowTransferModal(false);
-            setTransferToUserId('');
-            await qc.invalidateQueries({ queryKey: queryKeys.companyMembers(id) });
-            await qc.invalidateQueries({ queryKey: ['primary-owner', id] });
-            await qc.invalidateQueries({ queryKey: ['companys-role', id] });
-        },
-        onError: (err: any) => {
-            const m = getErrorMessage(err, 'Falha ao transferir propriedade');
-            setError(m);
-            show({ type: 'error', message: m });
-        },
-    });
-
-    useEffect(() => {
-        if (membersQuery.isSuccess && members.length === 0) {
-            setMembers(membersQuery.data.members || []);
-        }
-    }, [membersQuery.isSuccess, membersQuery.data, members.length]);
 
     const [hasSelectedCompany, setHasSelectedCompany] = useState(false);
     useEffect(() => {
         if (!membersQuery.isLoading && selectMutation.status === 'idle' && id && id !== 'undefined' && !hasSelectedCompany) {
-            selectMutation.mutate();
+            selectMutation.mutate(id, {
+                onSuccess: () => {
+                    setMessage('Empresas ativas definidas');
+                },
+                onError: (err: any) => {
+                    const m = getErrorMessage(err, 'Não foi possível atualizar as empresas ativas.');
+                    setError(m);
+                },
+            });
             setHasSelectedCompany(true);
         }
-    }, [membersQuery.isLoading, id]);
+    }, [membersQuery.isLoading, id, hasSelectedCompany, selectMutation]);
 
     const handleInvited = useCallback((inviteUrl: string) => {
         setInviteToken(inviteUrl);
@@ -313,16 +136,17 @@ export default function CompanyPage() {
 
         whenReady().then(() => {
             if (!active) return;
-            unsubscribers.push(
+                        unsubscribers.push(
                 subscribe(RT_EVENTS.COMPANY_UPDATED, (payload: any) => {
                     if (payload?.id === id) {
-                        qc.invalidateQueries({ queryKey: ['company', id] });
+                        qc.invalidateQueries({ queryKey: queryKeys.company(id) });
+                        qc.invalidateQueries({ queryKey: queryKeys.companyPublicInfo(id) });
                     }
                 }),
             );
             const refetchMembers = () => {
                 qc.invalidateQueries({ queryKey: queryKeys.companyMembers(id) });
-                qc.invalidateQueries({ queryKey: ['company', id] });
+                qc.invalidateQueries({ queryKey: queryKeys.company(id) });
             };
             unsubscribers.push(
                 subscribe(RT_EVENTS.MEMBER_JOINED, (payload: any) => {
@@ -346,7 +170,21 @@ export default function CompanyPage() {
         };
     }, [id, qc]);
 
-    const company = companyQuery.data;
+    // Use public info if company query failed with 403/401, otherwise use company data
+    const company = companyQuery.data || (publicCompanyInfoQuery.data ? {
+        ...publicCompanyInfoQuery.data,
+        is_public: true,
+    } : null);
+
+    if (!id || id === 'undefined') {
+        return (
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full min-w-0">
+                <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+                    ID da empresa inválido.
+                </div>
+            </div>
+        );
+    }
 
     if (companyQuery.isLoading || roleQuery.isLoading) {
         return <Skeleton className="h-32" />;
@@ -395,15 +233,18 @@ export default function CompanyPage() {
                         <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">{company.description}</p>
                     </div>
                 )}
-                {publicCompanyInfoQuery.data && (
+                {company && company.is_public && !isMember && (
                     <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 space-y-2">
-                        <p><strong className="text-gray-900 dark:text-white">Quantidade de Membros:</strong> {publicCompanyInfoQuery.data.memberCount}</p>
-                        <p><strong className="text-gray-900 dark:text-white">Proprietário Principal:</strong> {
-                            publicCompanyInfoQuery.data.primaryOwnerName !== 'N/A'
-                                ? `${publicCompanyInfoQuery.data.primaryOwnerName}${publicCompanyInfoQuery.data.primaryOwnerEmail !== 'N/A' ?
-                                    ` (${publicCompanyInfoQuery.data.primaryOwnerEmail})` : ''}`
-                                : 'Não disponível'
-                        }</p>
+                        {primaryOwnerQuery.data && (
+                            <>
+                                <p><strong className="text-gray-900 dark:text-white">Proprietário Principal:</strong> {
+                                    primaryOwnerQuery.data.primaryOwnerName && primaryOwnerQuery.data.primaryOwnerName !== 'N/A'
+                                        ? `${primaryOwnerQuery.data.primaryOwnerName}${primaryOwnerQuery.data.primaryOwnerEmail && primaryOwnerQuery.data.primaryOwnerEmail !== 'N/A' ?
+                                            ` (${primaryOwnerQuery.data.primaryOwnerEmail})` : ''}`
+                                        : 'Não disponível'
+                                }</p>
+                            </>
+                        )}
                         {company.createdAt && (
                             <p><strong className="text-gray-900 dark:text-white">Data de Criação:</strong> {formatDate(company.createdAt)}</p>
                         )}
@@ -598,16 +439,19 @@ export default function CompanyPage() {
                             border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950
                              text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
                              transition-colors font-medium text-sm"
-                                onClick={async () => {
+                                onClick={() => {
                                     if (!confirm('Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.')) return;
-                                    try {
-                                        await http.delete(`/company/${id}`); show({ type: 'success', message: 'Empresa excluída' });
-                                        window.location.href = '/dashboard';
-                                    }
-                                    catch (err) {
-                                        const m = getErrorMessage(err, 'Falha ao excluir empresa');
-                                        setError(m); show({ type: 'error', message: m });
-                                    }
+                                    deleteCompanyMutation.mutate(id, {
+                                        onSuccess: () => {
+                                            show({ type: 'success', message: 'Empresa excluída' });
+                                            window.location.href = '/dashboard';
+                                        },
+                                        onError: (err: any) => {
+                                            const m = getErrorMessage(err, 'Falha ao excluir empresa');
+                                            setError(m);
+                                            show({ type: 'error', message: m });
+                                        },
+                                    });
                                 }}>Excluir empresa</button>
                         )}
                     </div>
@@ -634,25 +478,29 @@ export default function CompanyPage() {
             <Modal open={editOpen} title="Editar Empresa" onClose={() => setEditOpen(false)}>
                 <form className="space-y-4"
                     onSubmit={async e => {
-                        e.preventDefault(); setSaving(true);
-                        setError(null); try {
-                            await http.patch(`/company/${id}`, {
-                                name: editName || undefined,
-                                logoUrl: editLogo || undefined,
-                                description: editDescription.trim().slice(0, 400) || undefined,
-                                is_public: editIsPublic
-                            });
-                            show({ type: 'success', message: 'Empresa atualizada' });
-                            setMessage('Empresa atualizada'); setEditOpen(false);
-                            await qc.invalidateQueries({ queryKey: ['company', id] });
-                        }
-                        catch (err) {
-                            const m =
-                                getErrorMessage(err, 'Falha ao atualizar empresa');
-                            setError(m); show({ type: 'error', message: m });
-                        } finally {
-                            setSaving(false);
-                        }
+                        e.preventDefault();
+                        setSaving(true);
+                        setError(null);
+                        updateCompanyMutation.mutate({
+                            name: editName || undefined,
+                            logoUrl: editLogo || undefined,
+                            description: editDescription.trim().slice(0, 400) || undefined,
+                            is_public: editIsPublic,
+                        }, {
+                            onSuccess: () => {
+                                show({ type: 'success', message: 'Empresa atualizada' });
+                                setMessage('Empresa atualizada');
+                                setEditOpen(false);
+                            },
+                            onError: (err: any) => {
+                                const m = getErrorMessage(err, 'Falha ao atualizar empresa');
+                                setError(m);
+                                show({ type: 'error', message: m });
+                            },
+                            onSettled: () => {
+                                setSaving(false);
+                            },
+                        });
                     }}>
                     <div>
                         <input value={editName}
@@ -705,7 +553,37 @@ export default function CompanyPage() {
                 onClose={() => setShowNotificationModal(false)}>
                 <form className="space-y-4" onSubmit={async e => {
                     e.preventDefault();
-                    await sendNotificationMutation.mutateAsync({ title: notificationTitle, body: notificationBody, emails: notificationEmails });
+                    const recipientsEmails = notificationEmails ? notificationEmails.split(',').map(e => e.trim()) : null;
+                    sendNotificationMutation.mutate({
+                        companyId: id,
+                        title: notificationTitle,
+                        body: notificationBody,
+                        recipientsEmails,
+                    }, {
+                        onSuccess: (result: any) => {
+                            show({ type: 'success', message: 'Mensagem global enviada' });
+                            setShowNotificationModal(false);
+                            setNotificationTitle('');
+                            setNotificationBody('');
+                            setNotificationEmails('');
+
+                            if (result?.validationResults && result.validationResults.length > 0) {
+                                result.validationResults.forEach((entry: any) => {
+                                    const tone = entry.status === 'sent' ? 'success' : 'error';
+                                    const label = entry.email === '*' ? 'Membros da empresa' : entry.email;
+                                    const message = entry.status === 'sent'
+                                        ? getSuccessMessage(entry.code, { count: entry.count })
+                                        : getErrorMessageByCode(entry.code);
+                                    show({ type: tone, message: `${label}: ${message}` });
+                                });
+                            }
+                        },
+                        onError: (err: any) => {
+                            const m = getErrorMessage(err, 'Não foi possível enviar notificações');
+                            setError(m);
+                            show({ type: 'error', message: m });
+                        },
+                    });
                 }}>
                     <div>
                         <input value={notificationTitle} onChange={e =>
@@ -751,12 +629,15 @@ export default function CompanyPage() {
                 </div>
             ) : (
                 <MemberList
-                    members={membersQuery.data?.members || members}
+                    members={membersQuery.data?.members || []}
                     currentRole={(roleQuery.data?.role ?? null) as any}
                     currentUserId={profileQuery.data?.id}
                     primaryOwnerUserId={primaryOwnerQuery.data?.primaryOwnerUserId || null}
                     onMemberClick={(m) => {
-                        setSelectedMember(m);
+                        setSelectedMember({
+                            ...m,
+                            role: m.role as 'OWNER' | 'ADMIN' | 'MEMBER'
+                        });
                         setShowMemberModal(true);
                     }}
                     loadingIds={[]}
@@ -766,7 +647,22 @@ export default function CompanyPage() {
                 open={showLeaveModal}
                 title="Sair da empresa?"
                 onCancel={() => setShowLeaveModal(false)}
-                onConfirm={() => leaveMutation.mutate()}
+                onConfirm={() => {
+                    if (!profileQuery.data?.id) {
+                        show({ type: 'error', message: 'Não foi possível determinar o usuário atual' });
+                        return;
+                    }
+                    leaveMutation.mutate(profileQuery.data.id, {
+                        onSuccess: () => {
+                            show({ type: 'success', message: 'Você saiu da empresa' });
+                            window.location.href = '/dashboard';
+                        },
+                        onError: (err: any) => {
+                            const m = getErrorMessage(err, 'Não foi possível sair da empresa');
+                            show({ type: 'error', message: m });
+                        },
+                    });
+                }}
             >
                 Você realmente deseja sair da empresa? Todos os administradores serão notificados.
             </ConfirmModal>
@@ -776,7 +672,18 @@ export default function CompanyPage() {
                 onCancel={() => setRemoveMemberConfirm(null)}
                 onConfirm={() => {
                     if (removeMemberConfirm) {
-                        removeMemberMutation.mutate(removeMemberConfirm);
+                        removeMemberMutation.mutate(removeMemberConfirm.userId, {
+                            onSuccess: () => {
+                                setRemoveMemberConfirm(null);
+                                show({ type: 'success', message: 'Membro removido com sucesso' });
+                            },
+                            onError: (err: any) => {
+                                const m = getErrorMessage(err, 'Não foi possível remover membro');
+                                setError(m);
+                                show({ type: 'error', message: m });
+                                setRemoveMemberConfirm(null);
+                            },
+                        });
                     }
                 }}
             >
@@ -798,7 +705,18 @@ export default function CompanyPage() {
                             show({ type: 'error', message: 'Por favor, selecione um membro' });
                             return;
                         }
-                        await transferOwnershipMutation.mutateAsync(transferToUserId);
+                        transferOwnershipMutation.mutate(transferToUserId, {
+                            onSuccess: () => {
+                                show({ type: 'success', message: 'Propriedade transferida com sucesso' });
+                                setShowTransferModal(false);
+                                setTransferToUserId('');
+                            },
+                            onError: (err: any) => {
+                                const m = getErrorMessage(err, 'Falha ao transferir propriedade');
+                                setError(m);
+                                show({ type: 'error', message: m });
+                            },
+                        });
                     }}
                 >
                     <div>
@@ -812,7 +730,7 @@ export default function CompanyPage() {
                             required
                         >
                             <option value="">Selecione um membro...</option>
-                            {(membersQuery.data?.members || members)
+                            {(membersQuery.data?.members || [])
                                 .filter((m: Member) => m.userId !== profileQuery.data?.id && m.role !== 'OWNER')
                                 .map((m: Member) => {
                                     const roleTranslations: Record<string, string> = {
@@ -959,7 +877,11 @@ export default function CompanyPage() {
                                                         }
                                                     }}
                                                     disabled={!newRole || newRole === selectedMember.role}
-                                                    className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm flex items-center gap-2"
+                                                    className="px-4 py-2 bg-gray-900 dark:bg-white
+                                                    text-white dark:text-gray-900 rounded-lg
+                                                    hover:bg-gray-800 dark:hover:bg-gray-200
+                                                    disabled:opacity-50 disabled:cursor-not-allowed
+                                                    transition-colors font-medium text-sm flex items-center gap-2"
                                                 >
                                                     <FiEdit className="text-base" />
                                                     Alterar
@@ -974,7 +896,10 @@ export default function CompanyPage() {
                                                 setActionMember(selectedMember);
                                                 setShowActionConfirmModal(true);
                                             }}
-                                            className="w-full px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                                            className="w-full px-4 py-2 border
+                                            ]border-red-200 dark:border-red-800 rounded-lg
+                                             bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50
+                                              dark:hover:bg-red-900/20 transition-colors font-medium text-sm flex items-center justify-center gap-2"
                                         >
                                             <FiTrash2 className="text-base" />
                                             Remover Membro
@@ -996,15 +921,30 @@ export default function CompanyPage() {
                 }}
                 onConfirm={async () => {
                     if (actionType === 'delete' && actionMember) {
-                        await removeMemberMutation.mutateAsync(actionMember);
-                        setShowMemberModal(false);
-                        setSelectedMember(null);
+                        removeMemberMutation.mutate(actionMember.userId, {
+                            onSuccess: () => {
+                                setShowMemberModal(false);
+                                setSelectedMember(null);
+                                show({ type: 'success', message: 'Membro removido com sucesso' });
+                            },
+                            onError: (err: any) => {
+                                const m = getErrorMessage(err, 'Não foi possível remover membro');
+                                show({ type: 'error', message: m });
+                            },
+                        });
                     } else if (actionType === 'changeRole' && actionMember && newRole) {
-                        await changeRoleMutation.mutateAsync({ member: actionMember, role: newRole as any });
-                        show({ type: 'success', message: 'Papel atualizado' });
-                        setShowMemberModal(false);
-                        setSelectedMember(null);
-                        setNewRole('');
+                        changeRoleMutation.mutate({ userId: actionMember.userId, role: newRole as any }, {
+                            onSuccess: () => {
+                                show({ type: 'success', message: 'Papel atualizado' });
+                                setShowMemberModal(false);
+                                setSelectedMember(null);
+                                setNewRole('');
+                            },
+                            onError: (err: any) => {
+                                const m = getErrorMessage(err, 'Não foi possível atualizar papel');
+                                show({ type: 'error', message: m });
+                            },
+                        });
                     }
                     setShowActionConfirmModal(false);
                     setActionType(null);
@@ -1015,7 +955,8 @@ export default function CompanyPage() {
                 {actionType === 'delete' && actionMember ? (
                     `Tem certeza que deseja remover ${actionMember.name || 'este membro'} da empresa? Esta ação não pode ser desfeita.`
                 ) : actionType === 'changeRole' && actionMember && newRole ? (
-                    `Tem certeza que deseja alterar o papel de ${actionMember.name || 'este membro'} para ${newRole === 'OWNER' ? 'PROPRIETÁRIO' : newRole === 'ADMIN' ? 'ADMINISTRADOR' : 'MEMBRO'}?`
+                    `Tem certeza que deseja alterar o papel de ${actionMember.name || 'este membro'} 
+                    para ${newRole === 'OWNER' ? 'PROPRIETÁRIO' : newRole === 'ADMIN' ? 'ADMINISTRADOR' : 'MEMBRO'}?`
                 ) : null}
             </ConfirmModal>
         </div>

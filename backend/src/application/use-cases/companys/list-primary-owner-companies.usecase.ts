@@ -1,5 +1,6 @@
 import {MembershipRepository} from "@domain/repositories/memberships/membership.repository";
 import {CompanyRepository} from "@domain/repositories/companys/company.repository";
+import {UserRepository} from "@domain/repositories/users/user.repository";
 import {Role} from "@domain/enums/role.enum";
 
 export interface ListPrimaryOwnerCompaniesInput {
@@ -15,6 +16,9 @@ export interface PrimaryOwnerCompany {
     description?: string | null;
     isPublic: boolean;
     createdAt: Date;
+    memberCount: number;
+    primaryOwnerName: string;
+    primaryOwnerEmail: string;
 }
 
 export interface ListPrimaryOwnerCompaniesResult {
@@ -28,6 +32,7 @@ export class ListPrimaryOwnerCompaniesUseCase {
     constructor(
         private readonly memberships: MembershipRepository,
         private readonly companies: CompanyRepository,
+        private readonly users: UserRepository,
     ) {
     }
 
@@ -49,13 +54,19 @@ export class ListPrimaryOwnerCompaniesUseCase {
             if (primaryOwner && primaryOwner.userId === input.userId) {
                 const company = await this.companies.findById(membership.companyId);
                 if (company) {
+                    const memberCount = allMemberships.length;
+                    const primaryOwnerUser = await this.users.findById(primaryOwner.userId);
+                    
                     primaryOwnerCompanies.push({
                         id: company.id,
                         name: company.name,
                         logoUrl: company.logoUrl,
                         description: company.description,
                         isPublic: company.isPublic,
-                        createdAt: primaryOwner.createdAt,
+                        createdAt: primaryOwner.createdAt instanceof Date ? primaryOwner.createdAt : new Date(primaryOwner.createdAt),
+                        memberCount,
+                        primaryOwnerName: primaryOwnerUser?.name ?? 'N/A',
+                        primaryOwnerEmail: primaryOwnerUser?.email?.toString() ?? 'N/A',
                     });
                 }
             }

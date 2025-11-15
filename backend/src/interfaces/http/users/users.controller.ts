@@ -32,16 +32,14 @@ export class UsersController {
     }
 
     @Delete('me')
-    @ApiOperation({summary: 'Delete current users account'})
+    @ApiOperation({summary: 'Delete current users account. Automatically deletes all companies where user is primary owner and removes user from all companies where they are ADMIN or MEMBER.'})
     @ApiResponse({status: 200, description: 'Account deleted successfully'})
-    @ApiResponse({status: 400, description: 'Cannot delete account (e.g., primary owner of companies)'})
+    @ApiResponse({status: 400, description: 'Cannot delete account (e.g., last owner of a company)'})
     async deleteAccount(
         @CurrentUser() user: User,
-        @Body() body: { deleteCompanyIds?: string[] },
     ) {
         await this.deleteAccountUseCase.execute({
             userId: user.id,
-            deleteCompanyIds: body.deleteCompanyIds,
         });
         return {message: 'Account deleted successfully'};
     }

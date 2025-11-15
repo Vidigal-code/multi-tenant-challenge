@@ -3,11 +3,24 @@ import React, { useState, useEffect } from 'react';
 import { http } from '../../lib/http';
 import { getErrorMessage } from '../../lib/error';
 import { useToast } from '../../hooks/useToast';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { Modal } from '../../components/modals/Modal';
+import {
+    useProfile,
+    usePrimaryOwnerCompanies,
+    useMemberCompanies,
+    useUpdateProfile,
+    useDeleteAccount,
+    type PrimaryOwnerCompany,
+    type MemberCompany,
+} from '../../services/api/auth.api';
+import { extractData } from '../../lib/api-response';
 import {FaExclamationTriangle} from "react-icons/fa";
+import { formatDate, formatDateOnly } from '../../lib/date-utils';
+import Link from 'next/link';
+import { DEFAULT_COMPANY_LOGO } from '../../types';
 
 export default function ProfilePage() {
 
@@ -19,86 +32,61 @@ export default function ProfilePage() {
     const [error, setError] = useState<string | null>(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showPrimaryOwnerModal, setShowPrimaryOwnerModal] = useState(false);
-    const [selectedCompaniesToDelete, setSelectedCompaniesToDelete] = useState<string[]>([]);
+    const [showFinalConfirmModal, setShowFinalConfirmModal] = useState(false);
     const [primaryOwnerPage, setPrimaryOwnerPage] = useState(1);
+    const [memberCompaniesPage, setMemberCompaniesPage] = useState(1);
+    const [activeCompanyTab, setActiveCompanyTab] = useState<'owner' | 'member'>('owner');
     const [activeTab, setActiveTab] = useState<'profile' | 'privacy'>('profile');
+    const [logoErrors, setLogoErrors] = useState<Record<string, boolean>>({});
     const [notificationPreferences, setNotificationPreferences] = useState<Record<string, boolean>>({});
     const { show } = useToast();
     const qc = useQueryClient();
 
-    async function handleDeleteAccountClick() {
-        try {
-            const { data } = await http.get('/auth/account/primary-owner-companies', {
-                params: { page: 1, pageSize: 10 },
-            });
+    const profileQuery = useProfile();
+    const pageSize = 10;
+    // Always load both queries when modal is open to check for empty state
+    const primaryOwnerCompaniesQuery = usePrimaryOwnerCompanies(primaryOwnerPage, pageSize, showPrimaryOwnerModal);
+    const memberCompaniesQuery = useMemberCompanies(memberCompaniesPage, pageSize, showPrimaryOwnerModal);
+    const updateProfileMutation = useUpdateProfile();
+    const deleteAccountMutation = useDeleteAccount();
 
-            if (data.total > 0) {
+    async function handleDeleteAccountClick() {
                 setPrimaryOwnerPage(1);
-                setSelectedCompaniesToDelete([]);
                 setShowPrimaryOwnerModal(true);
-            } else {
-                setShowDeleteModal(true);
-            }
-        } catch (err: any) {
-            setShowDeleteModal(true);
-        }
     }
 
-    async function handleDeleteAccount() {
-        try {
-            const deleteCompanyIds = selectedCompaniesToDelete.length > 0
-                ? selectedCompaniesToDelete
-                : undefined;
-
-            const config: any = {};
-            if (deleteCompanyIds && deleteCompanyIds.length > 0) {
-                config.data = { deleteCompanyIds };
-            }
-
-            await http.delete('/auth/account', config);
-
+    function handleDeleteAccount() {
+        deleteAccountMutation.mutate(undefined, {
+            onSuccess: () => {
             setShowDeleteModal(false);
             setShowPrimaryOwnerModal(false);
-            show({ type: 'success', message: 'Conta excluída permanentemente' });
+                setShowFinalConfirmModal(false);
+                show({ type: 'success', message: 'Conta excluída permanentemente. Todas as empresas e dados foram removidos.' });
             setTimeout(() => {
                 window.location.href = '/';
             }, 500);
-        } catch (err: any) {
+            },
+            onError: (err: any) => {
             const m = getErrorMessage(err, 'Falha ao excluir conta');
             setError(m);
             show({ type: 'error', message: m });
-            if (selectedCompaniesToDelete.length > 0) {
+                setShowFinalConfirmModal(false);
                 setShowPrimaryOwnerModal(true);
-            }
-        }
+            },
+        });
     }
 
-    const profileQuery = useQuery({
-        queryKey: [queryKeys.profile()],
-        queryFn: async () => {
-            const { data } = await http.get('/auth/profile');
-            return data;
-        },
-        staleTime: 30_000,
-    });
-
-    const primaryOwnerCompaniesQuery = useQuery({
-        queryKey: ['primary-owner-companies', primaryOwnerPage],
-        queryFn: async () => {
-            const { data } = await http.get('/auth/account/primary-owner-companies', {
-                params: { page: primaryOwnerPage, pageSize: 10 },
-            });
-            return data;
-        },
-        enabled: showPrimaryOwnerModal,
-    });
-
     useEffect(() => {
-        if (showPrimaryOwnerModal && primaryOwnerPage && !primaryOwnerCompaniesQuery.isFetching) {
+        if (showPrimaryOwnerModal) {
+            // Force refetch when modal opens or page changes
+            if (activeCompanyTab === 'owner') {
             primaryOwnerCompaniesQuery.refetch();
+            } else {
+                memberCompaniesQuery.refetch();
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [primaryOwnerPage, showPrimaryOwnerModal]);
+    }, [primaryOwnerPage, memberCompaniesPage, showPrimaryOwnerModal, activeCompanyTab]);
 
     const currentName = profileQuery.data?.name ?? '';
     const currentEmail = profileQuery.data?.email ?? '';
@@ -109,49 +97,20 @@ export default function ProfilePage() {
         }
     }, [profileQuery.data]);
 
-    const updateMutation = useMutation({
-        mutationFn: async () => {
-            const payload: any = {};
-            if (name) payload.name = name;
-            if (email) payload.email = email;
-            if (newPassword) {
-                payload.currentPassword = currentPassword;
-                payload.newPassword = newPassword;
-            }
-            const { data } = await http.post('/auth/profile', payload);
-            return data;
-        },
-        onSuccess: async () => {
-            setMessage('Profile updated successfully');
-            show({ type: 'success', message: 'Profile updated successfully' });
-            setError(null);
-            await qc.invalidateQueries({ queryKey: [queryKeys.profile()] });
-        },
-        onError: (err: any) => {
-            const m = getErrorMessage(err, 'Failed to update profile');
-            setError(m);
-            show({ type: 'error', message: m });
-        }
-    });
-
-    const updatePreferencesMutation = useMutation({
-        mutationFn: async (prefs: Record<string, boolean>) => {
-            const { data } = await http.post('/auth/profile', {
-                notificationPreferences: prefs,
+    // Debug: log query state when modal opens
+    useEffect(() => {
+        if (showPrimaryOwnerModal) {
+            console.log('Primary Owner Companies Query State:', {
+                isLoading: primaryOwnerCompaniesQuery.isLoading,
+                isError: primaryOwnerCompaniesQuery.isError,
+                error: primaryOwnerCompaniesQuery.error,
+                data: primaryOwnerCompaniesQuery.data,
+                enabled: showPrimaryOwnerModal,
             });
-            return data;
-        },
-        onSuccess: async () => {
-            show({ type: 'success', message: 'Notification preferences updated successfully' });
-            await qc.invalidateQueries({ queryKey: [queryKeys.profile()] });
-        },
-        onError: (err: any) => {
-            const m = getErrorMessage(err, 'Failed to update notifications preferences');
-            show({ type: 'error', message: m });
         }
-    });
+    }, [showPrimaryOwnerModal, primaryOwnerCompaniesQuery.isLoading, primaryOwnerCompaniesQuery.isError, primaryOwnerCompaniesQuery.data]);
 
-    const loading = updateMutation.isPending || profileQuery.isLoading;
+    const loading = updateProfileMutation.isPending || profileQuery.isLoading;
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
@@ -201,8 +160,27 @@ export default function ProfilePage() {
                         {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm" data-testid="profile-error">{error}</div>}
                         <form className="space-y-4" onSubmit={async e => {
                             e.preventDefault();
-                            setError(null); setMessage(null);
-                            updateMutation.mutate();
+                            setError(null);
+                            setMessage(null);
+                            const payload: any = {};
+                            if (name) payload.name = name;
+                            if (email) payload.email = email;
+                            if (newPassword) {
+                                payload.currentPassword = currentPassword;
+                                payload.newPassword = newPassword;
+                            }
+                            updateProfileMutation.mutate(payload, {
+                                onSuccess: () => {
+                                    setMessage('Perfil atualizado com sucesso');
+                                    show({ type: 'success', message: 'Perfil atualizado com sucesso' });
+                                    setError(null);
+                                },
+                                onError: (err: any) => {
+                                    const m = getErrorMessage(err, 'Falha ao atualizar perfil');
+                                    setError(m);
+                                    show({ type: 'error', message: m });
+                                },
+                            });
                         }}>
                             <div>
                                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Novo nome"
@@ -233,185 +211,473 @@ export default function ProfilePage() {
                     </div>
                     <ConfirmModal
                         open={showDeleteModal}
-                        title={selectedCompaniesToDelete.length > 0
-                            ? `Excluir ${selectedCompaniesToDelete.length} empresa(s) e conta?`
-                            : "Tem certeza que deseja excluir permanentemente sua conta?"}
+                        title="Tem certeza que deseja excluir permanentemente sua conta?"
                         onCancel={() => {
                             setShowDeleteModal(false);
-                            if (selectedCompaniesToDelete.length > 0) {
                                 setShowPrimaryOwnerModal(true);
-                            }
                         }}
                         onConfirm={handleDeleteAccount}
                     >
-                        {selectedCompaniesToDelete.length > 0 ? (
                             <div>
                                 <p className="mb-2">Você está prestes a excluir:</p>
                                 <ul className="list-disc list-inside mb-2">
-                                    <li>{selectedCompaniesToDelete.length} empresa(s) onde você é o owner principal</li>
+                                <li>Todas as empresas onde você é o owner principal</li>
                                     <li>Sua conta e todos os dados associados</li>
+                                <li>Todas as notificações, amizades e convites</li>
                                 </ul>
                                 <p className="text-red-600 font-semibold">Esta ação não pode ser desfeita.</p>
                             </div>
-                        ) : (
-                            <p>Todos os seus dados, empresas e convites serão removidos. Esta ação não pode ser desfeita.</p>
-                        )}
                     </ConfirmModal>
                     <Modal
                         open={showPrimaryOwnerModal}
-                        title="Não é possível excluir conta - Empresas como Owner Principal"
+                        title="Excluir Conta Permanentemente"
                         onClose={() => {
                             setShowPrimaryOwnerModal(false);
-                            setSelectedCompaniesToDelete([]);
+                            setActiveCompanyTab('owner');
+                            setPrimaryOwnerPage(1);
+                            setMemberCompaniesPage(1);
                         }}
                     >
                         <div className="space-y-4">
-                            <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
-                                <p className="text-sm text-yellow-800 font-semibold mb-2 flex items-center gap-2">
-                                    <span className="text-lg text-yellow-600">
+                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3 mb-4">
+                                <p className="text-sm text-blue-800 dark:text-blue-200 font-semibold mb-2 flex items-center gap-2">
+                                    <span className="text-lg text-blue-600 dark:text-blue-400">
                                       <FaExclamationTriangle />
                                     </span>
-                                    Você é o owner principal (criador) de uma ou mais empresas.
+                                    Empresas Associadas
                                 </p>
-                                <p className="text-sm text-yellow-700">
-                                    Para excluir sua conta, você deve primeiro excluir todas as empresas onde você é o owner principal.
-                                    Isso é necessário porque, como criador, você é responsável pela existência da empresa.
-                                    Excluir essas empresas também removerá todos os dados associados, membros e convites.
+                                <p className="text-sm text-blue-700 dark:text-blue-300">
+                                    Ao excluir sua conta, todas as empresas onde você é owner principal serão excluídas permanentemente. 
+                                    Você será removido de todas as empresas onde participa como ADMIN ou MEMBER.
                                 </p>
                             </div>
 
-                            {primaryOwnerCompaniesQuery.isLoading ? (
-                                <p>Carregando empresas...</p>
-                            ) : primaryOwnerCompaniesQuery.data?.data?.length > 0 ? (
+                            {/* Tabs */}
+                            <div className="border-b border-gray-200 dark:border-gray-800">
+                                <nav className="-mb-px flex space-x-4">
+                                    <button
+                                        onClick={() => {
+                                            setActiveCompanyTab('owner');
+                                            setPrimaryOwnerPage(1);
+                                        }}
+                                        className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                            activeCompanyTab === 'owner'
+                                                ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                                                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                        }`}
+                                    >
+                                        Owner Principal
+                                        {primaryOwnerCompaniesQuery.data && primaryOwnerCompaniesQuery.data.total > 0 && (
+                                            <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">
+                                                {primaryOwnerCompaniesQuery.data.total}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setActiveCompanyTab('member');
+                                            setMemberCompaniesPage(1);
+                                        }}
+                                        className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                            activeCompanyTab === 'member'
+                                                ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                                                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                        }`}
+                                    >
+                                        Participa
+                                        {memberCompaniesQuery.data && memberCompaniesQuery.data.total > 0 && (
+                                            <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">
+                                                {memberCompaniesQuery.data.total}
+                                            </span>
+                                        )}
+                                    </button>
+                                </nav>
+                            </div>
+
+                            {/* Owner Companies Tab */}
+                            {activeCompanyTab === 'owner' && (
                                 <>
-                                    <div className="max-h-64 overflow-y-auto border rounded p-2">
-                                        {primaryOwnerCompaniesQuery.data.data.map((company: any) => (
-                                            <label key={company.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedCompaniesToDelete.includes(company.id)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setSelectedCompaniesToDelete([...selectedCompaniesToDelete, company.id]);
-                                                        } else {
-                                                            setSelectedCompaniesToDelete(selectedCompaniesToDelete.filter(id => id !== company.id));
-                                                        }
-                                                    }}
-                                                    className="rounded"
-                                                />
-                                                <div className="flex-1">
-                                                    <div className="font-medium">{company.name}</div>
-                                                    <div className="text-xs text-gray-600">ID: {company.id}</div>
-                                                    {company.description && (
-                                                        <div className="text-xs text-gray-500 mt-1">
-                                                            {company.description.length > 100
-                                                                ? `${company.description.slice(0, 100)}...`
-                                                                : company.description}
+                            {primaryOwnerCompaniesQuery.isLoading ? (
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">Carregando empresas...</p>
+                                    ) : primaryOwnerCompaniesQuery.error ? (
+                                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                    <p className="text-sm text-red-800 dark:text-red-200">
+                                        Erro ao carregar empresas: {primaryOwnerCompaniesQuery.error instanceof Error ? primaryOwnerCompaniesQuery.error.message : 'Erro desconhecido'}
+                                    </p>
+                                </div>
+                            ) : primaryOwnerCompaniesQuery.data && primaryOwnerCompaniesQuery.data.data?.length > 0 ? (
+                                <>
+                                    <div className="max-h-96 overflow-y-auto border rounded-lg divide-y divide-gray-200 dark:divide-gray-800">
+                                        {primaryOwnerCompaniesQuery.data.data.map((company: PrimaryOwnerCompany) => (
+                                            <div key={company.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
+                                                <div className="flex items-start gap-3">
+                                                    <img 
+                                                        src={logoErrors[company.id] || !company.logoUrl ? DEFAULT_COMPANY_LOGO : company.logoUrl} 
+                                                        alt={`Logo ${company.name}`}
+                                                        className="h-16 w-16 rounded object-cover flex-shrink-0"
+                                                        onError={() => setLogoErrors(prev => ({ ...prev, [company.id]: true }))}
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <h3 className="font-semibold text-gray-900 dark:text-white text-base mb-1">
+                                                                    {company.name}
+                                                                </h3>
+                                                                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
+                                                                    <span className="font-mono">ID: {company.id}</span>
+                                                                    <span className="flex items-center gap-1">
+                                                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                                                            company.isPublic 
+                                                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
+                                                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                                                        }`}>
+                                                                            {company.isPublic ? 'Pública' : 'Privada'}
+                                                                        </span>
+                                                                    </span>
+                                                                    <span>{company.memberCount || 0} membro(s)</span>
+                                                                    <span>Criada em: {formatDate(company.createdAt)}</span>
+                                                                </div>
+                                                            </div>
+                                                            <Link
+                                                                href={`/company/${company.id}`}
+                                                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium whitespace-nowrap"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                Acessar →
+                                                            </Link>
                                                         </div>
-                                                    )}
+                                                        
+                                                    {company.description && (
+                                                            <div className="text-sm text-gray-700 dark:text-gray-300 mb-2 bg-gray-50 dark:bg-gray-900/50 p-2 rounded">
+                                                                <span className="font-medium text-xs text-gray-500 dark:text-gray-400">Descrição: </span>
+                                                                {company.description}
+                                                            </div>
+                                                        )}
+                                                        
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                                            <div><strong>Informações:</strong></div>
+                                                            <div>• Tipo: {company.isPublic ? 'Empresa Pública' : 'Empresa Privada'}</div>
+                                                            <div>• Total de membros: {company.memberCount || 0}</div>
+                                                            <div>• Data de criação: {formatDateOnly(company.createdAt)}</div>
+                                                            <div>• Dono Principal: {company.primaryOwnerName} ({company.primaryOwnerEmail})</div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            </label>
+                                            </div>
                                         ))}
                                     </div>
 
-                                    {primaryOwnerCompaniesQuery.data.total > 10 && (
-                                        <div className="flex items-center gap-2 text-sm">
+                                    {primaryOwnerCompaniesQuery.data && primaryOwnerCompaniesQuery.data.total > 0 && (
+                                        <div className="space-y-2">
+                                            <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                                                Mostrando {primaryOwnerCompaniesQuery.data.data.length} de {primaryOwnerCompaniesQuery.data.total} empresa(s)
+                                            </div>
+                                            {primaryOwnerCompaniesQuery.data.total > pageSize && (
+                                                <div className="flex items-center justify-center gap-2 text-sm">
                                             <button
                                                 onClick={() => {
                                                     const newPage = Math.max(1, primaryOwnerPage - 1);
                                                     setPrimaryOwnerPage(newPage);
                                                 }}
-                                                disabled={primaryOwnerPage === 1}
-                                                className="px-2 py-1 border rounded disabled:opacity-50"
+                                                        disabled={primaryOwnerPage === 1 || primaryOwnerCompaniesQuery.isLoading}
+                                                        className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                             >
-                                                Anterior
+                                                        ← Anterior
                                             </button>
-                                            <span>Página {primaryOwnerPage} de {Math.ceil(primaryOwnerCompaniesQuery.data.total / 10)}</span>
+                                                    <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded">
+                                                        Página {primaryOwnerPage} de {Math.ceil(primaryOwnerCompaniesQuery.data.total / pageSize)}
+                                                    </span>
                                             <button
                                                 onClick={() => {
                                                     const newPage = primaryOwnerPage + 1;
                                                     setPrimaryOwnerPage(newPage);
                                                 }}
-                                                disabled={primaryOwnerPage >= Math.ceil(primaryOwnerCompaniesQuery.data.total / 10)}
-                                                className="px-2 py-1 border rounded disabled:opacity-50"
+                                                        disabled={!primaryOwnerCompaniesQuery.data || primaryOwnerPage >= Math.ceil(primaryOwnerCompaniesQuery.data.total / pageSize) || primaryOwnerCompaniesQuery.isLoading}
+                                                        className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                             >
-                                                Próxima
+                                                        Próxima →
                                             </button>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={async () => {
-                                                const allCompanies: any[] = [];
-                                                let currentPage = 1;
-                                                let hasMore = true;
-
-                                                while (hasMore) {
-                                                    const { data } = await http.get('/auth/account/primary-owner-companies', {
-                                                        params: { page: currentPage, pageSize: 100 },
-                                                    });
-                                                    allCompanies.push(...data.data);
-                                                    hasMore = data.data.length === 100 && allCompanies.length < data.total;
-                                                    currentPage++;
-                                                }
-
-                                                setSelectedCompaniesToDelete(allCompanies.map((c: any) => c.id));
-                                            }}
-                                            className="text-sm text-blue-600 underline"
-                                        >
-                                            Selecionar todas ({primaryOwnerCompaniesQuery.data.total})
-                                        </button>
-                                        <button
-                                            onClick={() => setSelectedCompaniesToDelete([])}
-                                            className="text-sm text-gray-600 underline"
-                                        >
-                                            Limpar seleção
-                                        </button>
-                                    </div>
-
-                                    <div className="bg-red-50 border border-red-200 rounded p-3">
-                                        <p className="text-sm text-red-800">
-                                            <strong>Selecionadas {selectedCompaniesToDelete.length} de
-                                                {primaryOwnerCompaniesQuery.data.total} empresas para excluir.</strong>
+                                </>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg p-6">
+                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                            Você não é owner principal de nenhuma empresa.
                                         </p>
-                                        <p className="text-xs text-red-700 mt-1">
-                                            Você deve selecionar todas as empresas para prosseguir com a exclusão da conta.
+                                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                                            Ao excluir sua conta, você será removido de todas as empresas onde participa.
                                         </p>
                                     </div>
+                                </div>
+                            )}
+                                </>
+                            )}
 
-                                    <div className="flex justify-end gap-2">
+                            {/* Member Companies Tab */}
+                            {activeCompanyTab === 'member' && (
+                                <>
+                                    {memberCompaniesQuery.isLoading ? (
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">Carregando empresas...</p>
+                                    ) : memberCompaniesQuery.error ? (
+                                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
+                                            <p className="text-sm text-red-800 dark:text-red-200">
+                                                Erro ao carregar empresas: {memberCompaniesQuery.error instanceof Error ? memberCompaniesQuery.error.message : 'Erro desconhecido'}
+                                            </p>
+                                        </div>
+                                    ) : memberCompaniesQuery.data && memberCompaniesQuery.data.data?.length > 0 ? (
+                                        <>
+                                            <div className="max-h-96 overflow-y-auto border rounded-lg divide-y divide-gray-200 dark:divide-gray-800">
+                                                {memberCompaniesQuery.data.data.map((company: MemberCompany) => (
+                                                    <div key={company.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
+                                                        <div className="flex items-start gap-3">
+                                                            <img 
+                                                                src={logoErrors[company.id] || !company.logoUrl ? DEFAULT_COMPANY_LOGO : company.logoUrl} 
+                                                                alt={`Logo ${company.name}`}
+                                                                className="h-16 w-16 rounded object-cover flex-shrink-0"
+                                                                onError={() => setLogoErrors(prev => ({ ...prev, [company.id]: true }))}
+                                                            />
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <h3 className="font-semibold text-gray-900 dark:text-white text-base mb-1">
+                                                                            {company.name}
+                                                                        </h3>
+                                                                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
+                                                                            <span className="font-mono">ID: {company.id}</span>
+                                                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                                                                company.userRole === 'ADMIN' 
+                                                                                    ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                                                                                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                                                                            }`}>
+                                                                                {company.userRole === 'ADMIN' ? 'ADMIN' : 'MEMBER'}
+                                                                            </span>
+                                                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                                                                company.isPublic 
+                                                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
+                                                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                                                            }`}>
+                                                                                {company.isPublic ? 'Pública' : 'Privada'}
+                                                                            </span>
+                                                                            <span>{company.memberCount || 0} membro(s)</span>
+                                                                            <span>Criada em: {formatDate(company.createdAt)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <Link
+                                                                        href={`/company/${company.id}`}
+                                                                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium whitespace-nowrap"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    >
+                                                                        Acessar →
+                                                                    </Link>
+                                                                </div>
+                                                                
+                                                                {company.description && (
+                                                                    <div className="text-sm text-gray-700 dark:text-gray-300 mb-2 bg-gray-50 dark:bg-gray-900/50 p-2 rounded">
+                                                                        <span className="font-medium text-xs text-gray-500 dark:text-gray-400">Descrição: </span>
+                                                                        {company.description}
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                                                    <div><strong>Informações:</strong></div>
+                                                                    <div>• Seu papel: {company.userRole === 'ADMIN' ? 'Administrador' : 'Membro'}</div>
+                                                                    <div>• Tipo: {company.isPublic ? 'Empresa Pública' : 'Empresa Privada'}</div>
+                                                                    <div>• Total de membros: {company.memberCount || 0}</div>
+                                                                    <div>• Data de criação: {formatDateOnly(company.createdAt)}</div>
+                                                                    <div>• Dono Principal: {company.primaryOwnerName} ({company.primaryOwnerEmail})</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {memberCompaniesQuery.data && memberCompaniesQuery.data.total > 0 && (
+                                                <div className="space-y-2">
+                                                    <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                                                        Mostrando {memberCompaniesQuery.data.data.length} de {memberCompaniesQuery.data.total} empresa(s)
+                                                    </div>
+                                                    {memberCompaniesQuery.data.total > pageSize && (
+                                                        <div className="flex items-center justify-center gap-2 text-sm">
+                                                            <button
+                                                                onClick={() => {
+                                                                    const newPage = Math.max(1, memberCompaniesPage - 1);
+                                                                    setMemberCompaniesPage(newPage);
+                                                                }}
+                                                                disabled={memberCompaniesPage === 1 || memberCompaniesQuery.isLoading}
+                                                                className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                            >
+                                                                ← Anterior
+                                        </button>
+                                                            <span className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded">
+                                                                Página {memberCompaniesPage} de {Math.ceil(memberCompaniesQuery.data.total / pageSize)}
+                                                            </span>
+                                        <button
+                                                                onClick={() => {
+                                                                    const newPage = memberCompaniesPage + 1;
+                                                                    setMemberCompaniesPage(newPage);
+                                                                }}
+                                                                disabled={!memberCompaniesQuery.data || memberCompaniesPage >= Math.ceil(memberCompaniesQuery.data.total / pageSize) || memberCompaniesQuery.isLoading}
+                                                                className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                            >
+                                                                Próxima →
+                                        </button>
+                                    </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="text-center py-8">
+                                            <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg p-6">
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                                    Você não participa de nenhuma empresa como ADMIN ou MEMBER.
+                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-500">
+                                                    Você não será removido de nenhuma empresa ao excluir sua conta.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {/* Empty State - No companies at all */}
+                            {activeCompanyTab === 'owner' && 
+                             !primaryOwnerCompaniesQuery.isLoading && 
+                             !primaryOwnerCompaniesQuery.error &&
+                             primaryOwnerCompaniesQuery.data && 
+                             primaryOwnerCompaniesQuery.data.total === 0 &&
+                             (!memberCompaniesQuery.data || memberCompaniesQuery.data.total === 0) && (
+                                <div className="text-center py-8">
+                                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
+                                        <p className="text-sm text-green-800 dark:text-green-200 font-semibold mb-2">
+                                            ✓ Você não possui empresas associadas
+                                        </p>
+                                        <p className="text-xs text-green-700 dark:text-green-300">
+                                            Ao excluir sua conta, apenas seus dados pessoais serão removidos. 
+                                            Nenhuma empresa será afetada.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                                         <button
                                             onClick={() => {
                                                 setShowPrimaryOwnerModal(false);
-                                                setSelectedCompaniesToDelete([]);
+                                        setActiveCompanyTab('owner');
+                                        setPrimaryOwnerPage(1);
+                                        setMemberCompaniesPage(1);
                                             }}
-                                            className="px-4 py-2 border rounded"
+                                    className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                                         >
                                             Cancelar
                                         </button>
                                         <button
                                             onClick={() => {
-                                                if (selectedCompaniesToDelete.length === primaryOwnerCompaniesQuery.data.total) {
-                                                    setShowDeleteModal(true);
-                                                } else {
-                                                    show({
-                                                        type: 'error',
-                                                        message: `Você deve selecionar todas as 
-                                                        ${primaryOwnerCompaniesQuery.data.total} empresas para excluir sua conta.`
-                                                    });
-                                                }
-                                            }}
-                                            disabled={selectedCompaniesToDelete.length !== primaryOwnerCompaniesQuery.data.total}
-                                            className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            Excluir {selectedCompaniesToDelete.length > 0 ? `${selectedCompaniesToDelete.length} empresa(s) e ` : ''}Conta
+                                        setShowFinalConfirmModal(true);
+                                    }}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                >
+                                    Sim, tenho certeza. Excluir permanentemente
                                         </button>
                                     </div>
-                                </>
-                            ) : (
-                                <p className="text-sm text-gray-600">Nenhuma empresa como owner principal encontrada.</p>
-                            )}
+                        </div>
+                    </Modal>
+
+                    <Modal
+                        open={showFinalConfirmModal}
+                        title="Confirmação Final - Exclusão Permanente"
+                        onClose={() => {
+                            setShowFinalConfirmModal(false);
+                        }}
+                    >
+                        <div className="space-y-4">
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-4">
+                                <p className="text-sm text-red-800 dark:text-red-200 font-semibold mb-2 flex items-center gap-2">
+                                    <span className="text-lg text-red-600 dark:text-red-400">
+                                        <FaExclamationTriangle />
+                                    </span>
+                                    ATENÇÃO: Esta ação é PERMANENTE e IRREVERSÍVEL
+                                </p>
+                                <p className="text-sm text-red-700 dark:text-red-300">
+                                    Ao confirmar, você está ciente de que:
+                                </p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded p-3">
+                                    <h4 className="font-semibold text-sm mb-2 text-gray-900 dark:text-white">O que será excluído:</h4>
+                                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                                        {primaryOwnerCompaniesQuery.data && primaryOwnerCompaniesQuery.data.total > 0 && (
+                                            <li>
+                                                <strong>{primaryOwnerCompaniesQuery.data.total} empresa(s)</strong> onde você é owner principal serão excluídas permanentemente
+                                            </li>
+                                        )}
+                                        <li>
+                                            <strong>Sua conta</strong> e todos os dados pessoais serão excluídos permanentemente
+                                        </li>
+                                        <li>
+                                            Você será <strong>removido automaticamente</strong> de todas as empresas onde é <strong>ADMIN</strong> ou <strong>MEMBER</strong>
+                                        </li>
+                                        <li>
+                                            Todos os <strong>convites</strong> enviados e recebidos serão cancelados
+                                        </li>
+                                        <li>
+                                            Todas as <strong>notificações</strong> e histórico serão perdidos
+                                        </li>
+                                        <li>
+                                            Todas as <strong>amizades</strong> serão removidas
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
+                                    <p className="text-sm text-yellow-800 dark:text-yellow-200 font-semibold mb-1">
+                                        Regras importantes:
+                                    </p>
+                                    <ul className="list-disc list-inside space-y-1 text-xs text-yellow-700 dark:text-yellow-300">
+                                        <li>Esta ação <strong>NÃO PODE</strong> ser desfeita</li>
+                                        <li>Não há como recuperar seus dados após a exclusão</li>
+                                        <li>As empresas excluídas não poderão ser restauradas</li>
+                                        <li>Outros membros das empresas serão notificados sobre a exclusão</li>
+                                    </ul>
+                                </div>
+
+                                <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded p-3">
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                                        <strong>Tem certeza absoluta</strong> que deseja prosseguir com a exclusão permanente da sua conta?
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    onClick={() => {
+                                        setShowFinalConfirmModal(false);
+                                    }}
+                                    className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        setShowFinalConfirmModal(false);
+                                        await handleDeleteAccount();
+                                    }}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={deleteAccountMutation.isPending}
+                                >
+                                    {deleteAccountMutation.isPending ? 'Excluindo...' : 'Sim, tenho certeza. Excluir permanentemente'}
+                                </button>
+                            </div>
                         </div>
                     </Modal>
                 </>
@@ -436,7 +702,15 @@ export default function ProfilePage() {
                                 onChange={(e) => {
                                     const newPrefs = { ...notificationPreferences, companyInvitations: e.target.checked };
                                     setNotificationPreferences(newPrefs);
-                                    updatePreferencesMutation.mutate(newPrefs);
+                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                        onSuccess: () => {
+                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                        },
+                                        onError: (err: any) => {
+                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                            show({ type: 'error', message: m });
+                                        },
+                                    });
                                 }}
                                 className="w-5 h-5"
                             />
@@ -453,7 +727,15 @@ export default function ProfilePage() {
                                 onChange={(e) => {
                                     const newPrefs = { ...notificationPreferences, friendRequests: e.target.checked };
                                     setNotificationPreferences(newPrefs);
-                                    updatePreferencesMutation.mutate(newPrefs);
+                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                        onSuccess: () => {
+                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                        },
+                                        onError: (err: any) => {
+                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                            show({ type: 'error', message: m });
+                                        },
+                                    });
                                 }}
                                 className="w-5 h-5"
                             />
@@ -470,7 +752,15 @@ export default function ProfilePage() {
                                 onChange={(e) => {
                                     const newPrefs = { ...notificationPreferences, companyMessages: e.target.checked };
                                     setNotificationPreferences(newPrefs);
-                                    updatePreferencesMutation.mutate(newPrefs);
+                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                        onSuccess: () => {
+                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                        },
+                                        onError: (err: any) => {
+                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                            show({ type: 'error', message: m });
+                                        },
+                                    });
                                 }}
                                 className="w-5 h-5"
                             />
@@ -487,7 +777,15 @@ export default function ProfilePage() {
                                 onChange={(e) => {
                                     const newPrefs = { ...notificationPreferences, membershipChanges: e.target.checked };
                                     setNotificationPreferences(newPrefs);
-                                    updatePreferencesMutation.mutate(newPrefs);
+                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                        onSuccess: () => {
+                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                        },
+                                        onError: (err: any) => {
+                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                            show({ type: 'error', message: m });
+                                        },
+                                    });
                                 }}
                                 className="w-5 h-5"
                             />
@@ -504,7 +802,15 @@ export default function ProfilePage() {
                                 onChange={(e) => {
                                     const newPrefs = { ...notificationPreferences, roleChanges: e.target.checked };
                                     setNotificationPreferences(newPrefs);
-                                    updatePreferencesMutation.mutate(newPrefs);
+                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                        onSuccess: () => {
+                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                        },
+                                        onError: (err: any) => {
+                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                            show({ type: 'error', message: m });
+                                        },
+                                    });
                                 }}
                                 className="w-5 h-5"
                             />
@@ -521,14 +827,22 @@ export default function ProfilePage() {
                                 onChange={(e) => {
                                     const newPrefs = { ...notificationPreferences, realtimePopups: e.target.checked };
                                     setNotificationPreferences(newPrefs);
-                                    updatePreferencesMutation.mutate(newPrefs);
+                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                        onSuccess: () => {
+                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                        },
+                                        onError: (err: any) => {
+                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                            show({ type: 'error', message: m });
+                                        },
+                                    });
                                 }}
                                 className="w-5 h-5"
                             />
                         </div>
                     </div>
 
-                    {updatePreferencesMutation.isPending && (
+                    {updateProfileMutation.isPending && (
                         <p className="text-sm text-gray-500">Salvando preferências...</p>
                     )}
                 </div>

@@ -1,17 +1,21 @@
 "use client";
 import React, {useEffect, useState} from 'react';
-import {http} from '../../lib/http';
 import {getErrorMessage} from '../../lib/error';
 import {useToast} from '../../hooks/useToast';
-import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
+import {useQueryClient} from '@tanstack/react-query';
 import Skeleton from '../../components/skeleton/Skeleton';
 import {queryKeys} from '../../lib/queryKeys';
 import {ConfirmModal} from '../../components/modals/ConfirmModal';
 import {subscribe, whenReady, RT_EVENTS} from '../../lib/realtime';
 import {formatNotificationMessage, getNotificationStyle, NotificationData} from '../../lib/notification-messages';
 import {formatDate} from '../../lib/date-utils';
-
-type Notification = NotificationData;
+import {
+    useNotifications,
+    useMarkNotificationRead,
+    useDeleteNotification,
+    useReplyToNotification,
+    type Notification,
+} from '../../services/api/notification.api';
 
 function truncate(text: string, max: number) {
     if (!text) return '';
@@ -27,26 +31,7 @@ export default function NotificationsPage() {
     const {show} = useToast();
     const queryClient = useQueryClient();
 
-    const {data: notifications = [], isLoading} = useQuery({
-        queryKey: queryKeys.notifications(),
-        queryFn: async () => {
-            const response = await http.get('/notifications');
-            const items = (response.data.items ?? []) as Notification[];
-            const notificationsWithSenders = await Promise.all(
-                items.map(async (notif) => {
-                    if (notif.meta?.sender) {
-                        return notif;
-                    }
-                    try {
-                        return notif;
-                    } catch {
-                        return notif;
-                    }
-                })
-            );
-            return notificationsWithSenders;
-        },
-    });
+    const {data: notifications = [], isLoading} = useNotifications();
 
     useEffect(() => {
         let active = true;
@@ -65,54 +50,26 @@ export default function NotificationsPage() {
         };
     }, [queryClient]);
 
-    const markReadMutation = useMutation({
-        mutationFn: async (id: string) => {
-            await http.patch(`/notifications/${id}/read`);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: queryKeys.notifications()});
-            show({message: 'Notificação marcada como lida', type: 'success'});
-        },
-        onError: (error) => {
-            show({message: getErrorMessage(error), type: 'error'});
-        },
-    });
-
-    const deleteMutation = useMutation({
-        mutationFn: async (id: string) => {
-            await http.delete(`/notifications/${id}`);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: queryKeys.notifications()});
-            show({message: 'Notificação excluída', type: 'success'});
-        },
-        onError: (error) => {
-            show({message: getErrorMessage(error), type: 'error'});
-        },
-    });
-
-    const replyMutation = useMutation({
-        mutationFn: async ({id, body}: { id: string; body: string }) => {
-            await http.post(`/notifications/${id}/reply`, {replyBody: body});
-        },
-        onSuccess: () => {
-            setReplyingTo(null);
-            setReplyBody('');
-            show({message: 'Resposta enviada', type: 'success'});
-        },
-        onError: (error) => {
-            show({message: getErrorMessage(error), type: 'error'});
-        },
-    });
+    const markReadMutation = useMarkNotificationRead();
+    const deleteMutation = useDeleteNotification();
+    const replyMutation = useReplyToNotification();
 
     const handleReply = () => {
         if (!replyBody.trim()) {
             show({message: 'Por favor escreva uma resposta', type: 'error'});
             return;
         }
-        if (replyingTo) {
-            replyMutation.mutate({id: replyingTo, body: replyBody.trim()});
-        }
+        if (!replyingTo) return;
+        replyMutation.mutate({id: replyingTo, body: replyBody.trim()}, {
+            onSuccess: () => {
+                setReplyingTo(null);
+                setReplyBody('');
+                show({message: 'Resposta enviada', type: 'success'});
+            },
+            onError: (error) => {
+                show({message: getErrorMessage(error), type: 'error'});
+            },
+        });
     };
 
     if (isLoading) {
@@ -191,7 +148,14 @@ export default function NotificationsPage() {
                                 <div className="flex flex-wrap gap-2 mt-3 sm:mt-0 sm:ml-4">
                                     {!notification.read && (
                                         <button
-                                            onClick={() => markReadMutation.mutate(notification.id)}
+                                            onClick={() => markReadMutation.mutate(notification.id, {
+                                                onSuccess: () => {
+                                                    show({message: 'Notificação marcada como lida', type: 'success'});
+                                                },
+                                                onError: (error) => {
+                                                    show({message: getErrorMessage(error), type: 'error'});
+                                                },
+                                            })}
                                             className="px-3 py-2 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 transition-colors font-medium whitespace-nowrap"
                                             disabled={markReadMutation.isPending}
                                         >
@@ -330,8 +294,15 @@ export default function NotificationsPage() {
                 title="Excluir Notificação"
                 onConfirm={() => {
                     if (deleteConfirm) {
-                        deleteMutation.mutate(deleteConfirm);
-                        setDeleteConfirm(null);
+                        deleteMutation.mutate(deleteConfirm, {
+                            onSuccess: () => {
+                                setDeleteConfirm(null);
+                                show({message: 'Notificação excluída', type: 'success'});
+                            },
+                            onError: (error) => {
+                                show({message: getErrorMessage(error), type: 'error'});
+                            },
+                        });
                     }
                 }}
                 onCancel={() => setDeleteConfirm(null)}

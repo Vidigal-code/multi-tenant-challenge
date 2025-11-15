@@ -6,10 +6,10 @@ import {ApplicationError} from "@application/errors/application-error";
 import {ErrorCode} from "@application/errors/error-code";
 import {Role} from "@domain/enums/role.enum";
 import {ListPrimaryOwnerCompaniesUseCase} from "@application/use-cases/companys/list-primary-owner-companies.usecase";
+import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
 
 export interface DeleteAccountInput {
     userId: string;
-    deleteCompanyIds?: string[];
 }
 
 export class DeleteAccountUseCase {
@@ -19,53 +19,54 @@ export class DeleteAccountUseCase {
         private readonly memberships: MembershipRepository,
         private readonly domainEvents: DomainEventsService,
         private readonly listPrimaryOwnerCompanies: ListPrimaryOwnerCompaniesUseCase,
+        private readonly prisma: PrismaService,
     ) {
     }
 
     async execute(input: DeleteAccountInput) {
-        const user = await this.users.findById(input.userId);
-        if (!user) throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
+        const userToDelete = await this.users.findById(input.userId);
+        if (!userToDelete) throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
 
-        const primaryOwnerCompanies = await this.listPrimaryOwnerCompanies.execute({
-            userId: input.userId,
-            page: 1,
-            pageSize: 1000,
-        });
+       
+        const allPrimaryOwnerCompanies: Array<{ id: string; name: string }> = [];
+        let currentPage = 1;
+        let hasMore = true;
+        let totalCompanies = 0;
 
-        if (primaryOwnerCompanies.total > 0) {
-            if (input.deleteCompanyIds) {
-                const companyIdsToDelete = new Set(input.deleteCompanyIds);
-                const primaryOwnerCompanyIds = new Set(primaryOwnerCompanies.data.map(c => c.id));
-                
-                for (const companyId of companyIdsToDelete) {
-                    if (!primaryOwnerCompanyIds.has(companyId)) {
-                        throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
-                    }
-                }
+        while (hasMore) {
+            const result = await this.listPrimaryOwnerCompanies.execute({
+                userId: input.userId,
+                page: currentPage,
+                pageSize: 1000,
+            });
 
-                for (const companyId of companyIdsToDelete) {
-                    await this.companies.delete(companyId);
-                    await this.domainEvents.publish({
-                        name: "companys.deleted",
-                        payload: {companyId},
-                    });
-                }
-
-                const remainingCompanies = primaryOwnerCompanies.data.filter(
-                    c => !companyIdsToDelete.has(c.id)
-                );
-
-                if (remainingCompanies.length > 0) {
-                    throw new ApplicationError(ErrorCode.CANNOT_DELETE_ACCOUNT_WITH_PRIMARY_OWNER_COMPANIES);
-                }
-            } else {
-                throw new ApplicationError(ErrorCode.CANNOT_DELETE_ACCOUNT_WITH_PRIMARY_OWNER_COMPANIES);
+            if (currentPage === 1) {
+                totalCompanies = result.total;
             }
+
+            if (result.data && result.data.length > 0) {
+                allPrimaryOwnerCompanies.push(...result.data);
+            }
+
+            hasMore = result.data.length === 1000 && allPrimaryOwnerCompanies.length < totalCompanies;
+            currentPage++;
+
+            if (currentPage > 100) {
+                break;
+            }
+        }
+
+        for (const company of allPrimaryOwnerCompanies) {
+            await this.companies.delete(company.id);
+            await this.domainEvents.publish({
+                name: "companys.deleted",
+                payload: {companyId: company.id},
+            });
         }
 
         const userMemberships = await this.memberships.listByUser(input.userId);
         for (const membership of userMemberships) {
-            if (input.deleteCompanyIds?.includes(membership.companyId)) {
+            if (allPrimaryOwnerCompanies.some(c => c.id === membership.companyId)) {
                 continue;
             }
 
@@ -78,7 +79,40 @@ export class DeleteAccountUseCase {
                     throw new ApplicationError(ErrorCode.CANNOT_DELETE_LAST_OWNER);
                 }
             }
+
             await this.memberships.remove(membership.id);
+        }
+
+        await (this.prisma as any).notification.deleteMany({
+            where: {
+                OR: [
+                    { senderUserId: input.userId },
+                    { recipientUserId: input.userId },
+                ],
+            },
+        });
+
+        await this.prisma.friendship.deleteMany({
+            where: {
+                OR: [
+                    { requesterId: input.userId },
+                    { addresseeId: input.userId },
+                ],
+            },
+        });
+
+        await this.prisma.invite.deleteMany({
+            where: {
+                inviterId: input.userId,
+            },
+        });
+
+        if (userToDelete && userToDelete.email) {
+            await this.prisma.invite.deleteMany({
+                where: {
+                    email: userToDelete.email.toString(),
+                },
+            });
         }
 
         await this.users.deleteById(input.userId);

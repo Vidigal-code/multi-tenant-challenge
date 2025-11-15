@@ -10,11 +10,14 @@ import {Response} from "express";
 import {SignupDto} from "@application/dto/auths/signup.dto";
 import {LoginDto} from "@application/dto/auths/login.dto";
 import {AcceptInviteDto} from "@application/dto/invites/accept-invite.dto";
+import {PrimaryOwnerCompaniesResponseDto} from "@application/dto/auths/primary-owner-companies.dto";
+import {MemberCompaniesResponseDto} from "@application/dto/auths/member-companies.dto";
 import {SignupUseCase} from "@application/use-cases/auths/signup.usecase";
 import {LoginUseCase} from "@application/use-cases/auths/login.usecase";
 import {AcceptInviteUseCase} from "@application/use-cases/memberships/accept-invite.usecase";
 import {DeleteAccountUseCase} from "@application/use-cases/users/delete-account.usecase";
 import {ListPrimaryOwnerCompaniesUseCase} from "@application/use-cases/companys/list-primary-owner-companies.usecase";
+import {ListMemberCompaniesUseCase} from "@application/use-cases/companys/list-member-companies.usecase";
 import {ConfigService} from "@nestjs/config";
 import {JwtService} from "@nestjs/jwt";
 import {ApplicationError} from "@application/errors/application-error";
@@ -30,6 +33,7 @@ export class AuthController {
         private readonly acceptInviteUseCase: AcceptInviteUseCase,
         private readonly deleteAccountUseCase: DeleteAccountUseCase,
         private readonly listPrimaryOwnerCompanies: ListPrimaryOwnerCompaniesUseCase,
+        private readonly listMemberCompanies: ListMemberCompaniesUseCase,
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
         @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
@@ -190,41 +194,77 @@ export class AuthController {
     @Get("account/primary-owner-companies")
     @UseGuards(JwtAuthGuard)
     @ApiOperation({summary: "List companies where users is primary owner (creator)"})
-    @ApiResponse({status: 200, description: "Primary owner companies listed"})
-    async getPrimaryOwnerCompanies(@CurrentUser() user: any, @Query("page") page = "1", @Query("pageSize") pageSize = "10") {
-        return this.listPrimaryOwnerCompanies.execute({
+    @ApiResponse({status: 200, description: "Primary owner companies listed", type: PrimaryOwnerCompaniesResponseDto})
+    async getPrimaryOwnerCompanies(@CurrentUser() user: any, @Query("page") page = "1", @Query("pageSize") pageSize = "10"): Promise<PrimaryOwnerCompaniesResponseDto> {
+        const result = await this.listPrimaryOwnerCompanies.execute({
             userId: user.sub,
             page: parseInt(page, 10) || 1,
             pageSize: parseInt(pageSize, 10) || 10,
         });
+        
+        const response: PrimaryOwnerCompaniesResponseDto = {
+            data: result.data.map(company => ({
+                id: company.id,
+                name: company.name,
+                logoUrl: company.logoUrl ?? null,
+                description: company.description ?? null,
+                isPublic: company.isPublic,
+                createdAt: company.createdAt instanceof Date ? company.createdAt.toISOString() : (typeof company.createdAt === 'string' ? company.createdAt : new Date(company.createdAt).toISOString()),
+                memberCount: company.memberCount,
+                primaryOwnerName: company.primaryOwnerName,
+                primaryOwnerEmail: company.primaryOwnerEmail,
+            })),
+            total: result.total,
+            page: result.page,
+            pageSize: result.pageSize,
+        };
+        
+        return response;
+    }
+
+    @Get("account/member-companies")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "List companies where user is a member (ADMIN or MEMBER) but not primary owner"})
+    @ApiResponse({status: 200, description: "Member companies listed", type: MemberCompaniesResponseDto})
+    async getMemberCompanies(@CurrentUser() user: any, @Query("page") page = "1", @Query("pageSize") pageSize = "10"): Promise<MemberCompaniesResponseDto> {
+        const result = await this.listMemberCompanies.execute({
+            userId: user.sub,
+            page: parseInt(page, 10) || 1,
+            pageSize: parseInt(pageSize, 10) || 10,
+        });
+        
+        const response: MemberCompaniesResponseDto = {
+            data: result.data.map(company => ({
+                id: company.id,
+                name: company.name,
+                logoUrl: company.logoUrl ?? null,
+                description: company.description ?? null,
+                isPublic: company.isPublic,
+                createdAt: company.createdAt instanceof Date ? company.createdAt.toISOString() : (typeof company.createdAt === 'string' ? company.createdAt : new Date(company.createdAt).toISOString()),
+                memberCount: company.memberCount,
+                userRole: company.userRole,
+                primaryOwnerName: company.primaryOwnerName,
+                primaryOwnerEmail: company.primaryOwnerEmail,
+            })),
+            total: result.total,
+            page: result.page,
+            pageSize: result.pageSize,
+        };
+        
+        return response;
     }
 
     @Delete("account")
     @UseGuards(JwtAuthGuard)
-    @ApiOperation({summary: "Permanently delete users account"})
+    @ApiOperation({summary: "Permanently delete users account. Automatically deletes all companies where user is primary owner and removes user from all companies where they are ADMIN or MEMBER."})
     @ApiResponse({status: 200, description: "Account deleted successfully"})
-    @ApiResponse({status: 400, description: "Cannot delete account (e.g., primary owner of companies)", type: ErrorResponse})
-    @ApiBody({
-        schema: {
-            type: "object",
-            properties: {
-                deleteCompanyIds: {
-                    type: "array",
-                    items: {type: "string"},
-                    description: "Array of companys IDs to delete. Required if users is primary owner of companies.",
-                },
-            },
-        },
-        required: false,
-    })
+    @ApiResponse({status: 400, description: "Cannot delete account (e.g., last owner of a company)", type: ErrorResponse})
     async deleteAccount(
         @CurrentUser() user: any,
-        @Body() body: { deleteCompanyIds?: string[] },
         @Res({passthrough: true}) res: Response,
     ) {
         await this.deleteAccountUseCase.execute({
             userId: user.sub,
-            deleteCompanyIds: body.deleteCompanyIds,
         });
         res.cookie(this.cookieName, "", {
             httpOnly: true,
