@@ -1,0 +1,124 @@
+import {ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger,} from "@nestjs/common";
+import {Response} from "express";
+import {ApplicationError} from "@application/errors/application-error";
+import {ErrorCode} from "@application/errors/error-code";
+
+@Catch()
+export class AllExceptionsFilter implements ExceptionFilter {
+    private readonly logger = new Logger(AllExceptionsFilter.name);
+
+    catch(exception: unknown, host: ArgumentsHost) {
+        const ctx = host.switchToHttp();
+        const response = ctx.getResponse<Response>();
+        const request = ctx.getRequest();
+
+        let status = HttpStatus.INTERNAL_SERVER_ERROR;
+        let message = "Internal server error";
+        let code = "INTERNAL_ERROR";
+
+        if (exception instanceof ApplicationError) {
+            status = this.mapApplicationErrorToStatus(exception.code);
+            message = exception.message;
+            code = exception.code;
+        } else if (exception instanceof HttpException) {
+            status = exception.getStatus();
+            const exceptionResponse = exception.getResponse();
+            message =
+                typeof exceptionResponse === "string"
+                    ? exceptionResponse
+                    : (exceptionResponse as any).message;
+            code =
+                typeof exceptionResponse === "object" &&
+                (exceptionResponse as any).error
+                    ? (exceptionResponse as any).error
+                    : "HTTP_ERROR";
+        } else if (exception instanceof Error) {
+            message = exception.message;
+            this.logger.error(
+                `Unhandled error: ${exception.message}`,
+                exception.stack,
+            );
+        }
+
+        response.status(status).json({
+            statusCode: status,
+            message,
+            code,
+            timestamp: new Date().toISOString(),
+            path: request.url,
+        });
+    }
+
+    private mapApplicationErrorToStatus(code: string): number {
+        const errorMap: Record<string, number> = {
+
+            // Validation errors
+            [ErrorCode.NO_FIELDS_TO_UPDATE]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.CURRENT_PASSWORD_REQUIRED]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.INVALID_EMAIL]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.MISSING_USER_DATA]: HttpStatus.BAD_REQUEST,
+
+            // Authentication & Authorization
+            [ErrorCode.USER_NOT_AUTHENTICATED]: HttpStatus.UNAUTHORIZED,
+            [ErrorCode.INVALID_CREDENTIALS]: HttpStatus.UNAUTHORIZED,
+            [ErrorCode.INVALID_CURRENT_PASSWORD]: HttpStatus.UNAUTHORIZED,
+            [ErrorCode.NOT_A_MEMBER]: HttpStatus.FORBIDDEN,
+            [ErrorCode.INSUFFICIENT_ROLE]: HttpStatus.FORBIDDEN,
+            [ErrorCode.FORBIDDEN_ACTION]: HttpStatus.FORBIDDEN,
+
+            // User errors
+            [ErrorCode.USER_NOT_FOUND]: HttpStatus.NOT_FOUND,
+            [ErrorCode.EMAIL_ALREADY_IN_USE]: HttpStatus.CONFLICT,
+            [ErrorCode.EMAIL_ALREADY_USED]: HttpStatus.CONFLICT,
+
+            // Company errors
+            [ErrorCode.COMPANY_NOT_FOUND]: HttpStatus.NOT_FOUND,
+            [ErrorCode.OWNER_NOT_FOUND]: HttpStatus.NOT_FOUND,
+            [ErrorCode.NO_ACTIVE_COMPANY]: HttpStatus.FORBIDDEN,
+            [ErrorCode.NO_MEMBERSHIP_FOUND]: HttpStatus.FORBIDDEN,
+            [ErrorCode.CANNOT_JOIN_OWN_COMPANY]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.JOIN_REQUEST_NOT_ALLOWED]: HttpStatus.FORBIDDEN,
+            [ErrorCode.JOIN_REQUEST_ALREADY_EXISTS]: HttpStatus.CONFLICT,
+            [ErrorCode.JOIN_REQUEST_NOT_FOUND]: HttpStatus.NOT_FOUND,
+
+            // Invitation errors
+            [ErrorCode.INVITE_NOT_FOUND]: HttpStatus.NOT_FOUND,
+            [ErrorCode.INVITE_ALREADY_USED]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.INVITE_EXPIRED]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.INVITE_ALREADY_EXISTS]: HttpStatus.CONFLICT,
+            [ErrorCode.CANNOT_INVITE_SELF]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.CANNOT_INVITE_MEMBER]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.INVITE_NOT_PENDING]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.ONLY_OWNER_CAN_INVITE_OWNER]: HttpStatus.FORBIDDEN,
+
+            // Member errors
+            [ErrorCode.REQUESTER_NOT_MEMBER]: HttpStatus.FORBIDDEN,
+            [ErrorCode.TARGET_NOT_MEMBER]: HttpStatus.NOT_FOUND,
+            [ErrorCode.CANNOT_REMOVE_OWNER]: HttpStatus.FORBIDDEN,
+            [ErrorCode.LAST_OWNER_CANNOT_BE_REMOVED]: HttpStatus.FORBIDDEN,
+            [ErrorCode.CANNOT_MODIFY_OWNER]: HttpStatus.FORBIDDEN,
+            [ErrorCode.CANNOT_ASSIGN_OWNER]: HttpStatus.FORBIDDEN,
+            [ErrorCode.OWNER_MUST_TRANSFER_BEFORE_LEAVE]: HttpStatus.FORBIDDEN,
+
+            // Notification errors
+            [ErrorCode.NO_COMPANY_MEMBERS_AVAILABLE]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.CANNOT_SEND_TO_SELF]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.USER_MUST_BE_MEMBER_OR_FRIEND]: HttpStatus.FORBIDDEN,
+
+            // Friendship errors
+            [ErrorCode.CANNOT_ADD_YOURSELF]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.ALREADY_FRIENDS]: HttpStatus.CONFLICT,
+            [ErrorCode.FRIEND_REQUEST_ALREADY_SENT]: HttpStatus.CONFLICT,
+            [ErrorCode.USER_BLOCKED]: HttpStatus.FORBIDDEN,
+            [ErrorCode.FRIENDSHIP_NOT_FOUND]: HttpStatus.NOT_FOUND,
+            [ErrorCode.CANNOT_ACCEPT_OTHERS_REQUEST]: HttpStatus.FORBIDDEN,
+            [ErrorCode.FRIENDSHIP_NOT_PENDING]: HttpStatus.BAD_REQUEST,
+
+            // Account Deletion
+            [ErrorCode.CANNOT_DELETE_ACCOUNT_WITH_PRIMARY_OWNER_COMPANIES]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.CANNOT_DELETE_LAST_OWNER]: HttpStatus.BAD_REQUEST,
+        };
+
+        return errorMap[code] ?? HttpStatus.INTERNAL_SERVER_ERROR;
+    }
+}

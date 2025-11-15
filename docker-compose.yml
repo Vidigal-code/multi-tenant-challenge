@@ -1,0 +1,96 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: multitenant
+    ports: ["5432:5432"]
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d multitenant"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    ports: ["4000:4000"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: sh -c "if [ -d prisma/migrations ] && [ \"$(ls -A prisma/migrations 2>/dev/null)\" ]; then npx prisma migrate deploy; else npx prisma migrate dev --name init; fi; npx prisma generate; npm run dev"
+
+  worker-invites:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:invites"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  worker-members:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:members"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_DEFAULT_COMPANY_LOGO: ${NEXT_PUBLIC_DEFAULT_COMPANY_LOGO:-https://example.com/default-company.png}
+    env_file: ./frontend/.env
+    ports: ["3000:3000"]
+    depends_on:
+      - api
+    command: sh -c "npm run start"
+
+  api-test:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    command: sh -c "npm ci && npm test"
+    profiles: ["test"]
+
+  web-test:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: sh -c "npm ci && npm test"
+    profiles: ["test"]
+
+volumes:
+  db_data:

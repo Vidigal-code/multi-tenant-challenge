@@ -1,0 +1,134 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELED
+  REJECTED
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+model User {
+  id                    String      @id @default(cuid())
+  email                 String      @unique
+  name                  String
+  passwordHash          String
+  activeCompanyId       String?
+  notificationPreferences Json      @default("{}")
+  activeCompany         Company?    @relation("ActiveCompany", fields: [activeCompanyId], references: [id])
+  memberships           Membership[]
+  invitesAccepted       Invite[]    @relation("InviteAcceptedBy")
+  invitesSent           Invite[]    @relation("InviteSentBy")
+  notificationsSent     Notification[] @relation("NotificationSender")
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  friendshipsSent       Friendship[] @relation("FriendshipRequester")
+  friendshipsReceived   Friendship[] @relation("FriendshipAddressee")
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@index([activeCompanyId])
+}
+
+model Company {
+  id          String       @id @default(cuid())
+  name        String
+  logoUrl     String?
+  description String?
+  isPublic    Boolean     @default(false) @map("is_public")
+  memberships Membership[]
+  invites     Invite[]
+  activeUsers User[]      @relation("ActiveCompany")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  notifications Notification[]
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      Role
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId, userId])
+}
+
+model Invite {
+  id           String       @id @default(cuid())
+  companyId    String
+  email        String
+  token        String       @unique
+  role         Role         @default(MEMBER)
+  status       InviteStatus @default(PENDING)
+  expiresAt    DateTime
+  createdAt    DateTime     @default(now())
+  acceptedById String?
+  acceptedBy   User?        @relation("InviteAcceptedBy", fields: [acceptedById], references: [id])
+  inviterId    String?
+  inviter      User?        @relation("InviteSentBy", fields: [inviterId], references: [id])
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, email])
+}
+
+model Notification {
+  id               BigInt      @id @default(autoincrement())
+  companyId        String?
+  senderUserId     String
+  recipientUserId  String?
+  recipientsEmails String[]
+  title            String      @db.VarChar(255)
+  body             String
+  createdAt        DateTime    @default(now())
+  read             Boolean     @default(false)
+  meta             Json        @default("{}")
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sender  User     @relation("NotificationSender", fields: [senderUserId], references: [id], onDelete: Cascade)
+  recipient User?  @relation("NotificationRecipient", fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([senderUserId])
+  @@index([recipientUserId])
+}
+
+model Friendship {
+  id         String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status     FriendshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([requesterId])
+  @@index([addresseeId])
+  @@index([status])
+}
