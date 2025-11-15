@@ -1,8 +1,3 @@
-/**
- * Formata uma data para exibição no timezone local do usuário
- * @param dateString - String ISO ou Date object
- * @returns String formatada em pt-BR ou 'Data inválida' se inválida
- */
 export function formatDate(dateString: string | Date | null | undefined): string {
     if (!dateString) return '-';
     try {
@@ -21,9 +16,6 @@ export function formatDate(dateString: string | Date | null | undefined): string
     }
 }
 
-/**
- * Formata apenas a data (sem hora)
- */
 export function formatDateOnly(dateString: string | Date | null | undefined): string {
     if (!dateString) return '-';
     try {

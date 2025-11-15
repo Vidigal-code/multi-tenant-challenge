@@ -1,17 +1,17 @@
-import {CreateUserInput, UpdateUserInput, UserRepository,} from "@domain/repositories/user.repository";
+import {CreateUserInput, UpdateUserInput, UserRepository,} from "@domain/repositories/users/user.repository";
 import {
     CompanyRepository,
     CreateCompanyInput,
     ListCompaniesFilters,
     ListPublicCompaniesFilters,
     PaginatedCompanies,
-} from "@domain/repositories/company.repository";
-import {CreateMembershipInput, MembershipRepository,} from "@domain/repositories/membership.repository";
-import {CreateInviteInput, InviteRepository,} from "@domain/repositories/invite.repository";
-import {User} from "@domain/entities/user.entity";
-import {Company} from "@domain/entities/company.entity";
-import {Membership} from "@domain/entities/membership.entity";
-import {Invite} from "@domain/entities/invite.entity";
+} from "@domain/repositories/companys/company.repository";
+import {CreateMembershipInput, MembershipRepository,} from "@domain/repositories/memberships/membership.repository";
+import {CreateInviteInput, InviteRepository,} from "@domain/repositories/invites/invite.repository";
+import {User} from "@domain/entities/users/user.entity";
+import {Company} from "@domain/entities/companys/company.entity";
+import {Membership} from "@domain/entities/memberships/membership.entity";
+import {Invite} from "@domain/entities/invites/invite.entity";
 import {Role} from "@domain/enums/role.enum";
 import {InviteStatus} from "@domain/enums/invite-status.enum";
 import {Email} from "@domain/value-objects/email.vo";
@@ -111,8 +111,7 @@ export class InMemoryCompanyRepository implements CompanyRepository {
     }
 
     async listByUser(filters: ListCompaniesFilters): Promise<PaginatedCompanies> {
-        // Use the memberships array to find companies where user is a member
-        // If membershipRepo is set, use it; otherwise use internal memberships array
+
         const membershipsToUse = this.membershipRepo?.items || this.memberships;
         const userCompanyIds = new Set(
             membershipsToUse

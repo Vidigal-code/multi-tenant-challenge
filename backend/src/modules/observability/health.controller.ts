@@ -1,7 +1,7 @@
 import {Controller, Get, HttpCode} from "@nestjs/common";
-import {PrismaService} from "@infrastructure/prisma/prisma.service";
+import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
 import {ConfigService} from "@nestjs/config";
-import {RabbitMQService} from "@infrastructure/messaging/rabbitmq.service";
+import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
 
 @Controller("health")
 export class HealthController {

@@ -5,10 +5,10 @@ import { getErrorMessage } from '../../lib/error';
 import { getSuccessMessage } from '../../lib/messages';
 import { useToast } from '../../hooks/useToast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Skeleton from '../../components/Skeleton';
+import Skeleton from '../../components/skeleton/Skeleton';
 import { queryKeys } from '../../lib/queryKeys';
-import { ConfirmModal } from '../../components/ConfirmModal';
-import { Modal } from '../../components/Modal';
+import { ConfirmModal } from '../../components/modals/ConfirmModal';
+import { Modal } from '../../components/modals/Modal';
 import { subscribe, whenReady, RT_EVENTS } from '../../lib/realtime';
 
 interface User {
@@ -26,6 +26,7 @@ interface Friendship {
 }
 
 export default function FriendsPage() {
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'messages'>('friends');
@@ -83,7 +84,7 @@ export default function FriendsPage() {
       );
       setSearchResults(filtered);
       if (filtered.length === 0) {
-        show({ message: 'User not found ❌', type: 'error' });
+        show({ message: 'Usuário não encontrado', type: 'error' });
       }
     },
     onError: (error) => {
@@ -115,19 +116,6 @@ export default function FriendsPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.friendships() });
       queryClient.invalidateQueries({ queryKey: ['friend-requests'] });
       show({ message: 'Solicitação de amizade aceita', type: 'success' });
-    },
-    onError: (error) => {
-      show({ message: getErrorMessage(error), type: 'error' });
-    },
-  });
-
-  const rejectRequestMutation = useMutation({
-    mutationFn: async (friendshipId: string) => {
-      await http.delete(`/friendships/${friendshipId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['friend-requests'] });
-      show({ message: 'Solicitação de amizade rejeitada', type: 'success' });
     },
     onError: (error) => {
       show({ message: getErrorMessage(error), type: 'error' });
@@ -178,13 +166,11 @@ export default function FriendsPage() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async ({ friendEmails, title, body }: { friendEmails: string[]; title: string; body: string }) => {
-      // Enviar para cada amigo individualmente (com throttling para evitar sobrecarga)
       const results = [];
       for (let i = 0; i < friendEmails.length; i++) {
         try {
           await http.post('/notifications/friend', { friendEmail: friendEmails[i], title, body });
           results.push({ email: friendEmails[i], status: 'sent' });
-          // Throttling: aguardar 100ms entre envios para evitar sobrecarga
           if (i < friendEmails.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
@@ -224,7 +210,6 @@ export default function FriendsPage() {
     let friendEmails: string[] = [];
     
     if (messageMode === 'global') {
-      // Enviar para todos os amigos
       friendEmails = friends
         .map(f => {
           const friend = f.requester.id === currentUserId ? f.addressee : f.requester;
@@ -232,7 +217,6 @@ export default function FriendsPage() {
         })
         .filter(Boolean) as string[];
     } else {
-      // Enviar apenas para amigos selecionados
       if (selectedFriend) {
         friendEmails = [selectedFriend.email];
       } else if (selectedFriends.length > 0) {
@@ -293,45 +277,48 @@ export default function FriendsPage() {
   const isLoading = friendsLoading || requestsLoading;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Amigos</h1>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Amigos</h1>
+        <p className="text-gray-600 dark:text-gray-400">Conecte-se com outros usuários e gerencie suas amizades</p>
+      </div>
 
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-3">Buscar usuários</h2>
-        <div className="flex gap-2">
+        <h2 className="text-lg sm:text-xl font-semibold mb-3 text-gray-900 dark:text-white">Buscar usuários</h2>
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             placeholder="Digite um nome ou email…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1 p-2 border rounded"
+            className="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"
           />
           <button
             onClick={handleSearch}
             disabled={searchMutation.isPending}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap"
           >
             {searchMutation.isPending ? 'Buscando...' : 'Buscar'}
           </button>
         </div>
 
         {searchResults.length > 0 && (
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 space-y-3">
             {searchResults.map((user) => {
               if (!user || !user.id) {
                 return null;
               }
               return (
-                <div key={user.id} className="flex items-center justify-between p-3 border rounded">
-                  <div>
-                    <div className="font-medium">{user.name || 'Unknown'}</div>
-                    <div className="text-sm text-gray-600">{user.email || ''}</div>
+                <div key={user.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 dark:text-white">{user.name || 'Unknown'}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{user.email || ''}</div>
                   </div>
                   <button
                     onClick={() => handleSendRequest(user.email)}
                     disabled={sendRequestMutation.isPending}
-                    className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
+                    className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap flex-shrink-0"
                   >
                     Enviar solicitação
                   </button>
@@ -343,22 +330,34 @@ export default function FriendsPage() {
       </div>
 
       <div className="mb-6">
-        <div className="flex border-b">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide border-b border-gray-200 dark:border-gray-800">
           <button
             onClick={() => setActiveTab('friends')}
-            className={`px-4 py-2 ${activeTab === 'friends' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+            className={`px-4 py-2 font-medium text-sm sm:text-base whitespace-nowrap transition-colors border-b-2 ${
+              activeTab === 'friends' 
+                ? 'border-gray-900 dark:border-white text-gray-900 dark:text-white' 
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
           >
             Amigos ({friends.length})
           </button>
           <button
             onClick={() => setActiveTab('requests')}
-            className={`px-4 py-2 ${activeTab === 'requests' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+            className={`px-4 py-2 font-medium text-sm sm:text-base whitespace-nowrap transition-colors border-b-2 ${
+              activeTab === 'requests' 
+                ? 'border-gray-900 dark:border-white text-gray-900 dark:text-white' 
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
           >
             Solicitações Pendentes ({requests.length})
           </button>
           <button
             onClick={() => setActiveTab('messages')}
-            className={`px-4 py-2 ${activeTab === 'messages' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+            className={`px-4 py-2 font-medium text-sm sm:text-base whitespace-nowrap transition-colors border-b-2 ${
+              activeTab === 'messages' 
+                ? 'border-gray-900 dark:border-white text-gray-900 dark:text-white' 
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
           >
             Enviar Mensagem
           </button>
@@ -374,8 +373,8 @@ export default function FriendsPage() {
       ) : activeTab === 'friends' ? (
         <div className="space-y-4">
           {friends.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              Você ainda não tem amigos
+            <div className="text-center text-gray-600 dark:text-gray-400 py-12 sm:py-16 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900">
+              <p className="text-sm sm:text-base">Você ainda não tem amigos</p>
             </div>
           ) : (
             friends.map((friendship) => {
@@ -387,21 +386,21 @@ export default function FriendsPage() {
                 return null;
               }
               return (
-                <div key={friendship.id} className="flex items-center justify-between p-4 border rounded">
-                  <div>
-                    <div className="font-medium">{friend.name || 'Unknown'}</div>
-                    <div className="text-sm text-gray-600">{friend.email || ''}</div>
+                <div key={friendship.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 sm:p-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 dark:text-white text-base sm:text-lg mb-1">{friend.name || 'Unknown'}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{friend.email || ''}</div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 w-full sm:w-auto">
                     <button
                       onClick={() => handleSendMessage(friend)}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                      className="flex-1 sm:flex-initial px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium whitespace-nowrap"
                     >
-                    Enviar Mensagem
-                  </button>
+                      Enviar Mensagem
+                    </button>
                     <button
                       onClick={() => setRemoveConfirm(friendship.id)}
-                      className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                      className="flex-1 sm:flex-initial px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm transition-colors font-medium whitespace-nowrap"
                     >
                       Remover
                     </button>
@@ -413,16 +412,16 @@ export default function FriendsPage() {
         </div>
       ) : activeTab === 'messages' ? (
         <div className="space-y-4">
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 name="messageMode"
                 checked={messageMode === 'selective'}
                 onChange={() => setMessageMode('selective')}
-                className="rounded"
+                className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
               />
-              <span>Envio Seletivo</span>
+              <span className="text-sm sm:text-base text-gray-900 dark:text-white">Envio Seletivo</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -430,23 +429,23 @@ export default function FriendsPage() {
                 name="messageMode"
                 checked={messageMode === 'global'}
                 onChange={() => setMessageMode('global')}
-                className="rounded"
+                className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
               />
-              <span>Envio Global (todos os amigos)</span>
+              <span className="text-sm sm:text-base text-gray-900 dark:text-white">Envio Global (todos os amigos)</span>
             </label>
           </div>
           
           {messageMode === 'selective' && (
-            <div className="space-y-2 max-h-64 overflow-y-auto border rounded p-2">
+            <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-lg p-3 bg-white dark:bg-gray-950">
               {friends.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">Nenhum amigo disponível</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">Nenhum amigo disponível</p>
               ) : (
                 friends.map((friendship) => {
                   const friend = friendship.requester.id === currentUserId ? friendship.addressee : friendship.requester;
                   if (!friend) return null;
                   const isSelected = selectedFriends.some(f => f.id === friend.id);
                   return (
-                    <label key={friendship.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer">
+                    <label key={friendship.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer rounded-lg transition-colors">
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -457,11 +456,11 @@ export default function FriendsPage() {
                             setSelectedFriends(selectedFriends.filter(f => f.id !== friend.id));
                           }
                         }}
-                        className="rounded"
+                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
                       />
-                      <div className="flex-1">
-                        <div className="font-medium">{friend.name || 'Unknown'}</div>
-                        <div className="text-sm text-gray-600">{friend.email || ''}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">{friend.name || 'Unknown'}</div>
+                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{friend.email || ''}</div>
                       </div>
                     </label>
                   );
@@ -471,13 +470,12 @@ export default function FriendsPage() {
           )}
           
           {messageMode === 'global' && (
-            <div className="bg-blue-50 border border-blue-200 rounded p-3">
-              <p className="text-sm text-blue-800">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <p className="text-sm sm:text-base text-blue-800 dark:text-blue-300">
                 <strong>Modo Global Ativo:</strong> A mensagem será enviada para todos os {friends.length} amigo(s) na lista.
               </p>
             </div>
           )}
-          
           <button
             onClick={() => {
               if (messageMode === 'selective' && selectedFriends.length === 0) {
@@ -485,12 +483,11 @@ export default function FriendsPage() {
                 return;
               }
               setSelectedFriend(null);
-              // Não limpar selectedFriends aqui - manter seleção ao abrir modal
               setMessageTitle('');
               setMessageBody('');
               setShowMessageModal(true);
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="w-full sm:w-auto px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm sm:text-base"
             disabled={friends.length === 0 || (messageMode === 'selective' && selectedFriends.length === 0)}
           >
             {messageMode === 'global' ? 'Enviar Mensagem Global' : 'Enviar Mensagem Seletiva'}
@@ -499,8 +496,8 @@ export default function FriendsPage() {
       ) : (
         <div className="space-y-4">
           {requests.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              Nenhuma solicitação pendente
+            <div className="text-center text-gray-600 dark:text-gray-400 py-12 sm:py-16 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900">
+              <p className="text-sm sm:text-base">Nenhuma solicitação pendente</p>
             </div>
           ) : (
             requests.map((request) => {
@@ -511,23 +508,23 @@ export default function FriendsPage() {
                 return null;
               }
               return (
-                <div key={request.id} className="flex items-center justify-between p-4 border rounded">
-                  <div>
-                    <div className="font-medium">{request.requester.name || 'Unknown'}</div>
-                    <div className="text-sm text-gray-600">{request.requester.email || ''}</div>
+                <div key={request.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 sm:p-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 dark:text-white text-base sm:text-lg mb-1">{request.requester.name || 'Unknown'}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{request.requester.email || ''}</div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 w-full sm:w-auto">
                     <button
                       onClick={() => handleAcceptRequest(request.id)}
                       disabled={acceptRequestMutation.isPending}
-                      className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
+                      className="flex-1 sm:flex-initial px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap"
                     >
                       Aceitar
                     </button>
                     <button
                       onClick={() => handleRejectRequest(request.id)}
                       disabled={removeFriendMutation.isPending}
-                      className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 disabled:opacity-50"
+                      className="flex-1 sm:flex-initial px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors font-medium whitespace-nowrap"
                     >
                       Rejeitar
                     </button>
@@ -538,7 +535,6 @@ export default function FriendsPage() {
           )}
         </div>
       )}
-
       <ConfirmModal
         open={!!removeConfirm}
         title="Remover amigo"
@@ -547,7 +543,6 @@ export default function FriendsPage() {
       >
         Tem certeza que deseja remover este amigo?
       </ConfirmModal>
-
       <Modal open={showMessageModal} title={messageMode === 'global' ? 'Enviar Mensagem Global' : 'Enviar Mensagem Seletiva'} onClose={() => {
         setShowMessageModal(false);
         setSelectedFriend(null);
@@ -555,40 +550,44 @@ export default function FriendsPage() {
         setMessageTitle('');
         setMessageBody('');
       }}>
-        <form className="space-y-3" onSubmit={handleSubmitMessage}>
+        <form className="space-y-4" onSubmit={handleSubmitMessage}>
           {messageMode === 'selective' && selectedFriends.length > 0 && (
-            <div className="mb-3 bg-gray-50 p-2 rounded">
-              <div className="text-sm text-gray-600 mb-1">Para ({selectedFriends.length} amigo(s)):</div>
-              <div className="text-xs text-gray-500 max-h-32 overflow-y-auto">
+            <div className="mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-lg">
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Para ({selectedFriends.length} amigo(s)):</div>
+              <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-h-32 overflow-y-auto space-y-1">
                 {selectedFriends.map(f => (
-                  <div key={f.id}>{f.name} ({f.email})</div>
+                  <div key={f.id} className="truncate">{f.name} ({f.email})</div>
                 ))}
               </div>
             </div>
           )}
           {messageMode === 'global' && (
-            <div className="mb-3 bg-blue-50 p-2 rounded">
-              <div className="text-sm text-blue-800">
-                <strong>Enviando para todos os {friends.length} amigo(s)</strong>
+            <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+              <div className="text-sm sm:text-base font-medium text-blue-800 dark:text-blue-300">
+                Enviando para todos os {friends.length} amigo(s)
               </div>
             </div>
           )}
-          <input
-            value={messageTitle}
-            onChange={e => setMessageTitle(e.target.value)}
-            placeholder="Assunto"
-            className="border px-2 py-1 w-full"
-            required
-          />
-          <textarea
-            value={messageBody}
-            onChange={e => setMessageBody(e.target.value)}
-            placeholder="Mensagem"
-            className="border px-2 py-1 w-full resize-none"
-            rows={5}
-            required
-          />
-          <div className="flex justify-end gap-2">
+          <div>
+            <input
+              value={messageTitle}
+              onChange={e => setMessageTitle(e.target.value)}
+              placeholder="Assunto"
+              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"
+              required
+            />
+          </div>
+          <div>
+            <textarea
+              value={messageBody}
+              onChange={e => setMessageBody(e.target.value)}
+              placeholder="Mensagem"
+              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent resize-none transition-colors"
+              rows={5}
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => {
@@ -598,14 +597,14 @@ export default function FriendsPage() {
                 setMessageTitle('');
                 setMessageBody('');
               }}
-              className="px-3 py-1 border rounded text-sm"
+              className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={sendMessageMutation.isPending || (messageMode === 'selective' && selectedFriends.length === 0 && !selectedFriend)}
-              className="px-3 py-1 bg-blue-600 text-white rounded text-sm disabled:opacity-50"
+              className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
             >
               {sendMessageMutation.isPending ? 'Enviando...' : 'Enviar'}
             </button>

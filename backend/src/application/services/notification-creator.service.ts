@@ -1,9 +1,9 @@
 import {Injectable, Inject} from "@nestjs/common";
-import {NotificationRepository, NOTIFICATION_REPOSITORY} from "@domain/repositories/notification.repository";
-import {UserRepository, USER_REPOSITORY} from "@domain/repositories/user.repository";
-import {CompanyRepository, COMPANY_REPOSITORY} from "@domain/repositories/company.repository";
-import {InviteRepository, INVITE_REPOSITORY} from "@domain/repositories/invite.repository";
-import {FriendshipRepository, FRIENDSHIP_REPOSITORY} from "@domain/repositories/friendship.repository";
+import {NotificationRepository, NOTIFICATION_REPOSITORY} from "@domain/repositories/notifications/notification.repository";
+import {UserRepository, USER_REPOSITORY} from "@domain/repositories/users/user.repository";
+import {CompanyRepository, COMPANY_REPOSITORY} from "@domain/repositories/companys/company.repository";
+import {InviteRepository, INVITE_REPOSITORY} from "@domain/repositories/invites/invite.repository";
+import {FriendshipRepository, FRIENDSHIP_REPOSITORY} from "@domain/repositories/friendships/friendship.repository";
 import {DomainEventsService} from "@domain/services/domain-events.service";
 import {ConfigService} from "@nestjs/config";
 
@@ -20,9 +20,10 @@ export class NotificationCreatorService {
     ) {
     }
 
-    private async emitNotificationCreated(notification: any, companyId: string | null, recipientUserId: string | null, senderUserId: string | null): Promise<void> {
+    private async emitNotificationCreated(notification: any, companyId: string |
+        null, recipientUserId: string | null, senderUserId: string | null): Promise<void> {
         await this.domainEvents.publish({
-            name: "notification.created",
+            name: "notifications.created",
             payload: {
                 notificationId: notification.id,
                 companyId: companyId || null,
@@ -47,31 +48,31 @@ export class NotificationCreatorService {
                 case 'friend.removed':
                     await this.handleFriendRemoved(payload);
                     break;
-                case 'invite.created':
+                case 'invites.created':
                     await this.handleInviteCreated(payload);
                     break;
-                case 'invite.accepted':
+                case 'invites.accepted':
                     await this.handleInviteAccepted(payload);
                     break;
-                case 'invite.rejected':
+                case 'invites.rejected':
                     await this.handleInviteRejected(payload);
                     break;
-                case 'membership.joined':
+                case 'memberships.joined':
                     await this.handleMemberAdded(payload);
                     break;
-                case 'membership.removed':
+                case 'memberships.removed':
                     await this.handleMemberRemoved(payload);
                     break;
-                case 'membership.role.updated':
+                case 'memberships.role.updated':
                     await this.handleRoleChanged(payload);
                     break;
-                case 'company.created':
+                case 'companys.created':
                     await this.handleCompanyCreated(payload);
                     break;
-                case 'company.updated':
+                case 'companys.updated':
                     await this.handleCompanyUpdated(payload);
                     break;
-                case 'company.deleted':
+                case 'companys.deleted':
                     await this.handleCompanyDeleted(payload);
                     break;
             }
@@ -106,7 +107,7 @@ export class NotificationCreatorService {
         });
         
         await this.domainEvents.publish({
-            name: "notification.created",
+            name: "notifications.created",
             payload: {
                 notificationId: notification.id,
                 companyId: null,
@@ -225,7 +226,7 @@ export class NotificationCreatorService {
                 title: "INVITE_CREATED",
                 body: "INVITE_CREATED",
                 meta: {
-                    kind: "invite.created",
+                    kind: "invites.created",
                     channel: "company",
                     sender: {
                         id: inviter.id,
@@ -262,7 +263,7 @@ export class NotificationCreatorService {
             title: "INVITE_ACCEPTED",
             body: "INVITE_ACCEPTED",
             meta: {
-                kind: "invite.accepted",
+                kind: "invites.accepted",
                 channel: "company",
                 sender: {
                     id: acceptedBy.id,
@@ -388,7 +389,7 @@ export class NotificationCreatorService {
             title: "COMPANY_CREATED",
             body: "COMPANY_CREATED",
             meta: {
-                kind: "company.created",
+                kind: "companys.created",
                 channel: "company",
                 companyName: company.name,
                 companyId,

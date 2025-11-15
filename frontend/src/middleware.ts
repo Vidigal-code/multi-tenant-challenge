@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
     const {pathname} = request.nextUrl;
 
     const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
-    const isInvite = pathname.startsWith('/invite/');
+    const isInvite = pathname.startsWith('/invites/');
     const isApi = pathname.startsWith('/api');
     const isHome = pathname === '/';
     const isPublic = isAuthPage || isInvite || isApi || isHome;

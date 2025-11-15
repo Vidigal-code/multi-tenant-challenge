@@ -6,20 +6,27 @@ import rateLimit from "express-rate-limit";
 import {swaggerSetup} from "./swagger";
 import {ValidationPipe} from "@nestjs/common";
 import pinoHttp from "pino-http";
+import {ConfigService} from "@nestjs/config";
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, {bufferLogs: true});
+    const configService = app.get(ConfigService);
+    const loggingEnabled = configService.get<boolean>("app.logging.enabled", true);
+    
     app.use(helmet());
     app.use(cookieParser());
-    app.use(
-        pinoHttp({
-            autoLogging: false,
-            transport:
-                process.env.NODE_ENV !== "production"
-                    ? {target: "pino-pretty", options: {singleLine: true}}
-                    : undefined,
-        }),
-    );
+    
+    if (loggingEnabled) {
+        app.use(
+            pinoHttp({
+                autoLogging: false,
+                transport:
+                    process.env.NODE_ENV !== "production"
+                        ? {target: "pino-pretty", options: {singleLine: true}}
+                        : undefined,
+            }),
+        );
+    }
     app.enableCors({
         origin: ["http://localhost:3000"],
         credentials: true,

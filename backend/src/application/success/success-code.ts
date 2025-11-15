@@ -37,11 +37,7 @@ export enum SuccessCode {
     NOTIFICATION_DELETED = "NOTIFICATION_DELETED",
 }
 
-/**
- * @deprecated Use SuccessMessage instead
- * Success result wrapper for use cases
- * Contains the success code and optional data
- */
+
 export class SuccessResult<T = any> {
     constructor(
         public readonly code: SuccessCode,

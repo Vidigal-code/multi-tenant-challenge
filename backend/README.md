@@ -68,10 +68,11 @@ O projeto segue **Arquitetura Hexagonal (Ports & Adapters)** e **Domain-Driven D
    - Serviços de domínio
 
 2. **Application Layer** (`src/application/`)
-   - Use Cases (casos de uso)
+   - Use Cases organizados por domínio (auth, company, membership, notification, friendship, user)
    - DTOs (Data Transfer Objects)
    - Serviços de aplicação
    - Ports (interfaces)
+   - Sistema de erros padronizado (ErrorCode enum)
 
 3. **Infrastructure Layer** (`src/infrastructure/`)
    - Implementações Prisma
@@ -85,6 +86,8 @@ O projeto segue **Arquitetura Hexagonal (Ports & Adapters)** e **Domain-Driven D
    - Consumers (RabbitMQ)
 
 ## 📁 Estrutura do Projeto
+
+> **Nota**: Os use cases estão organizados por domínio para melhor separação de responsabilidades e manutenibilidade do código.
 
 ```
 backend/
@@ -105,11 +108,17 @@ backend/
 │   │   └── value-objects/    # Value Objects
 │   │
 │   ├── application/           # Camada de Aplicação
-│   │   ├── use-cases/        # Casos de uso (29 arquivos)
+│   │   ├── use-cases/        # Casos de uso organizados por domínio
+│   │   │   ├── auth/        # Autenticação (login, signup)
+│   │   │   ├── company/     # Empresas (create, update, delete, etc.)
+│   │   │   ├── membership/  # Membros e convites
+│   │   │   ├── notification/# Notificações
+│   │   │   ├── friendship/  # Amizades
+│   │   │   └── user/        # Usuários (search, delete-account)
 │   │   ├── dto/              # Data Transfer Objects
 │   │   ├── services/         # Serviços de aplicação
 │   │   ├── ports/            # Ports (interfaces)
-│   │   ├── errors/           # Erros de aplicação
+│   │   ├── errors/           # Erros de aplicação (ErrorCode enum padronizado)
 │   │   └── success/          # Mensagens de sucesso
 │   │
 │   ├── infrastructure/       # Camada de Infraestrutura
@@ -210,30 +219,31 @@ Gerencia observabilidade:
 
 ## 🎯 Use Cases (29)
 
-### Autenticação
+Os use cases estão organizados por domínio em `src/application/use-cases/`:
+
+### Autenticação (`auth/`)
 - `signup.usecase.ts` - Cadastro de usuário
 - `login.usecase.ts` - Login
-- `delete-account.usecase.ts` - Exclusão de conta
 
-### Empresas
+### Empresas (`company/`)
 - `create-company.usecase.ts` - Criar empresa
 - `update-company.usecase.ts` - Atualizar empresa
 - `delete-company.usecase.ts` - Excluir empresa
 - `get-company.usecase.ts` - Obter empresa
 - `list-companies.usecase.ts` - Listar empresas
+- `select-company.usecase.ts` - Selecionar empresa ativa
 - `transfer-ownership.usecase.ts` - Transferir propriedade
 - `list-primary-owner-companies.usecase.ts` - Listar empresas como owner principal
 
-### Membros e Convites
+### Membros e Convites (`membership/`)
 - `invite-user.usecase.ts` - Convidar usuário
 - `accept-invite.usecase.ts` - Aceitar convite
 - `reject-invite.usecase.ts` - Rejeitar convite
-- `select-company.usecase.ts` - Selecionar empresa ativa
 - `change-member-role.usecase.ts` - Alterar role do membro
 - `remove-member.usecase.ts` - Remover membro
 - `leave-company.usecase.ts` - Sair da empresa
 
-### Amizades
+### Amizades (`friendship/`)
 - `send-friend-request.usecase.ts` - Enviar solicitação
 - `accept-friend-request.usecase.ts` - Aceitar solicitação
 - `reject-friend-request.usecase.ts` - Rejeitar solicitação
@@ -241,15 +251,16 @@ Gerencia observabilidade:
 - `list-friendships.usecase.ts` - Listar amigos
 - `send-friend-message.usecase.ts` - Enviar mensagem
 
-### Notificações
+### Notificações (`notification/`)
 - `send-notification.usecase.ts` - Enviar notificação
 - `list-notifications.usecase.ts` - Listar notificações
 - `mark-notification-read.usecase.ts` - Marcar como lida
 - `delete-notification.usecase.ts` - Excluir notificação
 - `reply-to-notification.usecase.ts` - Responder notificação
 
-### Usuários
+### Usuários (`user/`)
 - `search-users.usecase.ts` - Buscar usuários
+- `delete-account.usecase.ts` - Exclusão de conta
 
 ## ⚙️ Configuração
 
@@ -452,6 +463,21 @@ docker run -p 4000:4000 --env-file .env backend:latest
 - **Validação** de inputs com class-validator
 - **RBAC** (Role-Based Access Control)
 - **Tenant Guard** para isolamento multi-tenant
+
+## ⚠️ Tratamento de Erros
+
+O projeto utiliza um sistema padronizado de códigos de erro através do enum `ErrorCode`:
+
+- **Erros padronizados**: Todos os use cases utilizam `ErrorCode` ao invés de strings literais
+- **Mapeamento HTTP**: O `AllExceptionsFilter` mapeia automaticamente códigos de erro para status HTTP apropriados
+- **Códigos organizados por categoria**: Validation, Authentication, User, Company, Invitations, Members, Notifications, Friendships
+
+Exemplo de uso:
+```typescript
+throw new ApplicationError(ErrorCode.NOTIFICATION_NOT_FOUND);
+```
+
+O filtro de exceções (`all-exceptions.filter.ts`) converte automaticamente para a resposta HTTP apropriada.
 
 ## 📊 Observabilidade
 

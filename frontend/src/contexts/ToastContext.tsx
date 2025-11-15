@@ -17,7 +17,8 @@ export type ToastContextValue = {
     clear: () => void;
 };
 
-export const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+export const ToastContext =
+    createContext<ToastContextValue | undefined>(undefined);
 
 export function ToastProvider({children}: { children: React.ReactNode }) {
 
@@ -42,9 +43,11 @@ export function ToastProvider({children}: { children: React.ReactNode }) {
         return id;
     }, [dismiss]);
 
-    const clear = useCallback(() => setToasts([]), []);
+    const clear =
+        useCallback(() => setToasts([]), []);
 
-    const value = useMemo(() => ({toasts, show, dismiss, clear}), [toasts, show, dismiss, clear]);
+    const value =
+        useMemo(() => ({toasts, show, dismiss, clear}), [toasts, show, dismiss, clear]);
 
     return (
         <ToastContext.Provider value={value}>

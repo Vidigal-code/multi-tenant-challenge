@@ -1,7 +1,7 @@
 import {Inject, Injectable, Logger} from "@nestjs/common";
 import Redis from "ioredis";
 import {EMAIL_VALIDATION_SERVICE, EmailValidationService,} from "@application/ports/email-validation.service";
-import {USER_REPOSITORY, UserRepository,} from "@domain/repositories/user.repository";
+import {USER_REPOSITORY, UserRepository,} from "@domain/repositories/users/user.repository";
 import {ConfigService} from "@nestjs/config";
 
 @Injectable()

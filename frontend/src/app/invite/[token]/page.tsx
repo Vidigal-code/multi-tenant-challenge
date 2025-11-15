@@ -1,12 +1,13 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+
+import React, {useState } from 'react';
 import {useParams, useRouter} from 'next/navigation';
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
 import {http} from '../../../lib/http';
 import {getErrorMessage} from '../../../lib/error';
-import {getSuccessMessage, getErrorMessage as getErrorMessageByCode} from '../../../lib/messages';
 import {useToast} from '../../../hooks/useToast';
-import { ConfirmModal } from '../../../components/ConfirmModal';
+import { ConfirmModal } from '../../../components/modals/ConfirmModal';
+import { DEFAULT_COMPANY_LOGO } from '../../../types';
 
 type InviteInfo = {
     id: string;
@@ -47,6 +48,7 @@ function formatDate(dateString: string | null | undefined): string {
 }
 
 export default function InviteByCodePage() {
+
     const { token } = useParams() as { token: string };
     const router = useRouter();
     const { show } = useToast();
@@ -102,22 +104,26 @@ export default function InviteByCodePage() {
         },
     });
 
-    const defaultLogo = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_LOGO ||  'https://dynamic.design.com/preview/logodraft/673b48a6-8177-4a84-9785-9f74d395a258/image/large.png';
+    const defaultLogo = DEFAULT_COMPANY_LOGO;
     const [logoError, setLogoError] = React.useState(false);
 
     if (inviteQuery.isLoading) {
         return (
-            <div className="p-6 max-w-4xl mx-auto">
-                <h1 className="text-xl font-semibold mb-4">Carregando convite...</h1>
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Carregando convite...</h1>
+                </div>
             </div>
         );
     }
 
     if (inviteQuery.isError) {
         return (
-            <div className="p-6 max-w-4xl mx-auto">
-                <h1 className="text-xl font-semibold mb-4 text-red-600">Erro</h1>
-                <p className="text-red-600">{getErrorMessage(inviteQuery.error, 'Convite inválido ou expirado')}</p>
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Erro</h1>
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">{getErrorMessage(inviteQuery.error, 'Convite inválido ou expirado')}</div>
+                </div>
             </div>
         );
     }
@@ -134,58 +140,69 @@ export default function InviteByCodePage() {
     };
 
     return (
-        <div className="p-6 max-w-4xl mx-auto space-y-4">
-            <h1 className="text-xl font-semibold">Detalhes do Convite</h1>
-            <div className="space-y-4 border rounded p-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
+            <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Detalhes do Convite</h1>
+                <p className="text-gray-600 dark:text-gray-400">Visualize e gerencie seu convite</p>
+            </div>
+            <div className="space-y-6 border border-gray-200 dark:border-gray-800 rounded-lg p-4 sm:p-6 bg-white dark:bg-gray-950">
                 {invite.companyLogo && (
                     <div className="flex items-center gap-4">
                         <img
                             src={logoError || !invite.companyLogo ? defaultLogo : invite.companyLogo}
                             alt="Logo da empresa"
-                            className="w-16 h-16 object-cover rounded"
+                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-800 flex-shrink-0"
                             onError={() => setLogoError(true)}
                         />
-                        <div>
-                            <h2 className="text-lg font-semibold">{invite.companyName || 'Empresa Desconhecida'}</h2>
-                            <p className="text-sm text-gray-600">ID: {invite.companyId}</p>
+                        <div className="min-w-0 flex-1">
+                            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-1">{invite.companyName || 'Empresa Desconhecida'}</h2>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 font-mono truncate">ID: {invite.companyId}</p>
                         </div>
                     </div>
                 )}
                 {invite.companyDescription && (
-                    <div>
-                        <p className="text-sm text-gray-700">{invite.companyDescription}</p>
+                    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+                        <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">{invite.companyDescription}</p>
                     </div>
                 )}
-                <div className="space-y-2 text-sm">
-                    <p><strong>Email do Destinatário:</strong> {invite.email}</p>
+                <div className="space-y-3 text-sm sm:text-base">
+                    <div><strong className="text-gray-700 dark:text-gray-300">Email do Destinatário:</strong> <span className="text-gray-900 dark:text-white">{invite.email}</span></div>
                     {invite.inviterName && (
-                        <p><strong>Convidado por:</strong> {invite.inviterName} ({invite.inviterEmail || 'N/A'})</p>
+                        <div><strong className="text-gray-700 dark:text-gray-300">Convidado por:</strong> <span className="text-gray-900 dark:text-white">{invite.inviterName} ({invite.inviterEmail || 'N/A'})</span></div>
                     )}
-                    <p><strong>Cargo:</strong> {invite.role}</p>
-                    <p><strong>Status:</strong> {STATUS_LABELS[invite.status] || invite.status}</p>
-                    <p><strong>Data de Envio:</strong> {formatDate(invite.createdAt)}</p>
-                    <p><strong>Expira em:</strong> {formatDate(invite.expiresAt)}</p>
+                    <div><strong className="text-gray-700 dark:text-gray-300">Cargo:</strong> <span className="text-gray-900 dark:text-white">{invite.role}</span></div>
+                    <div>
+                        <strong className="text-gray-700 dark:text-gray-300">Status:</strong>{' '}
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                            invite.status === 'PENDING' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300' :
+                            invite.status === 'ACCEPTED' ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300' :
+                            invite.status === 'REJECTED' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
+                            'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'
+                        }`}>{STATUS_LABELS[invite.status] || invite.status}</span>
+                    </div>
+                    <div><strong className="text-gray-700 dark:text-gray-300">Data de Envio:</strong> <span className="text-gray-900 dark:text-white">{formatDate(invite.createdAt)}</span></div>
+                    <div><strong className="text-gray-700 dark:text-gray-300">Expira em:</strong> <span className="text-gray-900 dark:text-white">{formatDate(invite.expiresAt)}</span></div>
                 </div>
                 {invite.isInviter && (
-                    <div className="pt-2 border-t">
-                        <p className="text-sm text-gray-600">
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                             Você criou este convite. Apenas o destinatário pode aceitar ou rejeitar.
                         </p>
                     </div>
                 )}
                 {invite.canAccept && invite.canReject && (
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
                         <button
                             onClick={() => acceptMutation.mutate()}
                             disabled={acceptMutation.isPending}
-                            className="bg-blue-600 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
+                            className="flex-1 sm:flex-initial px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm sm:text-base whitespace-nowrap"
                         >
                             {acceptMutation.isPending ? 'Aceitando...' : 'Aceitar'}
                         </button>
                         <button
                             onClick={() => setShowRejectModal(true)}
                             disabled={rejectMutation.isPending}
-                            className="border border-gray-300 px-4 py-2 rounded text-sm disabled:opacity-50 hover:bg-gray-50"
+                            className="flex-1 sm:flex-initial px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm sm:text-base whitespace-nowrap"
                         >
                             {rejectMutation.isPending ? 'Rejeitando...' : 'Rejeitar'}
                         </button>

@@ -30,7 +30,6 @@ api.interceptors.request.use((config: TimedConfig) => {
     return config;
 });
 
-// Flag para prevenir múltiplos redirecionamentos simultâneos
 let isRedirecting = false;
 
 api.interceptors.response.use(
@@ -45,7 +44,6 @@ api.interceptors.response.use(
             (error as any).message = message;
         }
 
-        // Redirecionar para login apenas se não estiver já na página de login e não estiver redirecionando
         if (typeof window !== 'undefined' && status === 401 && !isRedirecting) {
             const currentPath = window.location.pathname;
             if (currentPath !== '/login' && currentPath !== '/signup') {

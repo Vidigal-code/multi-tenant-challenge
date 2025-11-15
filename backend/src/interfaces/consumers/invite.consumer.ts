@@ -1,6 +1,6 @@
 import {ConfigService} from "@nestjs/config";
 import {Logger} from "@nestjs/common";
-import {INVITE_QUEUE, RabbitMQService} from "../../infrastructure/messaging/rabbitmq.service";
+import {INVITE_QUEUE, RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
 
 export class InviteConsumer {
     private readonly logger = new Logger(InviteConsumer.name);
@@ -40,7 +40,7 @@ export class InviteConsumer {
 
 async function bootstrap() {
     const logger = new Logger("WorkerBootstrap");
-    logger.log("Starting invite consumer worker...");
+    logger.log("Starting invites consumer worker...");
 
     const config = new ConfigService();
     const rabbitmqUrl =

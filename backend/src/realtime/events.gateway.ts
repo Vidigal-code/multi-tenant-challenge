@@ -9,18 +9,18 @@ import {Inject, Injectable, Logger} from '@nestjs/common';
 import {Server} from 'socket.io';
 import {JwtService} from '@nestjs/jwt';
 import {ConfigService} from '@nestjs/config';
-import {MEMBERSHIP_REPOSITORY, MembershipRepository} from '@domain/repositories/membership.repository';
+import {MEMBERSHIP_REPOSITORY, MembershipRepository} from '@domain/repositories/memberships/membership.repository';
 import {createAdapter} from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
 import {Counter, Gauge, Registry, Summary} from 'prom-client';
 
 export const RT_EVENT = {
-    COMPANY_UPDATED: 'company.updated',
+    COMPANY_UPDATED: 'companys.updated',
     MEMBER_JOINED: 'member.joined',
     MEMBER_LEFT: 'member.left',
-    NOTIFICATION_CREATED: 'notification.created',
-    INVITE_REJECTED: 'invite.rejected',
-    NOTIFICATION_READ: 'notification.read',
+    NOTIFICATION_CREATED: 'notifications.created',
+    INVITE_REJECTED: 'invites.rejected',
+    NOTIFICATION_READ: 'notifications.read',
     FRIEND_REQUEST_SENT: 'friend.request.sent',
     FRIEND_REQUEST_ACCEPTED: 'friend.request.accepted',
     FRIEND_REMOVED: 'friend.removed',

@@ -25,3 +25,6 @@ export type UserSearchDTO = {
     name: string;
     email: string;
 };
+
+export const DEFAULT_COMPANY_LOGO = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_LOGO || 
+    'https://dynamic.design.com/preview/logodraft/673b48a6-8177-4a84-9785-9f74d395a258/image/large.png';

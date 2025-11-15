@@ -1,14 +1,16 @@
 "use client";
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { http } from '../../lib/http';
 import { getErrorMessage } from '../../lib/error';
 import { useToast } from '../../hooks/useToast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
-import { ConfirmModal } from '../../components/ConfirmModal';
-import { Modal } from '../../components/Modal';
+import { ConfirmModal } from '../../components/modals/ConfirmModal';
+import { Modal } from '../../components/modals/Modal';
+import {FaExclamationTriangle} from "react-icons/fa";
 
 export default function ProfilePage() {
+
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [currentPassword, setCurrentPassword] = useState('');
@@ -29,7 +31,7 @@ export default function ProfilePage() {
             const { data } = await http.get('/auth/account/primary-owner-companies', {
                 params: { page: 1, pageSize: 10 },
             });
-            
+
             if (data.total > 0) {
                 setPrimaryOwnerPage(1);
                 setSelectedCompaniesToDelete([]);
@@ -44,17 +46,17 @@ export default function ProfilePage() {
 
     async function handleDeleteAccount() {
         try {
-            const deleteCompanyIds = selectedCompaniesToDelete.length > 0 
-                ? selectedCompaniesToDelete 
+            const deleteCompanyIds = selectedCompaniesToDelete.length > 0
+                ? selectedCompaniesToDelete
                 : undefined;
-            
+
             const config: any = {};
             if (deleteCompanyIds && deleteCompanyIds.length > 0) {
                 config.data = { deleteCompanyIds };
             }
-            
+
             await http.delete('/auth/account', config);
-            
+
             setShowDeleteModal(false);
             setShowPrimaryOwnerModal(false);
             show({ type: 'success', message: 'Conta excluída permanentemente' });
@@ -107,8 +109,6 @@ export default function ProfilePage() {
         }
     }, [profileQuery.data]);
 
-    // Email completo sem máscara
-
     const updateMutation = useMutation({
         mutationFn: async () => {
             const payload: any = {};
@@ -146,7 +146,7 @@ export default function ProfilePage() {
             await qc.invalidateQueries({ queryKey: [queryKeys.profile()] });
         },
         onError: (err: any) => {
-            const m = getErrorMessage(err, 'Failed to update notification preferences');
+            const m = getErrorMessage(err, 'Failed to update notifications preferences');
             show({ type: 'error', message: m });
         }
     });
@@ -154,26 +154,29 @@ export default function ProfilePage() {
     const loading = updateMutation.isPending || profileQuery.isLoading;
 
     return (
-        <div className="space-y-6">
-            <h1 className="text-xl font-semibold">Meu Perfil</h1>
-            <div className="border-b border-gray-200">
+        <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+            <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Meu Perfil</h1>
+                <p className="text-gray-600 dark:text-gray-400">Gerencie suas informações e preferências</p>
+            </div>
+            <div className="border-b border-gray-200 dark:border-gray-800">
                 <nav className="-mb-px flex space-x-8">
                     <button
                         onClick={() => setActiveTab('profile')}
-                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                             activeTab === 'profile'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                ? 'border-gray-900 dark:border-white text-gray-900 dark:text-white'
+                                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                         }`}
                     >
                         Perfil
                     </button>
                     <button
                         onClick={() => setActiveTab('privacy')}
-                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                        className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                             activeTab === 'privacy'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                ? 'border-gray-900 dark:border-white text-gray-900 dark:text-white'
+                                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                         }`}
                     >
                         Configurações de Privacidade
@@ -183,48 +186,54 @@ export default function ProfilePage() {
 
             {activeTab === 'profile' && (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-sm text-gray-600">Nome atual</label>
-                            <input value={profileQuery.isLoading ? '...' : currentName} readOnly className="border px-2 py-1 w-full bg-gray-100" />
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome atual</label>
+                                <input value={profileQuery.isLoading ? '...' : currentName} readOnly className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-950 text-gray-600 dark:text-gray-400 cursor-not-allowed" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email atual</label>
+                                <input value={profileQuery.isLoading ? '...' : currentEmail} readOnly className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-950 text-gray-600 dark:text-gray-400 cursor-not-allowed" />
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm text-gray-600">Email atual</label>
-                            <input value={profileQuery.isLoading ? '...' : currentEmail} readOnly className="border px-2 py-1 w-full bg-gray-100" />
-                        </div>
-                    </div>
-                    {message && <p className="text-green-700">{message}</p>}
-                    {error && <p className="text-red-600" data-testid="profile-error">{error}</p>}
-                    <form className="space-y-3" onSubmit={async e => {
-                        e.preventDefault();
-                        setError(null); setMessage(null);
-                        updateMutation.mutate();
-                    }}>
-                        <input value={name} onChange={e => setName(e.target.value)} placeholder="Novo nome"
-                               className="border px-2 py-1 w-full"/>
-                        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Novo email"
-                               className="border px-2 py-1 w-full"/>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
-                                   placeholder="Senha atual (obrigatória para alterar senha/email)"
-                                   className="border px-2 py-1 w-full"/>
-                            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                                   placeholder="Nova senha" className="border px-2 py-1 w-full"/>
-                        </div>
-                        <button disabled={loading}
-                                className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50">
-                            {loading ? 'Salvando...' : 'Salvar alterações'}</button>
-                    </form>
+                        {message && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">{message}</div>}
+                        {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm" data-testid="profile-error">{error}</div>}
+                        <form className="space-y-4" onSubmit={async e => {
+                            e.preventDefault();
+                            setError(null); setMessage(null);
+                            updateMutation.mutate();
+                        }}>
+                            <div>
+                                <input value={name} onChange={e => setName(e.target.value)} placeholder="Novo nome"
+                                       className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
+                            </div>
+                            <div>
+                                <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Novo email"
+                                       className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
+                                       placeholder="Senha atual"
+                                       className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
+                                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                                       placeholder="Nova senha" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
+                            </div>
+                            <button disabled={loading}
+                                    className="w-full px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors">
+                                {loading ? 'Salvando...' : 'Salvar alterações'}</button>
+                        </form>
 
-                    <div className="pt-6 border-t">
-                        <h2 className="font-semibold mb-2">Excluir conta</h2>
-                        <button className="bg-red-600 text-white px-4 py-2 rounded" onClick={handleDeleteAccountClick}>
-                            Excluir permanentemente
-                        </button>
+                        <div className="pt-8 border-t border-gray-200 dark:border-gray-800">
+                            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Excluir conta</h2>
+                            <button className="px-4 py-3 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors font-medium" onClick={handleDeleteAccountClick}>
+                                Excluir permanentemente
+                            </button>
+                        </div>
                     </div>
                     <ConfirmModal
                         open={showDeleteModal}
-                        title={selectedCompaniesToDelete.length > 0 
+                        title={selectedCompaniesToDelete.length > 0
                             ? `Excluir ${selectedCompaniesToDelete.length} empresa(s) e conta?`
                             : "Tem certeza que deseja excluir permanentemente sua conta?"}
                         onCancel={() => {
@@ -259,16 +268,18 @@ export default function ProfilePage() {
                         <div className="space-y-4">
                             <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
                                 <p className="text-sm text-yellow-800 font-semibold mb-2 flex items-center gap-2">
-                                    <span className="text-lg">⚠️</span>
+                                    <span className="text-lg text-yellow-600">
+                                      <FaExclamationTriangle />
+                                    </span>
                                     Você é o owner principal (criador) de uma ou mais empresas.
                                 </p>
                                 <p className="text-sm text-yellow-700">
-                                    Para excluir sua conta, você deve primeiro excluir todas as empresas onde você é o owner principal. 
-                                    Isso é necessário porque, como criador, você é responsável pela existência da empresa. 
+                                    Para excluir sua conta, você deve primeiro excluir todas as empresas onde você é o owner principal.
+                                    Isso é necessário porque, como criador, você é responsável pela existência da empresa.
                                     Excluir essas empresas também removerá todos os dados associados, membros e convites.
                                 </p>
                             </div>
-                            
+
                             {primaryOwnerCompaniesQuery.isLoading ? (
                                 <p>Carregando empresas...</p>
                             ) : primaryOwnerCompaniesQuery.data?.data?.length > 0 ? (
@@ -293,8 +304,8 @@ export default function ProfilePage() {
                                                     <div className="text-xs text-gray-600">ID: {company.id}</div>
                                                     {company.description && (
                                                         <div className="text-xs text-gray-500 mt-1">
-                                                            {company.description.length > 100 
-                                                                ? `${company.description.slice(0, 100)}...` 
+                                                            {company.description.length > 100
+                                                                ? `${company.description.slice(0, 100)}...`
                                                                 : company.description}
                                                         </div>
                                                     )}
@@ -302,7 +313,7 @@ export default function ProfilePage() {
                                             </label>
                                         ))}
                                     </div>
-                                    
+
                                     {primaryOwnerCompaniesQuery.data.total > 10 && (
                                         <div className="flex items-center gap-2 text-sm">
                                             <button
@@ -328,14 +339,14 @@ export default function ProfilePage() {
                                             </button>
                                         </div>
                                     )}
-                                    
+
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={async () => {
                                                 const allCompanies: any[] = [];
                                                 let currentPage = 1;
                                                 let hasMore = true;
-                                                
+
                                                 while (hasMore) {
                                                     const { data } = await http.get('/auth/account/primary-owner-companies', {
                                                         params: { page: currentPage, pageSize: 100 },
@@ -344,7 +355,7 @@ export default function ProfilePage() {
                                                     hasMore = data.data.length === 100 && allCompanies.length < data.total;
                                                     currentPage++;
                                                 }
-                                                
+
                                                 setSelectedCompaniesToDelete(allCompanies.map((c: any) => c.id));
                                             }}
                                             className="text-sm text-blue-600 underline"
@@ -358,16 +369,17 @@ export default function ProfilePage() {
                                             Limpar seleção
                                         </button>
                                     </div>
-                                    
+
                                     <div className="bg-red-50 border border-red-200 rounded p-3">
                                         <p className="text-sm text-red-800">
-                                            <strong>Selecionadas {selectedCompaniesToDelete.length} de {primaryOwnerCompaniesQuery.data.total} empresas para excluir.</strong>
+                                            <strong>Selecionadas {selectedCompaniesToDelete.length} de
+                                                {primaryOwnerCompaniesQuery.data.total} empresas para excluir.</strong>
                                         </p>
                                         <p className="text-xs text-red-700 mt-1">
                                             Você deve selecionar todas as empresas para prosseguir com a exclusão da conta.
                                         </p>
                                     </div>
-                                    
+
                                     <div className="flex justify-end gap-2">
                                         <button
                                             onClick={() => {
@@ -383,9 +395,10 @@ export default function ProfilePage() {
                                                 if (selectedCompaniesToDelete.length === primaryOwnerCompaniesQuery.data.total) {
                                                     setShowDeleteModal(true);
                                                 } else {
-                                                    show({ 
-                                                        type: 'error', 
-                                                        message: `Você deve selecionar todas as ${primaryOwnerCompaniesQuery.data.total} empresas para excluir sua conta.` 
+                                                    show({
+                                                        type: 'error',
+                                                        message: `Você deve selecionar todas as 
+                                                        ${primaryOwnerCompaniesQuery.data.total} empresas para excluir sua conta.`
                                                     });
                                                 }
                                             }}
@@ -410,7 +423,7 @@ export default function ProfilePage() {
                     <p className="text-sm text-gray-600">
                         Controle quais notificações você recebe do sistema.
                     </p>
-                    
+
                     <div className="space-y-4 border rounded-lg p-4">
                         <div className="flex items-center justify-between">
                             <div>

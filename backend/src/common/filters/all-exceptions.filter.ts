@@ -13,7 +13,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         const request = ctx.getRequest();
 
         let status = HttpStatus.INTERNAL_SERVER_ERROR;
-        let message = "Internal server error";
+        let message = "Internal server errors";
         let code = "INTERNAL_ERROR";
 
         if (exception instanceof ApplicationError) {
@@ -99,11 +99,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
             [ErrorCode.CANNOT_MODIFY_OWNER]: HttpStatus.FORBIDDEN,
             [ErrorCode.CANNOT_ASSIGN_OWNER]: HttpStatus.FORBIDDEN,
             [ErrorCode.OWNER_MUST_TRANSFER_BEFORE_LEAVE]: HttpStatus.FORBIDDEN,
+            [ErrorCode.ONLY_OWNER_CAN_TRANSFER]: HttpStatus.FORBIDDEN,
+            [ErrorCode.NEW_OWNER_NOT_MEMBER]: HttpStatus.NOT_FOUND,
+            [ErrorCode.CANNOT_TRANSFER_TO_SELF]: HttpStatus.BAD_REQUEST,
 
             // Notification errors
             [ErrorCode.NO_COMPANY_MEMBERS_AVAILABLE]: HttpStatus.BAD_REQUEST,
             [ErrorCode.CANNOT_SEND_TO_SELF]: HttpStatus.BAD_REQUEST,
             [ErrorCode.USER_MUST_BE_MEMBER_OR_FRIEND]: HttpStatus.FORBIDDEN,
+            [ErrorCode.NOTIFICATION_NOT_FOUND]: HttpStatus.NOT_FOUND,
+            [ErrorCode.NOT_AUTHORIZED]: HttpStatus.FORBIDDEN,
+            [ErrorCode.CANNOT_REPLY_TO_NOTIFICATION]: HttpStatus.FORBIDDEN,
+            [ErrorCode.FORBIDDEN_NOTIFICATION]: HttpStatus.FORBIDDEN,
 
             // Friendship errors
             [ErrorCode.CANNOT_ADD_YOURSELF]: HttpStatus.BAD_REQUEST,
@@ -113,6 +120,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             [ErrorCode.FRIENDSHIP_NOT_FOUND]: HttpStatus.NOT_FOUND,
             [ErrorCode.CANNOT_ACCEPT_OTHERS_REQUEST]: HttpStatus.FORBIDDEN,
             [ErrorCode.FRIENDSHIP_NOT_PENDING]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.CANNOT_REJECT_OTHERS_REQUEST]: HttpStatus.FORBIDDEN,
 
             // Account Deletion
             [ErrorCode.CANNOT_DELETE_ACCOUNT_WITH_PRIMARY_OWNER_COMPANIES]: HttpStatus.BAD_REQUEST,

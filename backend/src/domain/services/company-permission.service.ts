@@ -37,7 +37,7 @@ export class CompanyPermissionService {
                     return targetRole === Role.MEMBER;
                 }
                 if (requesterRole === Role.OWNER) {
-                    return targetRole !== Role.OWNER || isSelf;
+                    return targetRole !== Role.OWNER;
                 }
                 return false;
 

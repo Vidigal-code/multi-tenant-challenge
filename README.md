@@ -292,7 +292,7 @@ Uma camada de atualização em tempo real foi adicionada usando **Socket.IO** no
 
 ### Como Assinar no Frontend
 ```ts
-import { subscribe, RT_EVENTS, whenReady } from '@/lib/realtime';
+import { subscribe, RT_EVENTS, whenReady } from '@/lib/realtimes';
 
 useEffect(() => {
 	whenReady().then(() => {
@@ -551,7 +551,7 @@ Exemplo `GET /invites?page=2&pageSize=10`:
 		{
 			"id": "inv_123",
 			"companyId": "comp_456",
-			"email": "user@example.com",
+			"email": "users@example.com",
 			"role": "MEMBER",
 			"status": "PENDING",
 			"token": "abc123",
@@ -570,7 +570,7 @@ Exemplo `GET /invites/{inviteCode}`:
 {
 	"id": "inv_123",
 	"companyId": "comp_456",
-	"email": "user@example.com",
+	"email": "users@example.com",
 	"status": "PENDING",
 	"role": "MEMBER",
 	"createdAt": "2025-11-12T10:00:00.000Z",
@@ -605,7 +605,7 @@ Exemplo exclusão de conta:
 
 **Cenário 1: Usuário NÃO é owner principal**
 ```bash
-DELETE /auth/account
+DELETE /invites/account
 ```
 Response: `{"success":true}` (cookie limpo)
 - Remove usuário de todas as empresas
@@ -615,7 +615,7 @@ Response: `{"success":true}` (cookie limpo)
 **Cenário 2: Usuário É owner principal (criador) de empresas**
 ```bash
 # Primeiro, listar empresas onde é owner principal
-GET /auth/account/primary-owner-companies?page=1&pageSize=10
+GET /invites/account/primary-owner-companies?page=1&pageSize=10
 
 # Response:
 {
@@ -635,7 +635,7 @@ GET /auth/account/primary-owner-companies?page=1&pageSize=10
 }
 
 # Depois, deletar conta informando IDs das empresas a deletar
-DELETE /auth/account
+DELETE /invites/account
 Body: { "deleteCompanyIds": ["comp_123"] }
 ```
 Response: `{"success":true}` (cookie limpo)
@@ -695,7 +695,7 @@ Erros de permissão retornam:
 	"code": "FORBIDDEN_ACTION",
 	"message": "Você não possui permissão para remover este usuário.",
 	"timestamp": "...",
-	"path": "/company/{id}/members/{userId}"
+	"path": "/companys/{id}/members/{userId}"
 }
 ```
 

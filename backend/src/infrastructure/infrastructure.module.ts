@@ -1,13 +1,13 @@
 import {Module} from "@nestjs/common";
-import {PrismaService} from "./prisma/prisma.service";
-import {userRepositoryProvider} from "./prisma/user.prisma.repository";
-import {companyRepositoryProvider} from "./prisma/company.prisma.repository";
-import {membershipRepositoryProvider} from "./prisma/membership.prisma.repository";
-import {inviteRepositoryProvider} from "./prisma/invite.prisma.repository";
-import {RabbitMQModule} from "./messaging/rabbitmq.module";
+import {PrismaService} from "./prisma/services/prisma.service";
+import {userRepositoryProvider} from "@infrastructure/prisma/users/user.prisma.repository";
+import {companyRepositoryProvider} from "@infrastructure/prisma/companys/company.prisma.repository";
+import {membershipRepositoryProvider} from "@infrastructure/prisma/memberships/membership.prisma.repository";
+import {inviteRepositoryProvider} from "@infrastructure/prisma/invites/invite.prisma.repository";
+import {RabbitMQModule} from "./messaging/modules/rabbitmq.module";
 import {emailValidationProvider} from "./cache/redis-email-validation.service";
-import {notificationRepositoryProvider} from "./prisma/notification.prisma.repository";
-import {friendshipRepositoryProvider} from "./prisma/friendship.prisma.repository";
+import {notificationRepositoryProvider} from "@infrastructure/prisma/notifications/notification.prisma.repository";
+import {friendshipRepositoryProvider} from "@infrastructure/prisma/friendships/friendship.prisma.repository";
 
 const repositoryProviders = [
     userRepositoryProvider,

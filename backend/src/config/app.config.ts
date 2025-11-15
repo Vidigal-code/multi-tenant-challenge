@@ -37,4 +37,7 @@ export const appConfig = registerAs("app", () => ({
             10,
         ),
     },
+    logging: {
+        enabled: (process.env.ENABLE_LOGGING ?? "true").toLowerCase() === "true",
+    },
 }));

@@ -1,5 +1,5 @@
 import {Logger} from "@nestjs/common";
-import {RabbitMQService} from "@infrastructure/messaging/rabbitmq.service";
+import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
 import Redis from "ioredis";
 
 interface ResilientConsumerOptions {

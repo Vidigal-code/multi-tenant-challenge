@@ -14,14 +14,13 @@ export default function LoginPage() {
     const [success, setSuccess] = useState<string | null>(null);
     const router = useRouter();
     const {show} = useToast();
-    const isSubmittingRef = useRef(false); // Ref para prevenir múltiplos submits
+    const isSubmittingRef = useRef(false);
 
     const { setAuthenticated, login: loginAction } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Prevenir múltiplos submits simultâneos
         if (isSubmittingRef.current || loading) {
             return;
         }
@@ -36,8 +35,6 @@ export default function LoginPage() {
             setAuthenticated(true);
             setSuccess('Login realizado');
             show({type: 'success', message: 'Login realizado com sucesso'});
-            
-            // Usar setTimeout para garantir que o estado seja atualizado antes do redirect
             setTimeout(() => {
                 router.push('/dashboard');
             }, 100);
@@ -51,39 +48,49 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="space-y-4">
-            <h1 className="text-2xl font-semibold">Login</h1>
-            {success && <p className="text-green-700">{success}</p>}
-            {error && <p className="text-red-600">{error}</p>}
-            <form className="space-y-3" onSubmit={handleSubmit}>
-                <input 
-                    value={email} 
-                    onChange={e => setEmail(e.target.value)} 
-                    placeholder="Email"
-                    type="email"
-                    required
-                    disabled={loading}
-                    className="border px-2 py-1 w-full disabled:opacity-50"
-                />
-                <input 
-                    type="password" 
-                    value={password} 
-                    onChange={e => setPassword(e.target.value)} 
-                    placeholder="Senha"
-                    required
-                    disabled={loading}
-                    className="border px-2 py-1 w-full disabled:opacity-50"
-                />
-                <button 
-                    disabled={loading || isSubmittingRef.current}
-                    type="submit"
-                    className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {loading ? 'Entrando...' : 'Entrar'}
-                </button>
-            </form>
-            <p className="text-sm">Não tem conta? <a href="/signup" className="text-blue-600 underline">Criar conta</a>
-            </p>
+        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-16">
+            <div className="w-full max-w-md space-y-8">
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Login</h1>
+                    <p className="text-gray-600 dark:text-gray-400">Entre na sua conta para continuar</p>
+                </div>
+                {success && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">{success}</div>}
+                {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">{error}</div>}
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                    <div>
+                        <input 
+                            value={email} 
+                            onChange={e => setEmail(e.target.value)} 
+                            placeholder="Email"
+                            type="email"
+                            required
+                            disabled={loading}
+                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        />
+                    </div>
+                    <div>
+                        <input 
+                            type="password" 
+                            value={password} 
+                            onChange={e => setPassword(e.target.value)} 
+                            placeholder="Senha"
+                            required
+                            disabled={loading}
+                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        />
+                    </div>
+                    <button 
+                        disabled={loading || isSubmittingRef.current}
+                        type="submit"
+                        className="w-full px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                    >
+                        {loading ? 'Entrando...' : 'Entrar'}
+                    </button>
+                </form>
+                <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+                    Não tem conta? <a href="/signup" className="text-gray-900 dark:text-white font-medium hover:underline">Criar conta</a>
+                </p>
+            </div>
         </div>
     );
 }

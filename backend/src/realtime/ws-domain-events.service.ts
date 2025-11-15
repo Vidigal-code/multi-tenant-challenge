@@ -1,6 +1,6 @@
 import {Injectable} from '@nestjs/common';
 import {DomainEvent, DomainEventsService} from '@domain/services/domain-events.service';
-import {RabbitMQDomainEventsService} from '@infrastructure/messaging/domain-events.service';
+import {RabbitMQDomainEventsService} from '@infrastructure/messaging/services/domain-events.service';
 import {EventsGateway, RT_EVENT} from './events.gateway';
 import {NotificationCreatorService} from '@application/services/notification-creator.service';
 
@@ -20,21 +20,21 @@ export class WsDomainEventsBridgeService implements DomainEventsService {
         await this.notificationCreator.createNotificationForEvent(event.name, event.payload);
         
         switch (event.name) {
-            case 'company.updated': {
+            case 'companys.updated': {
                 const payload: any = event.payload;
                 if (payload?.id) {
                     this.gateway.emitToCompany(payload.id, RT_EVENT.COMPANY_UPDATED, payload);
                 }
                 break;
             }
-            case 'membership.joined': {
+            case 'memberships.joined': {
                 const payload: any = event.payload;
                 if (payload?.companyId) {
                     this.gateway.emitToCompany(payload.companyId, RT_EVENT.MEMBER_JOINED, payload);
                 }
                 break;
             }
-            case 'membership.left':
+            case 'memberships.left':
             case 'member.left': {
                 const payload: any = event.payload;
                 if (Array.isArray(payload?.notifiedUserIds) && payload.notifiedUserIds.length > 0) {
@@ -46,9 +46,9 @@ export class WsDomainEventsBridgeService implements DomainEventsService {
                 }
                 break;
             }
-            case 'notification.created':
-            case 'notification.sent':
-            case 'notification.replied': {
+            case 'notifications.created':
+            case 'notifications.sent':
+            case 'notifications.replied': {
                 const payload: any = event.payload;
                 if (payload?.companyId) {
                     this.gateway.emitToCompany(payload.companyId, RT_EVENT.NOTIFICATION_CREATED, payload);
@@ -58,7 +58,7 @@ export class WsDomainEventsBridgeService implements DomainEventsService {
                 }
                 break;
             }
-            case 'membership.removed': {
+            case 'memberships.removed': {
                 const payload: any = event.payload;
                 if (Array.isArray(payload?.notifiedUserIds) && payload.notifiedUserIds.length > 0) {
                     payload.notifiedUserIds.forEach((userId: string) => {
@@ -69,14 +69,14 @@ export class WsDomainEventsBridgeService implements DomainEventsService {
                 }
                 break;
             }
-            case 'invite.rejected': {
+            case 'invites.rejected': {
                 const payload: any = event.payload;
                 if (payload?.companyId) {
                     this.gateway.emitToCompany(payload.companyId, RT_EVENT.INVITE_REJECTED, payload);
                 }
                 break;
             }
-            case 'notification.read': {
+            case 'notifications.read': {
                 const payload: any = event.payload;
                 if (payload?.companyId) {
                     this.gateway.emitToCompany(payload.companyId, RT_EVENT.NOTIFICATION_READ, payload);

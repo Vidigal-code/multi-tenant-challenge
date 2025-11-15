@@ -9,10 +9,19 @@ import { initializeTheme } from '../store/slices/themeSlice';
 
 export default function Providers({ children, initialAuth = false }: { children: React.ReactNode; initialAuth?: boolean }) {
   const queryClient = useMemo(() => new QueryClient(), []);
+  
   useEffect(() => {
     store.dispatch(setAuthenticated(Boolean(initialAuth)));
-    store.dispatch(initializeTheme());
   }, [initialAuth]);
+
+  useEffect(() => {
+    // Initialize theme on client side - syncs Redux state with DOM and localStorage
+    // This runs after the blocking script in layout.tsx has set the initial class
+    if (typeof window !== 'undefined') {
+      store.dispatch(initializeTheme());
+    }
+  }, []);
+  
   return (
     <ReduxProvider store={store}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

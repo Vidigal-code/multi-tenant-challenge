@@ -15,19 +15,22 @@ function readCookie(name: string) {
 
 export function useAuth() {
     const dispatch = useDispatch();
-    const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated);
+    const isAuthenticated =
+        useSelector((s: RootState) => s.auth.isAuthenticated);
 
     const login = useCallback(async (email: string, password: string) => {
         await http.post('/auth/login', { email: email.trim(), password });
         dispatch(setAuthenticated(true));
     }, [dispatch]);
 
-    const signup = useCallback(async (email: string, password: string, name: string) => {
+    const signup =
+        useCallback(async (email: string, password: string, name: string) => {
         await http.post('/auth/signup', { email: email.trim(), password, name: name.trim() });
         dispatch(setAuthenticated(true));
     }, [dispatch]);
 
-    const logout = useCallback(async () => {
+    const logout =
+        useCallback(async () => {
         try { await fetch('/api/logout', { method: 'POST' }); } catch {}
         dispatch(logoutState());
         try { if (typeof window !== 'undefined') window.location.assign('/login'); } catch {}

@@ -1,12 +1,12 @@
 import {Module} from '@nestjs/common';
 import {InfrastructureModule} from '@infrastructure/infrastructure.module';
-import {UsersController} from '@interfaces/http/users.controller';
-import {SearchUsersUseCase} from '@application/use-cases/search-users.usecase';
-import {DeleteAccountUseCase} from '@application/use-cases/delete-account.usecase';
-import {ListPrimaryOwnerCompaniesUseCase} from '@application/use-cases/list-primary-owner-companies.usecase';
-import {USER_REPOSITORY} from '@domain/repositories/user.repository';
-import {COMPANY_REPOSITORY} from '@domain/repositories/company.repository';
-import {MEMBERSHIP_REPOSITORY} from '@domain/repositories/membership.repository';
+import {UsersController} from '@interfaces/http/users/users.controller';
+import {SearchUsersUseCase} from '@application/use-cases/users/search-users.usecase';
+import {DeleteAccountUseCase} from '@application/use-cases/users/delete-account.usecase';
+import {ListPrimaryOwnerCompaniesUseCase} from '@application/use-cases/companys/list-primary-owner-companies.usecase';
+import {USER_REPOSITORY} from '@domain/repositories/users/user.repository';
+import {COMPANY_REPOSITORY} from '@domain/repositories/companys/company.repository';
+import {MEMBERSHIP_REPOSITORY} from '@domain/repositories/memberships/membership.repository';
 
 @Module({
     imports: [InfrastructureModule],

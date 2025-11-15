@@ -1,6 +1,6 @@
 # Frontend - Multi-Tenant Challenge
 
-Aplicação web desenvolvida com Next.js 14 (App Router), React 18, TypeScript e TailwindCSS.
+Aplicação web desenvolvida com Next.js 16 (App Router), React 19, TypeScript e TailwindCSS.
 
 ## 📋 Índice
 
@@ -18,24 +18,24 @@ Aplicação web desenvolvida com Next.js 14 (App Router), React 18, TypeScript e
 ## 🛠 Tecnologias
 
 ### Core
-- **Next.js** (v14.2.0) - Framework React
-- **React** (v18.2.0) - Biblioteca UI
-- **TypeScript** (v5.5.4) - Linguagem
-- **TailwindCSS** (v3.4.10) - Estilização
+- **Next.js** (v16.0.3) - Framework React
+- **React** (v19.2.0) - Biblioteca UI
+- **TypeScript** (v5.9.3) - Linguagem
+- **TailwindCSS** (v3.4.17) - Estilização
 
 ### Estado e Dados
 - **Redux Toolkit** (v2.10.1) - Gerenciamento de estado
-- **React Query** (v5.90.7) - Cache e sincronização de dados
-- **Axios** (v1.7.7) - Cliente HTTP
+- **React Query** (v5.90.9) - Cache e sincronização de dados
+- **Axios** (v1.13.2) - Cliente HTTP
 
 ### Comunicação
 - **Socket.IO Client** (v4.8.1) - WebSocket para tempo real
-- **React Icons** (v5.3.0) - Biblioteca de ícones
+- **React Icons** (v5.5.0) - Biblioteca de ícones
 
 ### Testes
-- **Jest** (v29.7.0) - Framework de testes
-- **Testing Library** (v14.1.2) - Testes de componentes
-- **Jest DOM** (v6.4.2) - Matchers para DOM
+- **Jest** (v30.2.0) - Framework de testes
+- **Testing Library** (v16.3.0) - Testes de componentes
+- **Jest DOM** (v6.9.1) - Matchers para DOM
 
 ## 🏗 Arquitetura
 
@@ -72,7 +72,7 @@ O projeto segue a arquitetura do **Next.js App Router** com separação clara de
    - Lógica de negócio
 
 4. **Store** (`src/store/`)
-   - Redux slices
+   - Redux slices (auth, theme)
    - Estado global
 
 5. **Lib** (`src/lib/`)
@@ -120,17 +120,29 @@ frontend/
 │   │   ├── friends/       # Amigos
 │   │   └── notifications/# Notificações
 │   │
-│   ├── components/        # Componentes React
-│   │   ├── CompanyList.tsx
-│   │   ├── MemberList.tsx
-│   │   ├── InviteForm.tsx
-│   │   ├── NavAuthMenu.tsx
-│   │   ├── Modal.tsx
-│   │   ├── ConfirmModal.tsx
-│   │   ├── Skeleton.tsx
-│   │   ├── NotificationPopup.tsx
-│   │   ├── NotificationPopupManager.tsx
-│   │   ├── NotificationPopupWrapper.tsx
+│   ├── components/        # Componentes React (organizados por categoria)
+│   │   ├── companys/
+│   │   │   └── CompanyList.tsx
+│   │   ├── members/
+│   │   │   └── MemberList.tsx
+│   │   ├── invites/
+│   │   │   └── InviteForm.tsx
+│   │   ├── nav/
+│   │   │   ├── NavAuthMenu.tsx
+│   │   │   └── MobileMenu.tsx
+│   │   ├── modals/
+│   │   │   ├── Modal.tsx
+│   │   │   └── ConfirmModal.tsx
+│   │   ├── skeleton/
+│   │   │   └── Skeleton.tsx
+│   │   ├── notification/
+│   │   │   ├── NotificationPopup.tsx
+│   │   │   ├── NotificationPopupManager.tsx
+│   │   │   └── NotificationPopupWrapper.tsx
+│   │   ├── themes/
+│   │   │   └── ThemeToggle.tsx
+│   │   ├── footer/
+│   │   │   └── Footer.tsx
 │   │   └── ui/
 │   │       └── Toast.tsx
 │   │
@@ -143,7 +155,8 @@ frontend/
 │   ├── store/             # Redux Store
 │   │   ├── index.ts
 │   │   └── slices/
-│   │       └── authSlice.ts
+│   │       ├── authSlice.ts
+│   │       └── themeSlice.ts
 │   │
 │   ├── contexts/          # React Contexts
 │   │   ├── AuthContext.tsx
@@ -160,28 +173,45 @@ frontend/
 │   │   ├── error.ts
 │   │   ├── http.ts
 │   │   ├── messages.ts
-│   │   ├── notification-messages.ts
+│   │   ├── notification-messages.tsx
 │   │   ├── queryKeys.ts
 │   │   ├── realtime.ts
 │   │   └── web-vitals.ts
 │   │
 │   ├── types/             # TypeScript Types
-│   │   ├── index.ts
+│   │   ├── index.ts       # Types e constantes (ex: DEFAULT_COMPANY_LOGO)
 │   │   └── global.d.ts
 │   │
 │   ├── middleware.ts      # Next.js Middleware
 │   │
-│   └── tests/             # Testes
+│   └── tests/             # Testes (organizados por categoria)
 │       ├── setup.ts
-│       ├── company.page.roles.test.tsx
-│       ├── invites.page.test.tsx
-│       ├── profile.page.test.tsx
-│       ├── layout.logout.test.tsx
-│       ├── not-found.test.tsx
-│       ├── middleware.test.ts
-│       ├── realtime.client.test.ts
+│       ├── companys/
+│       │   └── company.page.roles.test.tsx
+│       ├── invites/
+│       │   └── invites.page.test.tsx
+│       ├── profiles/
+│       │   └── profile.page.test.tsx
+│       ├── logouts/
+│       │   └── layout.logout.test.tsx
+│       ├── pages/
+│       │   ├── dashboard.spec.tsx
+│       │   └── not-found.test.tsx
+│       ├── middlewares/
+│       │   └── middleware.test.ts
+│       ├── realtimes/
+│       │   └── realtime.client.test.ts
 │       ├── components/
-│       └── pages/
+│       │   ├── invites/
+│       │   │   └── inviteForm.spec.tsx
+│       │   └── members/
+│       │       └── memberList.spec.tsx
+│       └── integration/
+│           ├── auths/
+│           ├── companys/
+│           ├── friendships/
+│           ├── invites/
+│           └── notifications/
 │
 ├── Dockerfile             # Docker para produção
 ├── jest.config.ts         # Configuração Jest
@@ -220,24 +250,40 @@ frontend/
 
 ## 🧩 Componentes
 
-### Componentes Principais
+Os componentes estão organizados em pastas por categoria:
 
+### Empresas (`components/companys/`)
 - **`CompanyList`** - Lista de empresas do usuário
+
+### Membros (`components/members/`)
 - **`MemberList`** - Lista de membros de uma empresa
+
+### Convites (`components/invites/`)
 - **`InviteForm`** - Formulário de convite
+
+### Navegação (`components/nav/`)
 - **`NavAuthMenu`** - Menu de navegação com autenticação (desktop + mobile)
 - **`MobileMenu`** - Menu hambúrguer responsivo para mobile
-- **`ThemeToggle`** - Toggle de modo claro/escuro
-- **`Footer`** - Footer reutilizável com créditos e links
+
+### Modais (`components/modals/`)
 - **`Modal`** - Modal genérico
 - **`ConfirmModal`** - Modal de confirmação
+
+### Loading (`components/skeleton/`)
 - **`Skeleton`** - Loading skeleton
+
+### Notificações (`components/notification/`)
 - **`NotificationPopup`** - Popup de notificação em tempo real
 - **`NotificationPopupManager`** - Gerenciador de popups
 - **`NotificationPopupWrapper`** - Wrapper client-side
 
-### UI Components
+### Temas (`components/themes/`)
+- **`ThemeToggle`** - Toggle de modo claro/escuro
 
+### Footer (`components/footer/`)
+- **`Footer`** - Footer reutilizável com créditos e links
+
+### UI (`components/ui/`)
 - **`Toast`** - Sistema de toasts/notificações
 
 ## ⚙️ Configuração
@@ -256,19 +302,26 @@ NEXT_PUBLIC_WS_URL=http://localhost:4000
 # Cookie
 NEXT_PUBLIC_SESSION_COOKIE=mt_session
 
-# Logo padrão de empresa
-NEXT_PUBLIC_DEFAULT_COMPANY_LOGO=https://example.com/default-company.png
+# Logo padrão de empresa (ou usar constante DEFAULT_COMPANY_LOGO em src/types/index.ts)
+NEXT_PUBLIC_DEFAULT_COMPANY_LOGO=https://dynamic.design.com/preview/logodraft/673b48a6-8177-4a84-9785-9f74d395a258/image/large.png
 ```
 
 ### Configuração do Next.js
 
 O projeto utiliza:
-- **App Router** (Next.js 14)
+- **App Router** (Next.js 16)
 - **Server Components** por padrão
 - **Client Components** quando necessário (`"use client"`)
-- **Middleware** para proteção de rotas
+- **Middleware** para proteção de rotas (deprecated, migrar para proxy no futuro)
+
+### Constantes Centralizadas
+
+O projeto utiliza constantes centralizadas em `src/types/index.ts`:
+- **`DEFAULT_COMPANY_LOGO`** - Logo padrão de empresa (configurável via `NEXT_PUBLIC_DEFAULT_COMPANY_LOGO`)
 
 ## 📜 Scripts
+
+> **Nota:** O projeto pode usar `npm`, `pnpm` ou `yarn`. Os exemplos abaixo usam `npm`, mas você pode substituir por `pnpm` ou `yarn` conforme preferir.
 
 ```bash
 # Desenvolvimento

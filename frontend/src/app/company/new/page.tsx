@@ -15,11 +15,14 @@ export default function NewCompanyPage() {
     const router = useRouter();
 
     return (
-        <div className="space-y-4">
-            <h1 className="text-xl font-semibold">Criar Empresa</h1>
-            {success && <p className="text-green-700 text-sm">{success}</p>}
-            {error && <p className="text-red-600 text-sm">{error}</p>}
-            <form className="space-y-3" onSubmit={async e => {
+        <div className="max-w-2xl mx-auto px-4 py-8">
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Criar Empresa</h1>
+                <p className="text-gray-600 dark:text-gray-400">Crie uma nova empresa para gerenciar</p>
+            </div>
+            {success && <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">{success}</div>}
+            {error && <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">{error}</div>}
+            <form className="space-y-4" onSubmit={async e => {
                 e.preventDefault();
                 setError(null);
                 setSuccess(null);
@@ -49,27 +52,33 @@ export default function NewCompanyPage() {
                     setLoading(false);
                 }
             }}>
-                <input value={name}
-                       onChange={e => setName(e.target.value)} placeholder="Nome"
-                       className="border px-2 py-1 w-full"/>
-                <input value={logoUrl}
-                       onChange={e => setLogoUrl(e.target.value)} placeholder="URL do Logo (opcional)"
-                       className="border px-2 py-1 w-full"/>
-                <textarea value={description}
-                          onChange={e => setDescription(e.target.value)}
-                          placeholder="Descrição (máximo 400 caracteres)"
-                          maxLength={400}
-                          className="border px-2 py-1 w-full resize-none"/>
-                <label className="flex items-center space-x-2">
+                <div>
+                    <input value={name}
+                           onChange={e => setName(e.target.value)} placeholder="Nome"
+                           className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors" required/>
+                </div>
+                <div>
+                    <input value={logoUrl}
+                           onChange={e => setLogoUrl(e.target.value)} placeholder="URL do Logo (opcional)"
+                           className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
+                </div>
+                <div>
+                    <textarea value={description}
+                              onChange={e => setDescription(e.target.value)}
+                              placeholder="Descrição (máximo 400 caracteres)"
+                              maxLength={400}
+                              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent resize-none transition-colors" rows={4}/>
+                </div>
+                <label className="flex items-center space-x-3 cursor-pointer">
                     <input type="checkbox"
                            checked={isPublic}
                            onChange={e => setIsPublic(e.target.checked)}
-                           className="rounded"/>
-                    <span>Empresa pública (visível para todos os usuários)</span>
+                           className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"/>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Empresa pública (visível para todos os usuários)</span>
                 </label>
                 <button disabled={loading}
-                        className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50">{loading ? 'Criando...' : 'Criar'}</button>
+                        className="w-full px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors">{loading ? 'Criando...' : 'Criar'}</button>
             </form>
-    </div>
+        </div>
     );
 }

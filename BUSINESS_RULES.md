@@ -160,7 +160,7 @@ MEMBER (Menor privilégio)
 
 | Requester | Target | Pode Remover? |
 |-----------|--------|---------------|
-| OWNER | OWNER | ❌ Não (exceto se houver outros owners) |
+| OWNER | OWNER | ✅ Sim (se houver outros owners, backend valida) |
 | OWNER | ADMIN | ✅ Sim |
 | OWNER | MEMBER | ✅ Sim |
 | ADMIN | OWNER | ❌ Não |
@@ -169,7 +169,10 @@ MEMBER (Menor privilégio)
 | MEMBER | Qualquer | ❌ Não |
 | Qualquer | Si mesmo | ❌ Não |
 
-**Proteção Especial**: Último OWNER não pode ser removido (`LAST_OWNER_CANNOT_BE_REMOVED`)
+**Proteção Especial**: 
+- Último OWNER não pode ser removido (`LAST_OWNER_CANNOT_BE_REMOVED`) - validação no backend
+- Primary Owner não pode ser removido (proteção no frontend)
+- **Nota de Implementação**: O frontend permite OWNER remover outros OWNERs, mas protege o Primary Owner. A validação final de "último owner" é feita exclusivamente no backend, que retorna erro se tentar remover o último owner.
 
 ### 3.4. Regras de Alteração de Papel
 
@@ -211,10 +214,13 @@ MEMBER (Menor privilégio)
 - ADMIN: pode convidar ADMIN e MEMBER (não pode convidar OWNER)
 - MEMBER: não pode convidar
 
+**Nota de Implementação**: O frontend permite ADMIN selecionar OWNER no formulário, mas o backend valida e bloqueia com `ONLY_OWNER_CAN_INVITE_OWNER`. A validação ocorre apenas no backend.
+
 **Validações**:
 - ❌ Não pode convidar a si mesmo (`CANNOT_INVITE_SELF`)
 - ❌ Não pode convidar membro existente (`CANNOT_INVITE_MEMBER`)
 - ❌ Não pode criar múltiplos convites ativos para mesmo email+empresa (`INVITE_ALREADY_EXISTS`)
+- ❌ ADMIN não pode convidar OWNER (validação no backend: `ONLY_OWNER_CAN_INVITE_OWNER`)
 - ✅ Email deve existir no sistema (se `requireExistingUser: true`)
 - ✅ Token único gerado automaticamente
 - ✅ Expiração padrão: 7 dias (configurável)
@@ -540,23 +546,25 @@ Ao deletar conta, remove:
 
 ### 9.1. Matriz de Permissões
 
-| Ação | OWNER | ADMIN | MEMBER |
-|------|-------|-------|--------|
-| Criar empresa | ✅ | ✅ | ✅ |
-| Editar empresa | ✅ | ✅ | ❌ |
-| Deletar empresa | ✅ | ❌ | ❌ |
-| Convidar membro | ✅ | ✅ | ❌ |
-| Remover membro | ✅ | ✅ | ❌ |
-| Alterar papel | ✅ | ❌ | ❌ |
-| Enviar notificação | ✅ | ✅ | ❌ |
-| Sair da empresa | ❌ | ✅ | ✅ |
-| Transferir ownership | ✅ | ❌ | ❌ |
+| Ação | OWNER | ADMIN | MEMBER | Notas |
+|------|-------|-------|--------|-------|
+| Criar empresa | ✅ | ✅ | ✅ | |
+| Editar empresa | ✅ | ✅ | ❌ | |
+| Deletar empresa | ✅ | ❌ | ❌ | |
+| Convidar membro | ✅ | ✅ | ❌ | ADMIN não pode convidar OWNER (backend valida) |
+| Remover membro | ✅ | ✅ | ❌ | OWNER não pode remover último OWNER (backend valida) |
+| Alterar papel | ✅ | ❌ | ❌ | |
+| Enviar notificação | ✅ | ✅ | ❌ | |
+| Sair da empresa | ❌ | ✅ | ✅ | |
+| Transferir ownership | ✅ | ❌ | ❌ | |
 
-ADMIN não pode convidar OWNER  
-OWNER não pode remover outros OWNER se for último  
-ADMIN só pode remover MEMBER  
-OWNER não pode alterar próprio papel  
-OWNER deve transferir ownership antes de sair
+**Regras Importantes**:
+- ADMIN não pode convidar OWNER (validação no backend: `ONLY_OWNER_CAN_INVITE_OWNER`)
+- OWNER não pode remover último OWNER (validação no backend: `LAST_OWNER_CANNOT_BE_REMOVED`)
+- Primary Owner não pode ser removido (proteção no frontend)
+- ADMIN só pode remover MEMBER
+- OWNER não pode alterar próprio papel
+- OWNER deve transferir ownership antes de sair
 
 ### 9.2. Regras de Auto-Ação
 
@@ -635,10 +643,16 @@ OWNER deve transferir ownership antes de sair
 **Member List** (em `/company/[id]`):
 - **OWNER/ADMIN**: vê nome, email, User ID, role, data de entrada (joinedAt)
 - **MEMBER**: vê apenas nome e role (sem email, sem User ID, sem data de entrada)
-- OWNER: pode remover ADMIN/MEMBER, alterar papel de qualquer um (exceto próprio)
-- ADMIN: pode remover apenas MEMBER, não pode alterar papéis
+- **OWNER**: 
+  - Pode remover ADMIN, MEMBER e outros OWNERs (se houver outros owners)
+  - Pode alterar papel de qualquer um (exceto próprio)
+  - Primary Owner não pode ser removido (proteção no frontend)
+  - Último OWNER não pode ser removido (validação no backend)
+- **ADMIN**: 
+  - Pode remover apenas MEMBER
+  - Não pode alterar papéis
 - **Nunca exibe ações para si mesmo**
-- **Primary Owner**: exibe ícone de coroa (👑) ao lado do nome
+- **Primary Owner**: exibe ícone de estrela (⭐) ao lado do nome
 
 ### 11.3. Modais de Confirmação
 
@@ -798,6 +812,28 @@ OWNER deve transferir ownership antes de sair
 
 ---
 
+## NOTAS DE IMPLEMENTAÇÃO
+
+### Validações no Backend vs Frontend
+
+**Validações apenas no Backend** (frontend não bloqueia completamente):
+- **ADMIN não pode convidar OWNER**: O frontend permite ADMIN selecionar OWNER no formulário de convite, mas o backend valida e retorna erro `ONLY_OWNER_CAN_INVITE_OWNER` quando ADMIN tenta convidar OWNER. A validação ocorre exclusivamente no backend.
+- **OWNER não pode remover último OWNER**: O frontend permite OWNER tentar remover outros OWNERs (exceto Primary Owner). O backend valida se é o último owner e retorna erro `LAST_OWNER_CANNOT_BE_REMOVED` se for o último. A validação final de "último owner" é feita exclusivamente no backend.
+
+**Validações no Frontend e Backend**:
+- Auto-ação: Bloqueado em ambos os lados
+- ADMIN não pode remover OWNER/ADMIN: Bloqueado em ambos
+- ADMIN não pode alterar papéis: Bloqueado em ambos
+- OWNER não pode alterar próprio papel: Bloqueado em ambos
+
+**Comportamento Atual**:
+- O frontend oferece proteção adicional em algumas situações (ex: Primary Owner não pode ser removido no frontend)
+- Todas as validações críticas são garantidas no backend como camada de segurança final
+- O frontend oferece melhor UX ao esconder/bloquear opções inválidas quando possível, mas o backend sempre valida todas as operações
+- **Princípio de Segurança**: Não confiar apenas no frontend - backend sempre valida como última camada de proteção
+
+---
+
 
 ### Notificações com Informações do Sender (Implementado)
 - ✅ Backend inclui informações do sender (nome, email, id) no `meta.sender` ao criar notificações
@@ -810,7 +846,7 @@ OWNER deve transferir ownership antes de sair
 ### Visualização de Membros por Role (Implementado)
 - ✅ OWNER/ADMIN: veem nome, email, User ID, role, data de entrada
 - ✅ MEMBER: veem apenas nome e role
-- ✅ Primary Owner identificado com ícone de coroa (👑)
+- ✅ Primary Owner identificado com ícone de estrela (⭐)
 - ✅ Implementado em `/company/[id]` via componente `MemberList`
 
 ### Preferências de Notificação (Implementado)

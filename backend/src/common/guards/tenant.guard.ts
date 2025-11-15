@@ -1,5 +1,5 @@
 import {CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable,} from "@nestjs/common";
-import {MEMBERSHIP_REPOSITORY, MembershipRepository,} from "@domain/repositories/membership.repository";
+import {MEMBERSHIP_REPOSITORY, MembershipRepository,} from "@domain/repositories/memberships/membership.repository";
 
 @Injectable()
 export class TenantGuard implements CanActivate {
