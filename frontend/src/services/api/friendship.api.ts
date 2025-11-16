@@ -1,12 +1,6 @@
-/**
- * Centralized Friendship API service with React Query hooks
- * Follows SOLID principles - Single Responsibility for friendship operations
- */
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { http } from '../../lib/http';
 import { queryKeys } from '../../lib/queryKeys';
-import { extractData } from '../../lib/api-response';
 
 export interface User {
   id: string;
@@ -22,7 +16,6 @@ export interface Friendship {
   createdAt: string;
 }
 
-// Query Hooks
 export function useFriendships(status?: 'ACCEPTED' | 'PENDING') {
   return useQuery<Friendship[]>({
     queryKey: queryKeys.friendships(status),
@@ -46,8 +39,6 @@ export function useFriendRequests() {
 }
 
 export function useSearchUsers() {
-  const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: async (query: string) => {
       const response = await http.get(`/users/search?q=${encodeURIComponent(query)}`);
@@ -56,7 +47,6 @@ export function useSearchUsers() {
   });
 }
 
-// Mutation Hooks
 export function useSendFriendRequest() {
   const queryClient = useQueryClient();
   

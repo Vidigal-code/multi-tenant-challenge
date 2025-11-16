@@ -51,13 +51,13 @@ export function formatDateOnly(dateString: string | Date | null | undefined): st
         let date: Date;
         if (dateString instanceof Date) {
             date = dateString;
-        } else if (typeof dateString === 'string') {
-            date = new Date(dateString);
-            if (isNaN(date.getTime()) && !isNaN(Number(dateString))) {
-                date = new Date(Number(dateString));
-            }
         } else {
-            return '-';
+            {
+                date = new Date(dateString);
+                if (isNaN(date.getTime()) && !isNaN(Number(dateString))) {
+                    date = new Date(Number(dateString));
+                }
+            }
         }
         
         if (isNaN(date.getTime())) {

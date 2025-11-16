@@ -1,10 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { http } from '../../lib/http';
 import { getErrorMessage } from '../../lib/error';
 import { useToast } from '../../hooks/useToast';
 import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '../../lib/queryKeys';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { Modal } from '../../components/modals/Modal';
 import {
@@ -16,7 +14,6 @@ import {
     type PrimaryOwnerCompany,
     type MemberCompany,
 } from '../../services/api/auth.api';
-import { extractData } from '../../lib/api-response';
 import {FaExclamationTriangle} from "react-icons/fa";
 import { formatDate, formatDateOnly } from '../../lib/date-utils';
 import Link from 'next/link';
@@ -44,7 +41,6 @@ export default function ProfilePage() {
 
     const profileQuery = useProfile();
     const pageSize = 10;
-    // Always load both queries when modal is open to check for empty state
     const primaryOwnerCompaniesQuery = usePrimaryOwnerCompanies(primaryOwnerPage, pageSize, showPrimaryOwnerModal);
     const memberCompaniesQuery = useMemberCompanies(memberCompaniesPage, pageSize, showPrimaryOwnerModal);
     const updateProfileMutation = useUpdateProfile();
@@ -78,7 +74,6 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (showPrimaryOwnerModal) {
-            // Force refetch when modal opens or page changes
             if (activeCompanyTab === 'owner') {
             primaryOwnerCompaniesQuery.refetch();
             } else {
@@ -97,7 +92,6 @@ export default function ProfilePage() {
         }
     }, [profileQuery.data]);
 
-    // Debug: log query state when modal opens
     useEffect(() => {
         if (showPrimaryOwnerModal) {
             console.log('Primary Owner Companies Query State:', {
@@ -149,15 +143,21 @@ export default function ProfilePage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome atual</label>
-                                <input value={profileQuery.isLoading ? '...' : currentName} readOnly className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-950 text-gray-600 dark:text-gray-400 cursor-not-allowed" />
+                                <input value={profileQuery.isLoading ? '...' : currentName} readOnly className="w-full px-4
+                                py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-950
+                                text-gray-600 dark:text-gray-400 cursor-not-allowed" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email atual</label>
-                                <input value={profileQuery.isLoading ? '...' : currentEmail} readOnly className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-950 text-gray-600 dark:text-gray-400 cursor-not-allowed" />
+                                <input value={profileQuery.isLoading ? '...' : currentEmail} readOnly className="w-full px-4 py-3
+                                 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-950 text-gray-600
+                                 dark:text-gray-400 cursor-not-allowed" />
                             </div>
                         </div>
-                        {message && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">{message}</div>}
-                        {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm" data-testid="profile-error">{error}</div>}
+                        {message && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800
+                        rounded-lg text-green-700 dark:text-green-400 text-sm">{message}</div>}
+                        {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800
+                        rounded-lg text-red-700 dark:text-red-400 text-sm" data-testid="profile-error">{error}</div>}
                         <form className="space-y-4" onSubmit={async e => {
                             e.preventDefault();
                             setError(null);
@@ -184,27 +184,42 @@ export default function ProfilePage() {
                         }}>
                             <div>
                                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Novo nome"
-                                       className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
+                                       className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-
+                                       lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500
+                                       dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900
+                                        dark:focus:ring-white focus:border-transparent transition-colors"/>
                             </div>
                             <div>
                                 <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Novo email"
-                                       className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
+                                       className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
+                                       rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white
+                                       placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2
+                                       focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
                                        placeholder="Senha atual"
-                                       className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
+                                       className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
+                                       rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500
+                                       dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900
+                                       dark:focus:ring-white focus:border-transparent transition-colors"/>
                                 <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                                       placeholder="Nova senha" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
+                                       placeholder="Nova senha" className="w-full px-4 py-3 border border-gray-200
+                                        dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900
+                                        dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2
+                                        focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"/>
                             </div>
                             <button disabled={loading}
-                                    className="w-full px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors">
+                                    className="w-full px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900
+                                     rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50
+                                     disabled:cursor-not-allowed font-medium transition-colors">
                                 {loading ? 'Salvando...' : 'Salvar alterações'}</button>
                         </form>
 
                         <div className="pt-8 border-t border-gray-200 dark:border-gray-800">
                             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Excluir conta</h2>
-                            <button className="px-4 py-3 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors font-medium" onClick={handleDeleteAccountClick}>
+                            <button className="px-4 py-3 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700
+                            dark:hover:bg-red-600 transition-colors font-medium" onClick={handleDeleteAccountClick}>
                                 Excluir permanentemente
                             </button>
                         </div>
@@ -294,7 +309,6 @@ export default function ProfilePage() {
                                 </nav>
                             </div>
 
-                            {/* Owner Companies Tab */}
                             {activeCompanyTab === 'owner' && (
                                 <>
                             {primaryOwnerCompaniesQuery.isLoading ? (
@@ -380,7 +394,8 @@ export default function ProfilePage() {
                                                     setPrimaryOwnerPage(newPage);
                                                 }}
                                                         disabled={primaryOwnerPage === 1 || primaryOwnerCompaniesQuery.isLoading}
-                                                        className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                        className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50
+                                                        dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                             >
                                                         ← Anterior
                                             </button>
@@ -392,8 +407,10 @@ export default function ProfilePage() {
                                                     const newPage = primaryOwnerPage + 1;
                                                     setPrimaryOwnerPage(newPage);
                                                 }}
-                                                        disabled={!primaryOwnerCompaniesQuery.data || primaryOwnerPage >= Math.ceil(primaryOwnerCompaniesQuery.data.total / pageSize) || primaryOwnerCompaniesQuery.isLoading}
-                                                        className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                        disabled={!primaryOwnerCompaniesQuery.data ||
+                                                            primaryOwnerPage >= Math.ceil(primaryOwnerCompaniesQuery.data.total / pageSize) || primaryOwnerCompaniesQuery.isLoading}
+                                                        className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50
+                                                        dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                             >
                                                         Próxima →
                                             </button>
@@ -418,7 +435,6 @@ export default function ProfilePage() {
                                 </>
                             )}
 
-                            {/* Member Companies Tab */}
                             {activeCompanyTab === 'member' && (
                                 <>
                                     {memberCompaniesQuery.isLoading ? (
@@ -510,7 +526,8 @@ export default function ProfilePage() {
                                                                     setMemberCompaniesPage(newPage);
                                                                 }}
                                                                 disabled={memberCompaniesPage === 1 || memberCompaniesQuery.isLoading}
-                                                                className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                                className="px-3 py-1 border border-gray-300 dark:border-gray-700
+                                                                 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                                             >
                                                                 ← Anterior
                                         </button>
@@ -523,7 +540,8 @@ export default function ProfilePage() {
                                                                     setMemberCompaniesPage(newPage);
                                                                 }}
                                                                 disabled={!memberCompaniesQuery.data || memberCompaniesPage >= Math.ceil(memberCompaniesQuery.data.total / pageSize) || memberCompaniesQuery.isLoading}
-                                                                className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                                className="px-3 py-1 border border-gray-300 dark:border-gray-700
+                                                                rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                                             >
                                                                 Próxima →
                                         </button>
@@ -547,8 +565,7 @@ export default function ProfilePage() {
                                 </>
                             )}
 
-                            {/* Empty State - No companies at all */}
-                            {activeCompanyTab === 'owner' && 
+                            {activeCompanyTab === 'owner' &&
                              !primaryOwnerCompaniesQuery.isLoading && 
                              !primaryOwnerCompaniesQuery.error &&
                              primaryOwnerCompaniesQuery.data && 
@@ -567,7 +584,6 @@ export default function ProfilePage() {
                                 </div>
                             )}
 
-                            {/* Action Buttons */}
                             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                                         <button
                                             onClick={() => {
@@ -672,7 +688,8 @@ export default function ProfilePage() {
                                         setShowFinalConfirmModal(false);
                                         await handleDeleteAccount();
                                     }}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700
+                                    transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                     disabled={deleteAccountMutation.isPending}
                                 >
                                     {deleteAccountMutation.isPending ? 'Excluindo...' : 'Sim, tenho certeza. Excluir permanentemente'}

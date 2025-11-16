@@ -1,13 +1,7 @@
-/**
- * Centralized Company API service with React Query hooks
- * Follows SOLID principles - Single Responsibility for company operations
- */
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { http } from '../../lib/http';
 import { queryKeys } from '../../lib/queryKeys';
 import { extractData, extractPaginatedData, extractMembersData } from '../../lib/api-response';
-import { getErrorMessage } from '../../lib/error';
 
 export interface Company {
   id: string;
@@ -41,7 +35,6 @@ export interface PrimaryOwnerResponse {
   createdAt?: string;
 }
 
-// Query Hooks
 export function useCompanies(page: number = 1, pageSize: number = 10) {
   return useQuery<{ list: Company[]; total: number }>({
     queryKey: queryKeys.companies(page, pageSize),
@@ -69,7 +62,6 @@ export function useCompany(id: string | undefined) {
     },
     enabled: Boolean(id),
     retry: (failureCount, error: any) => {
-      // Don't retry on 403/401, try public endpoint instead
       if (error?.response?.status === 403 || error?.response?.status === 401) {
         return false;
       }
@@ -122,7 +114,6 @@ export function useCompanyPrimaryOwner(id: string | undefined, enabled: boolean 
   });
 }
 
-// Mutation Hooks
 export function useSelectCompany() {
   const queryClient = useQueryClient();
   
@@ -132,28 +123,8 @@ export function useSelectCompany() {
       return id;
     },
     onSuccess: async (id) => {
-      // Invalidate profile to refresh activeCompanyId
       await queryClient.invalidateQueries({ queryKey: queryKeys.profile() });
-      // Invalidate company queries
       await queryClient.invalidateQueries({ queryKey: queryKeys.company(id) });
-    },
-  });
-}
-
-export function useCreateCompany() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (data: { name: string; logoUrl?: string; description?: string; is_public: boolean }) => {
-      const response = await http.post('/company', data);
-      return extractData<Company>(response.data);
-    },
-    onSuccess: async (company) => {
-      // Invalidate companies list
-      await queryClient.invalidateQueries({ queryKey: ['companies'] });
-      // Invalidate profile
-      await queryClient.invalidateQueries({ queryKey: queryKeys.profile() });
-      return company;
     },
   });
 }
@@ -168,7 +139,6 @@ export function useUpdateCompany(id: string | undefined) {
     },
     onSuccess: async () => {
       if (!id) return;
-      // Invalidate all company-related queries
       await queryClient.invalidateQueries({ queryKey: queryKeys.company(id) });
       await queryClient.invalidateQueries({ queryKey: queryKeys.companyPublicInfo(id) });
       await queryClient.invalidateQueries({ queryKey: ['companies'] });
@@ -184,7 +154,6 @@ export function useDeleteCompany() {
       await http.delete(`/company/${id}`);
     },
     onSuccess: async () => {
-      // Invalidate all company queries
       await queryClient.invalidateQueries({ queryKey: ['companies'] });
       await queryClient.invalidateQueries({ queryKey: queryKeys.profile() });
     },

@@ -11,6 +11,8 @@ export interface Profile {
   notificationPreferences?: Record<string, boolean>;
 }
 
+const PROFILE_STALE_TIME = Number(process.env.NEXT_PUBLIC_PROFILE_STALE_TIME) || 60_000; // Default: 1 minute
+
 export function useProfile(enabled: boolean = true) {
   return useQuery<Profile>({
     queryKey: queryKeys.profile(),
@@ -19,7 +21,7 @@ export function useProfile(enabled: boolean = true) {
       return extractData<Profile>(response.data);
     },
     enabled,
-    staleTime: 60_000, // 1 minute
+    staleTime: PROFILE_STALE_TIME,
   });
 }
 
@@ -42,8 +44,6 @@ export function usePrimaryOwnerCompanies(page: number = 1, pageSize: number = 10
       const response = await http.get('/auth/account/primary-owner-companies', {
         params: { page, pageSize },
       });
-      // Backend already returns { data: [...], total, page, pageSize }
-      // So we return response.data directly (which is the full object)
       return response.data as { data: PrimaryOwnerCompany[]; total: number; page: number; pageSize: number };
     },
     enabled,
@@ -103,7 +103,6 @@ export function useDeleteAccount() {
   
   return useMutation({
     mutationFn: async () => {
-      // Backend agora faz tudo automaticamente - não precisa enviar dados
       await http.delete('/auth/account');
     },
     onSuccess: async () => {

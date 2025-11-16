@@ -1,8 +1,3 @@
-/**
- * Centralized Invite API service with React Query hooks
- * Follows SOLID principles - Single Responsibility for invite operations
- */
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { http } from '../../lib/http';
 import { queryKeys } from '../../lib/queryKeys';
@@ -28,7 +23,6 @@ export interface Invite {
   logoUrl?: string | null;
 }
 
-// Query Hooks
 export function useInvitesCreated(page: number = 1, pageSize: number = 10, enabled: boolean = true) {
   return useQuery<{ data: Invite[]; total: number }>({
     queryKey: queryKeys.invitesCreated(page, pageSize),
@@ -47,40 +41,10 @@ export function useInvitesReceived(page: number = 1, pageSize: number = 10, enab
     queryFn: async () => {
       const response = await http.get('/invites', { params: { page, pageSize } });
       const paginated = extractPaginatedData<Invite>(response.data);
-      // Backend already filters to PENDING, but we ensure it here too
       const pendingInvites = paginated.data.filter(inv => inv.status === 'PENDING');
       return { data: pendingInvites, total: pendingInvites.length };
     },
     enabled,
-  });
-}
-
-export function useInvite(code: string | undefined, enabled: boolean = true) {
-  return useQuery<Invite>({
-    queryKey: queryKeys.invite(code!),
-    queryFn: async () => {
-      const response = await http.get(`/invites/${code}`);
-      return extractData<Invite>(response.data);
-    },
-    enabled: Boolean(code) && enabled,
-    retry: false,
-  });
-}
-
-// Mutation Hooks
-export function useCreateInvite(companyId: string | undefined) {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (data: { email: string; role: 'OWNER' | 'ADMIN' | 'MEMBER' }) => {
-      const response = await http.post(`/companys/${companyId}/invites`, data);
-      return extractData(response.data);
-    },
-    onSuccess: async () => {
-      // Invalidate invites queries
-      await queryClient.invalidateQueries({ queryKey: ['invites-created'] });
-      await queryClient.invalidateQueries({ queryKey: ['invites-received'] });
-    },
   });
 }
 
@@ -92,11 +56,9 @@ export function useAcceptInvite() {
       await http.post('/auth/accept-invites', { token });
     },
     onSuccess: async () => {
-      // Invalidate all invite-related queries
       await queryClient.invalidateQueries({ queryKey: ['invites-created'] });
       await queryClient.invalidateQueries({ queryKey: ['invites-received'] });
       await queryClient.invalidateQueries({ queryKey: ['invite'] });
-      // Invalidate companies and profile
       await queryClient.invalidateQueries({ queryKey: ['companies'] });
       await queryClient.invalidateQueries({ queryKey: queryKeys.profile() });
     },

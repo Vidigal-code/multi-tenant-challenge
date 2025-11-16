@@ -1,8 +1,3 @@
-/**
- * Centralized Notification API service with React Query hooks
- * Follows SOLID principles - Single Responsibility for notification operations
- */
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { http } from '../../lib/http';
 import { queryKeys } from '../../lib/queryKeys';
@@ -20,7 +15,6 @@ export interface Notification {
   recipientUserId?: string;
 }
 
-// Query Hooks
 export function useNotifications(page?: number, pageSize?: number) {
   return useQuery<Notification[]>({
     queryKey: queryKeys.notifications(page, pageSize),
@@ -33,7 +27,6 @@ export function useNotifications(page?: number, pageSize?: number) {
   });
 }
 
-// Mutation Hooks
 export function useCreateNotification() {
   const queryClient = useQueryClient();
   
@@ -94,16 +87,5 @@ export function useReplyToNotification() {
   });
 }
 
-export function useSendFriendNotification() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (data: { friendEmail: string; title: string; body: string }) => {
-      await http.post('/notifications/friend', data);
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
-    },
-  });
-}
+
 
