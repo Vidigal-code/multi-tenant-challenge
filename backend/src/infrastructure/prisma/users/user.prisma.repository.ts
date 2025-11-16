@@ -35,15 +35,27 @@ export class UserPrismaRepository implements UserRepository {
     }
 
     async update(data: UpdateUserInput): Promise<User> {
+        const updateData: any = {};
+        
+        if (data.activeCompanyId !== undefined) {
+            updateData.activeCompanyId = data.activeCompanyId;
+        }
+        if (data.name !== undefined) {
+            updateData.name = data.name;
+        }
+        if (data.email !== undefined) {
+            updateData.email = data.email;
+        }
+        if (data.passwordHash !== undefined) {
+            updateData.passwordHash = data.passwordHash;
+        }
+        if (data.notificationPreferences !== undefined) {
+            updateData.notificationPreferences = data.notificationPreferences;
+        }
+
         const user = await this.prisma.user.update({
             where: {id: data.id},
-            data: {
-                activeCompanyId: data.activeCompanyId,
-                name: data.name,
-                email: data.email,
-                passwordHash: data.passwordHash,
-                notificationPreferences: data.notificationPreferences,
-            },
+            data: updateData,
             include: {memberships: true},
         });
         return this.toDomain(user);

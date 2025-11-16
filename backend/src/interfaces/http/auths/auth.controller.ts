@@ -156,7 +156,8 @@ export class AuthController {
         @Body() dto: UpdateProfileDto,
         @Res({passthrough: true}) res: Response,
     ) {
-        if (!dto.name && !dto.email && !dto.newPassword && !dto.notificationPreferences) {
+        const hasNotificationPreferences = dto.notificationPreferences !== undefined && dto.notificationPreferences !== null && Object.keys(dto.notificationPreferences || {}).length > 0;
+        if (!dto.name && !dto.email && !dto.newPassword && !hasNotificationPreferences) {
             this.logger.default(`Profile update failed: no fields to update - user: ${user.sub}`);
             throw new ApplicationError('NO_FIELDS_TO_UPDATE');
         }
@@ -189,12 +190,19 @@ export class AuthController {
             }
         }
 
+        let mergedNotificationPreferences: Record<string, any> | undefined;
+        if (dto.notificationPreferences !== undefined) {
+            const currentUser = await this.userRepo.findById(user.sub);
+            const currentPrefs = currentUser?.notificationPreferences || {};
+            mergedNotificationPreferences = { ...currentPrefs, ...dto.notificationPreferences };
+        }
+
         const updated = await this.userRepo.update({
             id: user.sub,
             name: dto.name,
             email: dto.email,
             passwordHash,
-            notificationPreferences: dto.notificationPreferences,
+            notificationPreferences: mergedNotificationPreferences,
         });
 
         const newToken = await this.jwtService.signAsync({
