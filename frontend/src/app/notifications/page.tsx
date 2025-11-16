@@ -134,7 +134,7 @@ export default function NotificationsPage() {
                                             <div>
                                                 <strong>Email:</strong> {notification.meta?.sender?.email || notification.senderUserId || 'N/A'}
                                             </div>
-                                            <div><strong>Data e Hora:</strong> {formatDate(notification.createdAt)}
+                                            <div><strong>Data e Hora:</strong> {notification.createdAt ? formatDate(notification.createdAt) : '-'}
                                             </div>
                                             {notification.meta?.channel && (
                                                 <div><strong>Canal:</strong> {notification.meta.channel}</div>

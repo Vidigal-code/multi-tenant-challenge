@@ -43,7 +43,6 @@ export default function FriendsPage() {
   const { data: friends = [], isLoading: friendsLoading } = useFriendships('ACCEPTED');
   const { data: allRequests = [], isLoading: requestsLoading } = useFriendRequests();
   
-  // Filter requests to only show those addressed to current user
   const requests = allRequests.filter((req) => {
     if (!req.addressee || !req.requester) return false;
     return req.addressee.id === currentUserId;
@@ -162,7 +161,6 @@ export default function FriendsPage() {
       return;
     }
     
-    // Send messages one by one
     const results = [];
     for (let i = 0; i < friendEmails.length; i++) {
       try {
@@ -247,12 +245,17 @@ export default function FriendsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"
+            className="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-800
+            rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white
+            placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none
+            focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"
           />
           <button
             onClick={handleSearch}
             disabled={searchMutation.isPending}
-            className="px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap"
+            className="px-4 py-3 bg-gray-900 dark:bg-white
+            text-white dark:text-gray-900 rounded-lg
+            hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap"
           >
             {searchMutation.isPending ? 'Buscando...' : 'Buscar'}
           </button>
@@ -265,7 +268,10 @@ export default function FriendsPage() {
                 return null;
               }
               return (
-                <div key={user.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                <div key={user.id} className="flex flex-col sm:flex-row
+                 items-start sm:items-center justify-between gap-3 p-4
+                 border border-gray-200 dark:border-gray-800 rounded-lg
+                 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-gray-900 dark:text-white">{user.name || 'Unknown'}</div>
                     <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{user.email || ''}</div>
@@ -273,7 +279,9 @@ export default function FriendsPage() {
                   <button
                     onClick={() => handleSendRequest(user.email)}
                     disabled={sendRequestMutation.isPending}
-                    className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap flex-shrink-0"
+                    className="px-4 py-2 bg-gray-900 dark:bg-white
+                    text-white dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800
+                    dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap flex-shrink-0"
                   >
                     Enviar solicitação
                   </button>
@@ -328,7 +336,8 @@ export default function FriendsPage() {
       ) : activeTab === 'friends' ? (
         <div className="space-y-4">
           {friends.length === 0 ? (
-            <div className="text-center text-gray-600 dark:text-gray-400 py-12 sm:py-16 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <div className="text-center text-gray-600 dark:text-gray-400 py-12
+            sm:py-16 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900">
               <p className="text-sm sm:text-base">Você ainda não tem amigos</p>
             </div>
           ) : (
@@ -341,7 +350,10 @@ export default function FriendsPage() {
                 return null;
               }
               return (
-                <div key={friendship.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 sm:p-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                <div key={friendship.id} className="flex flex-col
+                 sm:flex-row items-start sm:items-center justify-between
+                 gap-3 p-4 sm:p-6 border border-gray-200 dark:border-gray-800
+                 rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-gray-900 dark:text-white text-base sm:text-lg mb-1">{friend.name || 'Unknown'}</div>
                     <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{friend.email || ''}</div>
@@ -349,13 +361,17 @@ export default function FriendsPage() {
                   <div className="flex gap-2 w-full sm:w-auto">
                     <button
                       onClick={() => handleSendMessage(friend)}
-                      className="flex-1 sm:flex-initial px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium whitespace-nowrap"
+                      className="flex-1 sm:flex-initial px-4 py-2 bg-gray-900
+                      dark:bg-white text-white dark:text-gray-900 text-sm rounded-lg
+                       hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium whitespace-nowrap"
                     >
                       Enviar Mensagem
                     </button>
                     <button
                       onClick={() => setRemoveConfirm(friendship.id)}
-                      className="flex-1 sm:flex-initial px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm transition-colors font-medium whitespace-nowrap"
+                      className="flex-1 sm:flex-initial px-4 py-2 border
+                      border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950
+                      text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm transition-colors font-medium whitespace-nowrap"
                     >
                       Remover
                     </button>
@@ -374,7 +390,8 @@ export default function FriendsPage() {
                 name="messageMode"
                 checked={messageMode === 'selective'}
                 onChange={() => setMessageMode('selective')}
-                className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
+                className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900
+                dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
               />
               <span className="text-sm sm:text-base text-gray-900 dark:text-white">Envio Seletivo</span>
             </label>
@@ -384,14 +401,16 @@ export default function FriendsPage() {
                 name="messageMode"
                 checked={messageMode === 'global'}
                 onChange={() => setMessageMode('global')}
-                className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
+                className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900
+                dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
               />
               <span className="text-sm sm:text-base text-gray-900 dark:text-white">Envio Global (todos os amigos)</span>
             </label>
           </div>
           
           {messageMode === 'selective' && (
-            <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-lg p-3 bg-white dark:bg-gray-950">
+            <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200
+             dark:border-gray-800 rounded-lg p-3 bg-white dark:bg-gray-950">
               {friends.length === 0 ? (
                 <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">Nenhum amigo disponível</p>
               ) : (
@@ -400,7 +419,8 @@ export default function FriendsPage() {
                   if (!friend) return null;
                   const isSelected = selectedFriends.some(f => f.id === friend.id);
                   return (
-                    <label key={friendship.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer rounded-lg transition-colors">
+                    <label key={friendship.id} className="flex items-center gap-3 p-3
+                    hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer rounded-lg transition-colors">
                       <input
                         type="checkbox"
                         checked={isSelected}
@@ -411,7 +431,8 @@ export default function FriendsPage() {
                             setSelectedFriends(selectedFriends.filter(f => f.id !== friend.id));
                           }
                         }}
-                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
+                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900
+                        dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">{friend.name || 'Unknown'}</div>
@@ -442,7 +463,9 @@ export default function FriendsPage() {
               setMessageBody('');
               setShowMessageModal(true);
             }}
-            className="w-full sm:w-auto px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm sm:text-base"
+            className="w-full sm:w-auto px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900
+            rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed
+            transition-colors font-medium text-sm sm:text-base"
             disabled={friends.length === 0 || (messageMode === 'selective' && selectedFriends.length === 0)}
           >
             {messageMode === 'global' ? 'Enviar Mensagem Global' : 'Enviar Mensagem Seletiva'}
@@ -451,7 +474,8 @@ export default function FriendsPage() {
       ) : (
         <div className="space-y-4">
           {requests.length === 0 ? (
-            <div className="text-center text-gray-600 dark:text-gray-400 py-12 sm:py-16 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <div className="text-center text-gray-600 dark:text-gray-400 py-12 sm:py-16
+             border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900">
               <p className="text-sm sm:text-base">Nenhuma solicitação pendente</p>
             </div>
           ) : (

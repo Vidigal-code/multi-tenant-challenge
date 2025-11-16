@@ -5,7 +5,7 @@ import { DEFAULT_COMPANY_LOGO } from '../../types';
 export interface Company {
     id: string;
     name: string;
-    logoUrl?: string;
+    logoUrl?: string | null;
 }
 
 export const CompanyList = React.memo(function CompanyList({companies, onSelect}: {

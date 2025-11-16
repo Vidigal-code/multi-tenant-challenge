@@ -1,8 +1,35 @@
 export function formatDate(dateString: string | Date | null | undefined): string {
     if (!dateString) return '-';
     try {
-        const date = dateString instanceof Date ? dateString : new Date(dateString);
-        if (isNaN(date.getTime())) return 'Data inválida';
+        let date: Date;
+        if (dateString instanceof Date) {
+            date = dateString;
+        } else if (typeof dateString === 'string') {
+            date = new Date(dateString);
+            if (isNaN(date.getTime()) && !isNaN(Number(dateString))) {
+                date = new Date(Number(dateString));
+            }
+        } else {
+            return '-';
+        }
+        
+        if (isNaN(date.getTime())) {
+            if (typeof dateString === 'string') {
+                const timestamp = Number(dateString);
+                if (!isNaN(timestamp) && timestamp > 0) {
+                    date = new Date(timestamp);
+                } else {
+                    return '-';
+                }
+            } else {
+                return '-';
+            }
+        }
+        
+        if (isNaN(date.getTime())) {
+            return '-';
+        }
+        
         return date.toLocaleString('pt-BR', {
             year: 'numeric',
             month: '2-digit',
@@ -12,15 +39,42 @@ export function formatDate(dateString: string | Date | null | undefined): string
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
     } catch {
-        return 'Data inválida';
+        return '-';
     }
 }
 
 export function formatDateOnly(dateString: string | Date | null | undefined): string {
     if (!dateString) return '-';
     try {
-        const date = dateString instanceof Date ? dateString : new Date(dateString);
-        if (isNaN(date.getTime())) return 'Data inválida';
+        let date: Date;
+        if (dateString instanceof Date) {
+            date = dateString;
+        } else if (typeof dateString === 'string') {
+            date = new Date(dateString);
+            if (isNaN(date.getTime()) && !isNaN(Number(dateString))) {
+                date = new Date(Number(dateString));
+            }
+        } else {
+            return '-';
+        }
+        
+        if (isNaN(date.getTime())) {
+            if (typeof dateString === 'string') {
+                const timestamp = Number(dateString);
+                if (!isNaN(timestamp) && timestamp > 0) {
+                    date = new Date(timestamp);
+                } else {
+                    return '-';
+                }
+            } else {
+                return '-';
+            }
+        }
+        
+        if (isNaN(date.getTime())) {
+            return '-';
+        }
+        
         return date.toLocaleDateString('pt-BR', {
             year: 'numeric',
             month: '2-digit',
@@ -28,7 +82,7 @@ export function formatDateOnly(dateString: string | Date | null | undefined): st
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
     } catch {
-        return 'Data inválida';
+        return '-';
     }
 }
 
