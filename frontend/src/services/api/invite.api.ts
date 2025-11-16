@@ -89,7 +89,7 @@ export function useAcceptInvite() {
   
   return useMutation({
     mutationFn: async (token: string) => {
-      await http.post('/auth/accept-invite', { token });
+      await http.post('/auth/accept-invites', { token });
     },
     onSuccess: async () => {
       // Invalidate all invite-related queries

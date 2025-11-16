@@ -227,7 +227,7 @@ export function useLeaveCompany(companyId: string | undefined) {
   
   return useMutation({
     mutationFn: async (userId: string) => {
-      await http.post(`/companys/${companyId}/members/${userId}/leave`);
+      await http.post(`/company/${companyId}/members/${userId}/leave`);
     },
     onSuccess: async () => {
       if (!companyId) return;
