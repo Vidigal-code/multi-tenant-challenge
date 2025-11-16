@@ -77,6 +77,7 @@ export default function CompanyPage() {
     const [actionMember, setActionMember] = useState<Member | null>(null);
     const [newRole, setNewRole] = useState<'OWNER' | 'ADMIN' | 'MEMBER' | ''>('');
     const [removeMemberConfirm, setRemoveMemberConfirm] = useState<Member | null>(null);
+    const [showDeleteCompanyModal, setShowDeleteCompanyModal] = useState(false);
     const { show } = useToast();
     const qc = useQueryClient();
 
@@ -435,24 +436,14 @@ export default function CompanyPage() {
                             </button>
                         )}
                         {canDelete && (
-                            <button className="px-4 py-2 border
-                            border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950
+                            <button
+                                className="px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950
                              text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
                              transition-colors font-medium text-sm"
-                                onClick={() => {
-                                    if (!confirm('Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita.')) return;
-                                    deleteCompanyMutation.mutate(id, {
-                                        onSuccess: () => {
-                                            show({ type: 'success', message: 'Empresa excluída' });
-                                            window.location.href = '/dashboard';
-                                        },
-                                        onError: (err: any) => {
-                                            const m = getErrorMessage(err, 'Falha ao excluir empresa');
-                                            setError(m);
-                                            show({ type: 'error', message: m });
-                                        },
-                                    });
-                                }}>Excluir empresa</button>
+                                onClick={() => setShowDeleteCompanyModal(true)}
+                            >
+                                Excluir empresa
+                            </button>
                         )}
                     </div>
                     {showInvite && <InviteForm companyId={id} onInvited={handleInvited} />}
@@ -688,6 +679,27 @@ export default function CompanyPage() {
                 }}
             >
                 Tem certeza que deseja remover este membro da empresa? Esta ação não pode ser desfeita.
+            </ConfirmModal>
+            <ConfirmModal
+                open={showDeleteCompanyModal}
+                title="Excluir empresa?"
+                onCancel={() => setShowDeleteCompanyModal(false)}
+                onConfirm={() => {
+                    deleteCompanyMutation.mutate(id, {
+                        onSuccess: () => {
+                            setShowDeleteCompanyModal(false);
+                            show({ type: 'success', message: 'Empresa excluída' });
+                            window.location.href = '/dashboard';
+                        },
+                        onError: (err: any) => {
+                            const m = getErrorMessage(err, 'Falha ao excluir empresa');
+                            setError(m);
+                            show({ type: 'error', message: m });
+                        },
+                    });
+                }}
+            >
+                Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita e removerá todos os dados relacionados a ela.
             </ConfirmModal>
             <Modal
                 open={showTransferModal}
