@@ -1,3 +1,5 @@
+const LOCALE = process.env.NEXT_PUBLIC_LOCALE || 'pt-BR';
+
 export function formatDate(dateString: string | Date | null | undefined): string {
     if (!dateString) return '-';
     try {
@@ -30,7 +32,7 @@ export function formatDate(dateString: string | Date | null | undefined): string
             return '-';
         }
         
-        return date.toLocaleString('pt-BR', {
+        return date.toLocaleString(LOCALE, {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -75,7 +77,7 @@ export function formatDateOnly(dateString: string | Date | null | undefined): st
             return '-';
         }
         
-        return date.toLocaleDateString('pt-BR', {
+        return date.toLocaleDateString(LOCALE, {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
