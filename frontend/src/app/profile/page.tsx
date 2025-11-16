@@ -87,7 +87,6 @@ export default function ProfilePage() {
     const currentName = profileQuery.data?.name ?? '';
     const currentEmail = profileQuery.data?.email ?? '';
 
-    // Helper function to update notification preferences
     const updateNotificationPreference = (key: string, value: boolean) => {
         const newPrefs = { ...notificationPreferences, [key]: value };
         updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
@@ -289,7 +288,6 @@ export default function ProfilePage() {
                                 </p>
                             </div>
 
-                            {/* Tabs */}
                             <div className="border-b border-gray-200 dark:border-gray-800">
                                 <nav className="-mb-px flex space-x-4">
                                     <button
@@ -712,7 +710,8 @@ export default function ProfilePage() {
                                     onClick={() => {
                                         setShowFinalConfirmModal(false);
                                     }}
-                                    className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                                    className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50
+                                    dark:hover:bg-gray-900 transition-colors"
                                 >
                                     Cancelar
                                 </button>
@@ -740,7 +739,6 @@ export default function ProfilePage() {
                         Controle quais notificações você recebe do sistema.
                     </p>
 
-                    {/* Configuração de Notificações em Tempo Real */}
                     <div className="space-y-4 border border-gray-200 dark:border-gray-800 rounded-lg p-4 bg-white dark:bg-gray-900">
                         <div className="border-b border-gray-200 dark:border-gray-800 pb-4 mb-4">
                             <h3 className="text-md font-semibold dark:text-white mb-2 flex items-center gap-2">
@@ -748,7 +746,8 @@ export default function ProfilePage() {
                                 Configuração de Notificações em Tempo Real
                             </h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                                Habilite a opção para receber notificações imediatas via WebSocket. Ao ativar, todas as categorias selecionadas passam a enviar alertas em tempo real.
+                                Habilite a opção para receber notificações imediatas via WebSocket.
+                                Ao ativar, todas as categorias selecionadas passam a enviar alertas em tempo real.
                             </p>
                             
                             <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
@@ -781,7 +780,8 @@ export default function ProfilePage() {
                                         Escolha como deseja visualizar as notificações em tempo real:
                                     </p>
                                     
-                                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border border-gray-200 dark:border-gray-700">
+                                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50
+                                    dark:hover:bg-gray-800/50 transition-colors border border-gray-200 dark:border-gray-700">
                                         <div className="flex-shrink-0 mt-1">
                                             <MdNotifications className="text-xl text-purple-600 dark:text-purple-400" />
                                         </div>
@@ -810,7 +810,8 @@ export default function ProfilePage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border border-gray-200 dark:border-gray-700">
+                                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50
+                                    dark:hover:bg-gray-800/50 transition-colors border border-gray-200 dark:border-gray-700">
                                         <div className="flex-shrink-0 mt-1">
                                             <MdBadge className="text-xl text-green-600 dark:text-green-400" />
                                         </div>
@@ -839,7 +840,8 @@ export default function ProfilePage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border border-gray-200 dark:border-gray-700">
+                                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50
+                                    dark:hover:bg-gray-800/50 transition-colors border border-gray-200 dark:border-gray-700">
                                         <div className="flex-shrink-0 mt-1">
                                             <MdNotifications className="text-xl text-gray-600 dark:text-gray-400" />
                                         </div>
@@ -850,7 +852,8 @@ export default function ProfilePage() {
                                                         Nenhuma Exibição Especial
                                                     </label>
                                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        As notificações continuam sendo recebidas em tempo real via WebSocket, mas não aparece popup nem ícone. Acesse a página Notificações para visualizar.
+                                                        As notificações continuam sendo recebidas em tempo real
+                                                        via WebSocket, mas não aparece popup nem ícone. Acesse a página Notificações para visualizar.
                                                     </p>
                                                 </div>
                                                 <input
@@ -1001,9 +1004,9 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    {updateProfileMutation.isPending && (
+                    {/* {updateProfileMutation.isPending && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">Salvando preferências...</p>
-                    )}
+                    )} */}
                 </div>
             )}
         </div>

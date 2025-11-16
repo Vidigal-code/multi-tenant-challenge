@@ -37,6 +37,22 @@ interface FormattedLine {
     url?: string;
 }
 
+function normalizeInviteUrl(rawUrl: string | undefined | null): string {
+    if (!rawUrl) return '';
+    try {
+        const url = new URL(rawUrl, typeof window !== 'undefined' ? window.location.origin : undefined);
+        if (typeof window !== 'undefined' && window.location?.origin) {
+            return `${window.location.origin}${url.pathname}${url.search}${url.hash}`;
+        }
+        return url.toString();
+    } catch {
+        if (typeof window !== 'undefined' && rawUrl.startsWith('/')) {
+            return `${window.location.origin}${rawUrl}`;
+        }
+        return rawUrl;
+    }
+}
+
 function formatNotificationBody(body: string, title?: string): FormattedLine[] {
     if (!body) return [];
     
@@ -195,7 +211,8 @@ function formatNotificationBody(body: string, title?: string): FormattedLine[] {
             });
         } else if (line.startsWith('Invite URL:')) {
             const urlMatch = line.match(/(https?:\/\/[^\s]+|www\.[^\s]+|\/[^\s]+)/);
-            const url = urlMatch ? urlMatch[1] : line.replace('Invite URL:', '').trim();
+            const rawUrl = urlMatch ? urlMatch[1] : line.replace('Invite URL:', '').trim();
+            const url = normalizeInviteUrl(rawUrl);
             formattedLines.push({
                 icon: <MdLink className="inline mr-1" />,
                 label: 'Link do Convite:',
@@ -1124,7 +1141,17 @@ export default function NotificationsPage() {
                                                                 <div className="text-sm mt-1"><strong className="text-gray-600 dark:text-gray-400">Email do Convite:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{originalNotification.meta.inviteEmail}</span></div>
                                                             )}
                                                             {originalNotification.meta.inviteUrl && (
-                                                                <div className="text-sm mt-1"><strong className="text-gray-600 dark:text-gray-400">Link do Convite:</strong> <a href={originalNotification.meta.inviteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline break-all ml-1">{originalNotification.meta.inviteUrl}</a></div>
+                                                                <div className="text-sm mt-1">
+                                                                    <strong className="text-gray-600 dark:text-gray-400">Link do Convite:</strong>{' '}
+                                                                    <a
+                                                                        href={normalizeInviteUrl(originalNotification.meta.inviteUrl)}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-blue-600 dark:text-blue-400 hover:underline break-all ml-1"
+                                                                    >
+                                                                        {normalizeInviteUrl(originalNotification.meta.inviteUrl)}
+                                                                    </a>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     )}
@@ -1223,9 +1250,19 @@ export default function NotificationsPage() {
                                                                 {originalMeta.inviteEmail && (
                                                                     <div className="text-sm mt-1"><strong className="text-gray-600 dark:text-gray-400">Email do Convite:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{originalMeta.inviteEmail}</span></div>
                                                                 )}
-                                                                {originalMeta.inviteUrl && (
-                                                                    <div className="text-sm mt-1"><strong className="text-gray-600 dark:text-gray-400">Link do Convite:</strong> <a href={originalMeta.inviteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline break-all ml-1">{originalMeta.inviteUrl}</a></div>
-                                                                )}
+                                                            {originalMeta.inviteUrl && (
+                                                                <div className="text-sm mt-1">
+                                                                    <strong className="text-gray-600 dark:text-gray-400">Link do Convite:</strong>{' '}
+                                                                    <a
+                                                                        href={normalizeInviteUrl(originalMeta.inviteUrl)}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-blue-600 dark:text-blue-400 hover:underline break-all ml-1"
+                                                                    >
+                                                                        {normalizeInviteUrl(originalMeta.inviteUrl)}
+                                                                    </a>
+                                                                </div>
+                                                            )}
                                                             </div>
                                                         )}
                                                         {originalMeta?.rejectedByName && (
@@ -1375,7 +1412,17 @@ export default function NotificationsPage() {
                                                 <div><strong>Email do Convite:</strong> {notification.meta.inviteEmail}</div>
                                             )}
                                             {notification.meta.inviteUrl && (
-                                                <div><strong>Link do Convite:</strong> <a href={notification.meta.inviteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline break-all">{notification.meta.inviteUrl}</a></div>
+                                                <div>
+                                                    <strong>Link do Convite:</strong>{' '}
+                                                    <a
+                                                        href={normalizeInviteUrl(notification.meta.inviteUrl)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                                    >
+                                                        {normalizeInviteUrl(notification.meta.inviteUrl)}
+                                                    </a>
+                                                </div>
                                             )}
                                         </div>
                                     )}

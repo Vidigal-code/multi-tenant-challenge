@@ -7,6 +7,7 @@ import Skeleton from '../../components/skeleton/Skeleton';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { subscribe, whenReady, RT_EVENTS } from '../../lib/realtime';
 import { DEFAULT_COMPANY_LOGO } from '../../types';
+import {queryKeys} from '../../lib/queryKeys';
 import {
     useInvitesCreated,
     useInvitesReceived,
@@ -31,6 +32,22 @@ const STATUS_LABELS: Record<string, string> = {
     EXPIRED: 'Expirado',
     CANCELED: 'Cancelado',
 };
+
+function normalizeInviteUrl(rawUrl: string | undefined | null): string {
+    if (!rawUrl) return '';
+    try {
+        const url = new URL(rawUrl, typeof window !== 'undefined' ? window.location.origin : undefined);
+        if (typeof window !== 'undefined' && window.location?.origin) {
+            return `${window.location.origin}${url.pathname}${url.search}${url.hash}`;
+        }
+        return url.toString();
+    } catch {
+        if (typeof window !== 'undefined' && rawUrl.startsWith('/')) {
+            return `${window.location.origin}${rawUrl}`;
+        }
+        return rawUrl;
+    }
+}
 
 function formatDate(dateString: string | null | undefined): string {
     if (!dateString) return '-';
@@ -189,12 +206,10 @@ function InvitesPageInner() {
             if (!active) return;
             unsubscribers.push(
                 subscribe(RT_EVENTS.INVITE_REJECTED, () => {
-                    qc.invalidateQueries({ queryKey: ['invites-created', page, pageSize] });
-                    qc.invalidateQueries({ queryKey: queryKeys.invites(page, pageSize) });
+                    qc.invalidateQueries({ queryKey: queryKeys.invitesCreated(page, pageSize) });
                 }),
                 subscribe(RT_EVENTS.INVITE_ACCEPTED, () => {
-                    qc.invalidateQueries({ queryKey: ['invites-created', page, pageSize] });
-                    qc.invalidateQueries({ queryKey: queryKeys.invites(page, pageSize) });
+                    qc.invalidateQueries({ queryKey: queryKeys.invitesCreated(page, pageSize) });
                 }),
             );
         });
@@ -346,9 +361,13 @@ function InvitesPageInner() {
                                                     {i.inviteUrl && (
                                                         <div className="break-all">
                                                             <span className="font-medium text-gray-700 dark:text-gray-300">Link do Convite:</span>{' '}
-                                                            <a href={i.inviteUrl} target="_blank" rel="noopener noreferrer"
-                                                               className="text-gray-900 dark:text-white underline hover:no-underline break-all">
-                                                                {i.inviteUrl}
+                                                            <a
+                                                                href={normalizeInviteUrl(i.inviteUrl)}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-gray-900 dark:text-white underline hover:no-underline break-all"
+                                                            >
+                                                                {normalizeInviteUrl(i.inviteUrl)}
                                                             </a>
                                                         </div>
                                                     )}
