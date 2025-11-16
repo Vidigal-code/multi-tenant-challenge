@@ -14,6 +14,7 @@ import {createAdapter} from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
 import {Counter, Gauge, Registry, Summary} from 'prom-client';
 import {LoggerService} from '@infrastructure/logging/logger.service';
+import {DeliveryConfirmationService} from '@infrastructure/messaging/services/delivery-confirmation.service';
 
 export const RT_EVENT = {
     COMPANY_UPDATED: 'companys.updated',
@@ -25,6 +26,8 @@ export const RT_EVENT = {
     FRIEND_REQUEST_SENT: 'friend.request.sent',
     FRIEND_REQUEST_ACCEPTED: 'friend.request.accepted',
     FRIEND_REMOVED: 'friend.removed',
+    NOTIFICATION_DELIVERED: 'notifications.delivered',
+    NOTIFICATION_DELIVERY_FAILED: 'notifications.delivery.failed',
 };
 
 /**
@@ -94,6 +97,7 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
         private readonly jwt: JwtService,
         private readonly config: ConfigService,
         @Inject(MEMBERSHIP_REPOSITORY) private readonly memberships: MembershipRepository,
+        @Inject(DeliveryConfirmationService) private readonly deliveryConfirmation: DeliveryConfirmationService,
     ) {
         this.logger = new LoggerService(EventsGateway.name, config);
         const registry = new Registry();
@@ -215,6 +219,50 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
                 this.logger.websocket(`Evento recebido: ${event}, usuário=${socket.data?.userId}, args=${JSON.stringify(args).substring(0, 100)}`);
                 this.logger.websocket(`Event received: ${event}, user=${socket.data?.userId}, args=${JSON.stringify(args).substring(0, 100)}`);
             });
+
+            socket.on(RT_EVENT.NOTIFICATION_DELIVERED, async (payload: { messageId: string }) => {
+                try {
+                    if (!payload?.messageId) {
+                        this.logger.websocket(`Invalid delivery confirmation: missing messageId, user=${socket.data?.userId}`);
+                        return;
+                    }
+
+                    const userId = socket.data?.userId;
+                    if (!userId) {
+                        this.logger.websocket(`Delivery confirmation from unauthenticated socket: ${socket.id}`);
+                        return;
+                    }
+
+                    const confirmed = await this.deliveryConfirmation.confirmDelivery(payload.messageId);
+                    if (confirmed) {
+                        this.logger.websocket(`Delivery confirmed: messageId=${payload.messageId}, user=${userId}`);
+                    } else {
+                        this.logger.websocket(`Delivery confirmation failed (expired or already confirmed): messageId=${payload.messageId}, user=${userId}`);
+                    }
+                } catch (error: any) {
+                    this.logger.error(`Error processing delivery confirmation: ${error?.message || String(error)}`);
+                }
+            });
+
+            socket.on(RT_EVENT.NOTIFICATION_DELIVERY_FAILED, async (payload: { messageId: string; error?: string }) => {
+                try {
+                    if (!payload?.messageId) {
+                        this.logger.websocket(`Invalid delivery failure: missing messageId, user=${socket.data?.userId}`);
+                        return;
+                    }
+
+                    const userId = socket.data?.userId;
+                    if (!userId) {
+                        this.logger.websocket(`Delivery failure from unauthenticated socket: ${socket.id}`);
+                        return;
+                    }
+
+                    await this.deliveryConfirmation.removePendingDelivery(payload.messageId);
+                    this.logger.websocket(`Delivery failed: messageId=${payload.messageId}, user=${userId}, error=${payload.error || 'unknown'}`);
+                } catch (error: any) {
+                    this.logger.error(`Error processing delivery failure: ${error?.message || String(error)}`);
+                }
+            });
         });
     }
 
@@ -265,6 +313,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     }
 
     async emitToCompany(companyId: string, event: string, payload: any) {
+        if (!this.server) {
+            this.logger.error(`WebSocket server not initialized. Cannot emit to company: ${companyId}, event: ${event}`);
+            return;
+        }
         if (!(await this.allowEmit(companyId, event))) {
             this.logger.websocket(`Rate limit: emit to company blocked, company=${companyId}, event=${event}`);
             return;
@@ -275,6 +327,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     }
 
     async emitToUser(userId: string, event: string, payload: any) {
+        if (!this.server) {
+            this.logger.error(`WebSocket server not initialized. Cannot emit to user: ${userId}, event: ${event}`);
+            return;
+        }
         if (!(await this.allowEmit(userId, event))) {
             this.logger.websocket(`Rate limit: emit to user blocked, user=${userId}, event=${event}`);
             return;
@@ -285,6 +341,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     }
 
     async broadcast(event: string, payload: any) {
+        if (!this.server) {
+            this.logger.error(`WebSocket server not initialized. Cannot broadcast event: ${event}`);
+            return;
+        }
         if (!(await this.allowEmit('broadcast', event))) {
             this.logger.websocket(`Rate limit: broadcast blocked, event=${event}`);
             return;

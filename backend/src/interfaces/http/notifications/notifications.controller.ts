@@ -1,5 +1,5 @@
 import {Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards} from "@nestjs/common";
-import {ApiCookieAuth, ApiOperation, ApiResponse, ApiTags} from "@nestjs/swagger";
+import {ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags} from "@nestjs/swagger";
 import {JwtAuthGuard} from "@common/guards/jwt.guard";
 import {CurrentUser} from "@common/decorators/current-user.decorator";
 import {SendNotificationUseCase} from "@application/use-cases/notifications/send-notification.usecase";
@@ -7,6 +7,7 @@ import {SendFriendMessageUseCase} from "@application/use-cases/friendships/send-
 import {ListNotificationsUseCase} from "@application/use-cases/notifications/list-notifications.usecase";
 import {MarkNotificationReadUseCase} from "@application/use-cases/notifications/mark-notification-read.usecase";
 import {DeleteNotificationUseCase} from "@application/use-cases/notifications/delete-notification.usecase";
+import {DeleteNotificationsUseCase} from "@application/use-cases/notifications/delete-notifications.usecase";
 import {ReplyToNotificationUseCase} from "@application/use-cases/notifications/reply-to-notification.usecase";
 import {ErrorResponse} from "@application/dto/errors/error.response.dto";
 import {NotificationReadPayloadDto} from "@application/dto/realtimes/realtime.dto";
@@ -28,6 +29,7 @@ export class NotificationsController {
         private readonly listNotifications: ListNotificationsUseCase,
         private readonly markRead: MarkNotificationReadUseCase,
         private readonly deleteNotification: DeleteNotificationUseCase,
+        private readonly deleteNotificationsUseCase: DeleteNotificationsUseCase,
         private readonly replyToNotification: ReplyToNotificationUseCase,
         private readonly configService: ConfigService,
     ) {
@@ -148,6 +150,16 @@ export class NotificationsController {
     @ApiResponse({status: 404, description: "Not found", type: ErrorResponse})
     async delete(@CurrentUser() user: any, @Param('id') id: string) {
         return this.deleteNotification.execute({notificationId: id, userId: user.sub});
+    }
+
+    @Delete()
+    @ApiOperation({summary: "Delete multiple notifications"})
+    @ApiBody({schema: {properties: {notificationIds: {type: 'array', items: {type: 'string'}}}}})
+    @ApiResponse({status: 200, description: "Notifications deleted"})
+    @ApiResponse({status: 403, description: "Forbidden", type: ErrorResponse})
+    async deleteNotifications(@CurrentUser() user: any, @Body() body: { notificationIds: string[] }) {
+        const {notificationIds} = body;
+        return this.deleteNotificationsUseCase.execute({notificationIds, userId: user.sub});
     }
 
     @Post(":id/reply")

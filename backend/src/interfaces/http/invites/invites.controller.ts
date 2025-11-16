@@ -16,6 +16,7 @@ import {COMPANY_REPOSITORY, CompanyRepository} from "@domain/repositories/compan
 import {ConfigService} from "@nestjs/config";
 import {Role} from "@domain/enums/role.enum";
 import {LoggerService} from "@infrastructure/logging/logger.service";
+import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
 
 @ApiTags("invites")
 @ApiCookieAuth()
@@ -31,6 +32,7 @@ export class InvitesController {
         @Inject(MEMBERSHIP_REPOSITORY) private readonly memberships: MembershipRepository,
         private readonly rabbit: RabbitMQService,
         private readonly configService: ConfigService,
+        @Inject('EventPayloadBuilderService') private readonly eventBuilder: EventPayloadBuilderService,
     ) {
         this.logger = new LoggerService(InvitesController.name, configService);
     }
@@ -132,14 +134,14 @@ export class InvitesController {
             this.logger.default(`Get invite failed: invite not found - code: ${inviteCode}, user: ${user.sub}`);
             throw new ApplicationError(ErrorCode.INVITE_NOT_FOUND);
         }
-        
+
         const company = await this.companies.findById(invite.companyId);
         const inviter = invite.inviterId ? await this.users.findById(invite.inviterId) : null;
         const currentUser = await this.users.findById(user.sub);
-        
+
         const isInviter = invite.inviterId === user.sub;
         const isRecipient = currentUser && invite.email.toString().toLowerCase() === currentUser.email.toString().toLowerCase();
-        
+
         return {
             id: invite.id,
             companyId: invite.companyId,
@@ -181,7 +183,7 @@ export class InvitesController {
             this.logger.default(`Accept invite failed: invite expired - invite: ${invite.id}, user: ${user.sub}`);
             throw new ApplicationError("INVITE_EXPIRED");
         }
-        
+
         const currentUser = await this.users.findById(user.sub);
         if (!currentUser) {
             this.logger.default(`Accept invite failed: user not found - user: ${user.sub}`);
@@ -192,7 +194,7 @@ export class InvitesController {
             ${invite.id}, invite email: ${invite.email}, user email: ${currentUser.email}, user: ${user.sub}`);
             throw new ApplicationError("INVITE_NOT_FOR_USER");
         }
-        
+
         const existingMembership = await this.memberships.findByUserAndCompany(user.sub, invite.companyId);
         if (!existingMembership) {
             await this.memberships.create({
@@ -201,29 +203,32 @@ export class InvitesController {
                 role: invite.role as Role,
             });
         }
-        
+
         if (!currentUser.activeCompanyId) {
             await this.users.update({
                 id: user.sub,
                 activeCompanyId: invite.companyId,
             });
         }
-        
+
         await this.invites.markAccepted(invite.id, user.sub);
-        
+
+        const eventPayload = await this.eventBuilder.build({
+            eventId: "INVITE_ACCEPTED",
+            senderId: user.sub,
+            receiverId: invite.inviterId || null,
+            companyId: invite.companyId,
+            additionalData: {
+                inviteId: invite.id,
+                invitedUserId: user.sub,
+                invitedEmail: invite.email.toString(),
+            },
+        });
+
         await this.rabbit.assertEventQueue("events.invites", "dlq.events.invites");
         await this.rabbit.sendToQueue(
             "events.invites",
-            Buffer.from(
-                JSON.stringify({
-                    eventId: "INVITE_ACCEPTED",
-                    inviteId: invite.id,
-                    companyId: invite.companyId,
-                    invitedUserId: user.sub,
-                    invitedEmail: invite.email.toString(),
-                    timestamp: new Date().toISOString(),
-                }),
-            ),
+            Buffer.from(JSON.stringify(eventPayload)),
         );
         return {success: true, companyId: invite.companyId};
     }
@@ -243,48 +248,62 @@ export class InvitesController {
             this.logger.default(`Reject invite failed: invite already used - invite: ${invite.id}, user: ${user.sub}`);
             throw new ApplicationError(ErrorCode.INVITE_ALREADY_USED);
         }
-        
+
         await this.invites.updateStatus(invite.id, InviteStatus.REJECTED);
-        
+
         if (invite.inviterId) {
             const company = await this.companies.findById(invite.companyId);
             const rejectedUser = await this.users.findById(user.sub);
             const inviterUser = await this.users.findById(invite.inviterId);
-            
+
             if (inviterUser) {
                 await this.notifications.create({
                     companyId: invite.companyId,
                     senderUserId: user.sub,
                     recipientUserId: invite.inviterId,
-                    title: "INVITE_REJECTED",
-                    body: "INVITE_REJECTED",
+                    title: "[INVITE_REJECTED]",
+                    body: "INVITE_REJECTED:[your_company_invitation_has_been_rejected.]",
                     meta: {
                         kind: "invites.rejected",
+                        channel: "company",
                         inviteId: invite.id,
                         rejectedBy: user.sub,
                         rejectedByName: rejectedUser?.name || null,
-                        rejectedByEmail: invite.email.toString(),
+                        rejectedByEmail: rejectedUser?.email?.toString() || user.email || null,
                         companyName: company?.name || null,
+                        companyId: invite.companyId,
                         inviteEmail: invite.email.toString(),
+                        sender: {
+                            id: rejectedUser?.id || user.sub,
+                            name: rejectedUser?.name || null,
+                            email: rejectedUser?.email?.toString() || user.email || null,
+                        },
+                        company: company ? {
+                            id: company.id,
+                            name: company.name,
+                            description: company.description || null,
+                            logoUrl: company.logoUrl || null,
+                        } : null,
                     },
                 });
             }
         }
-        
+
+        const eventPayload = await this.eventBuilder.build({
+            eventId: "INVITE_REJECTED",
+            senderId: user.sub,
+            receiverId: invite.inviterId || null,
+            companyId: invite.companyId,
+            additionalData: {
+                inviteId: invite.id,
+                invitedEmail: invite.email.toString(),
+            },
+        });
+
         await this.rabbit.assertEventQueue("events.invites", "dlq.events.invites");
         await this.rabbit.sendToQueue(
             "events.invites",
-            Buffer.from(
-                JSON.stringify({
-                    eventId: "INVITE_REJECTED",
-                    inviteId: invite.id,
-                    companyId: invite.companyId,
-                    inviterId: invite.inviterId,
-                    invitedEmail: invite.email.toString(),
-                    invitedName: user.name ?? null,
-                    timestamp: new Date().toISOString(),
-                }),
-            ),
+            Buffer.from(JSON.stringify(eventPayload)),
         );
         return {success: true};
     }
@@ -316,6 +335,30 @@ export class InvitesController {
         if (isRecipient && !isInviter && invite.isPending()) {
             await this.invites.updateStatus(invite.id, InviteStatus.REJECTED);
         }
+
+        const receiverId = isInviter ? null : invite.inviterId || null;
+        const receiverEmail = isInviter ? invite.email.toString() : null;
+
+        const eventPayload = await this.eventBuilder.build({
+            eventId: "INVITE_DELETED",
+            senderId: user.sub,
+            receiverId: receiverId,
+            receiverEmail: receiverEmail,
+            companyId: invite.companyId,
+            additionalData: {
+                inviteId: invite.id,
+                invitedEmail: invite.email.toString(),
+                deletedBy: user.sub,
+                isInviter: isInviter,
+                isRecipient: isRecipient,
+            },
+        });
+
+        await this.rabbit.assertEventQueue("events.invites", "dlq.events.invites");
+        await this.rabbit.sendToQueue(
+            "events.invites",
+            Buffer.from(JSON.stringify(eventPayload)),
+        );
 
         await this.invites.delete(inviteId);
         return {success: true};

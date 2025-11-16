@@ -5,6 +5,7 @@ import {LoggerService} from "@infrastructure/logging/logger.service";
 
 const INVITES_EVENTS_QUEUE = "events.invites";
 const NOTIFICATIONS_REALTIME_QUEUE = "notifications.realtimes";
+const DLQ_REALTIME_NOTIFICATIONS = "dlq.notifications.realtimes";
 const DLQ_INVITES = "dlq.events.invites";
 
 class InvitesEventsConsumer extends BaseResilientConsumer<any> {
@@ -20,7 +21,11 @@ class InvitesEventsConsumer extends BaseResilientConsumer<any> {
     }
 
     protected async process(payload: any): Promise<void> {
-        await this.rabbit.assertQueue(NOTIFICATIONS_REALTIME_QUEUE);
+        await this.rabbit.assertQueueWithOptions(NOTIFICATIONS_REALTIME_QUEUE, {
+            deadLetterExchange: '',
+            deadLetterRoutingKey: DLQ_REALTIME_NOTIFICATIONS,
+        });
+        await this.rabbit.assertQueue(DLQ_REALTIME_NOTIFICATIONS);
         await this.rabbit.sendToQueue(
             NOTIFICATIONS_REALTIME_QUEUE,
             Buffer.from(JSON.stringify(payload)),

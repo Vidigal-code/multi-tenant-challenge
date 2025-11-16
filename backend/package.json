@@ -13,7 +13,11 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "worker:invites": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/invites.events.consumer.ts",
-    "worker:members": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/members.events.consumer.ts"
+    "worker:members": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/members.events.consumer.ts",
+    "worker:generic": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/generic.events.consumer.ts",
+    "worker:realtime": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/realtime-notifications.consumer.ts",
+    "clean:queues": "powershell -ExecutionPolicy Bypass -File ./scripts/clean-queues.ps1",
+    "clear:dedup": "powershell -ExecutionPolicy Bypass -File ./scripts/clear-redis-dedup.ps1"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.9",

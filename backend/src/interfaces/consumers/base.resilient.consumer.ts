@@ -3,7 +3,7 @@ import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.servi
 import {LoggerService} from "@infrastructure/logging/logger.service";
 import Redis from "ioredis";
 
-interface ResilientConsumerOptions {
+export interface ResilientConsumerOptions {
     queue: string;
     dlq: string;
     prefetch: number;
@@ -90,10 +90,12 @@ export abstract class BaseResilientConsumer<T = any> {
             if (key) {
                 const exists = await this.redis.get(key);
                 if (exists) {
-                    this.logger.rabbitmq(`Dedup: skipping duplicate message, key: ${key}`);
+                    this.logger.rabbitmq(`Dedup: skipping duplicate message, key: ${key}, ttl: ${await this.redis.ttl(key)}s`);
                     channel.ack(msg);
                     return;
                 }
+                // Log when processing with dedup key for debugging
+                this.logger.rabbitmq(`Dedup: processing new message, key: ${key}`);
             }
             try {
                 this.logger.rabbitmq(`Processing message from queue: ${this.opts.queue}`);
@@ -118,15 +120,34 @@ export abstract class BaseResilientConsumer<T = any> {
     protected abstract process(payload: T): Promise<void>;
 
     protected dedupKey(payload: T): string | null {
-        if ((payload as any)?.eventId && (payload as any)?.inviteId) {
-            return `evt:${(payload as any).eventId}:invite:${(payload as any).inviteId}`;
+        const p = payload as any;
+        
+        // Use messageId from RabbitMQ if available (most reliable)
+        if (p?.messageId || p?.id) {
+            return `msg:${p.messageId || p.id}`;
         }
-        if ((payload as any)?.eventId && (payload as any)?.userId) {
-            return `evt:${(payload as any).eventId}:user:${(payload as any).userId}`;
+        
+        // For events with inviteId, use inviteId + eventId + timestamp
+        if (p?.eventId && p?.inviteId) {
+            const timestamp = p?.timestamp ? new Date(p.timestamp).getTime() : Date.now();
+            return `evt:${p.eventId}:invite:${p.inviteId}:ts:${timestamp}`;
         }
-        if ((payload as any)?.eventId && (payload as any)?.companyId) {
-            return `evt:${(payload as any).eventId}:company:${(payload as any).companyId}`;
+        
+        // For user events, include oldRole and newRole to differentiate status changes
+        if (p?.eventId && p?.userId) {
+            const timestamp = p?.timestamp ? new Date(p.timestamp).getTime() : Date.now();
+            const uniqueId = p?.initiatorId || p?.senderUserId || p?.notificationId || '';
+            const roleChange = (p?.oldRole && p?.newRole) ? `:${p.oldRole}->${p.newRole}` : '';
+            return `evt:${p.eventId}:user:${p.userId}:ts:${timestamp}:uid:${uniqueId}${roleChange}`;
         }
+        
+        // For company events
+        if (p?.eventId && p?.companyId) {
+            const timestamp = p?.timestamp ? new Date(p.timestamp).getTime() : Date.now();
+            const uniqueId = p?.initiatorId || p?.senderUserId || p?.notificationId || '';
+            return `evt:${p.eventId}:company:${p.companyId}:ts:${timestamp}:uid:${uniqueId}`;
+        }
+        
         return null;
     }
 

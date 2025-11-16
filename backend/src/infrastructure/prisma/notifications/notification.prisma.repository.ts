@@ -22,7 +22,7 @@ export class NotificationPrismaRepository implements NotificationRepository {
                 recipientUserId: data.recipientUserId ?? null,
                 recipientsEmails: (data.recipientsEmails == null ? undefined : data.recipientsEmails) as any,
                 title: data.title,
-                body: data.body,
+                body: data.body ?? '',
                 meta: data.meta ?? {},
             },
         });

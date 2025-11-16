@@ -36,6 +36,35 @@ export interface Notification {
     originalNotificationId?: string;
     replyTo?: string;
     originalTitle?: string;
+    originalBody?: string;
+    originalMeta?: {
+      kind?: string;
+      channel?: string;
+      sender?: {
+        id: string;
+        name: string;
+        email: string;
+      };
+      company?: {
+        name?: string;
+        description?: string;
+        memberCount?: number;
+      };
+      companyName?: string;
+      companyId?: string;
+      inviteId?: string;
+      inviteUrl?: string;
+      inviteEmail?: string;
+      role?: string;
+      previousRole?: string;
+      removedBy?: {
+        id: string;
+        name: string;
+        email: string;
+      };
+      rejectedByName?: string;
+      rejectedByEmail?: string;
+    };
     rejectedByName?: string;
     rejectedByEmail?: string;
     inviteEmail?: string;
@@ -70,7 +99,13 @@ export function useCreateNotification() {
       return response.data;
     },
     onSuccess: async (result) => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.notifications(),
+      }).catch((error: any) => {
+        if (error?.name !== 'CancelledError') {
+          console.error('[useCreateNotification] Error invalidating queries:', error);
+        }
+      });
       return result;
     },
   });
@@ -84,7 +119,13 @@ export function useMarkNotificationRead() {
       await http.patch(`/notifications/${id}/read`);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.notifications(),
+      }).catch((error: any) => {
+        if (error?.name !== 'CancelledError') {
+          console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
+        }
+      });
     },
   });
 }
@@ -97,7 +138,32 @@ export function useDeleteNotification() {
       await http.delete(`/notifications/${id}`);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.notifications(),
+      }).catch((error: any) => {
+        if (error?.name !== 'CancelledError') {
+          console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
+        }
+      });
+    },
+  });
+}
+
+export function useDeleteNotifications() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (notificationIds: string[]) => {
+      await http.delete('/notifications', { data: { notificationIds } });
+    },
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.notifications(),
+      }).catch((error: any) => {
+        if (error?.name !== 'CancelledError') {
+          console.error('[useDeleteNotifications] Error invalidating queries:', error);
+        }
+      });
     },
   });
 }
@@ -107,10 +173,16 @@ export function useReplyToNotification() {
   
   return useMutation({
     mutationFn: async ({ id, body }: { id: string; body: string }) => {
-      await http.post(`/notifications/${id}/reply`, { body });
+      await http.post(`/notifications/${id}/reply`, { replyBody: body });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.notifications(),
+      }).catch((error: any) => {
+        if (error?.name !== 'CancelledError') {
+          console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
+        }
+      });
     },
   });
 }

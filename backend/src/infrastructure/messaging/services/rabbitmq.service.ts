@@ -192,8 +192,59 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
      * @throws Error se o canal não estiver inicializado.
      */
     async assertQueueWithOptions(queue: string, options: any): Promise<void> {
+        if (!this.connection) throw new Error("RABBITMQ_CONNECTION_NOT_INITIALIZED");
+        
+        if (!this.channel) {
+            this.logger.rabbitmq(`Channel not initialized, creating new channel...`);
+            this.channel = await this.connection.createChannel();
+        }
+        
+        try {
+            await this.channel.assertQueue(queue, { durable: true, ...(options || {}) });
+            this.logger.rabbitmq(`Queue asserted successfully: ${queue}`);
+        } catch (error: any) {
+            if (error?.code === 406 || error?.message?.includes('PRECONDITION_FAILED')) {
+                this.logger.rabbitmq(`Queue ${queue} exists with different options (PRECONDITION_FAILED).`);
+                this.logger.rabbitmq(`The queue has different DLQ configuration. Messages in the queue will be preserved.`);
+                this.logger.rabbitmq(`To fix: Stop all workers, run 'npm run clean:queues', then restart with 'npm run start:all'`);
+                this.logger.rabbitmq(`Or delete the queue manually from RabbitMQ Management UI: http://localhost:15672`);
+                throw new Error(`Queue ${queue} exists with different options. Stop all workers, run 'npm run clean:queues', and restart. Error: ${error?.message || String(error)}`);
+            } else {
+                throw error;
+            }
+        }
+    }
+
+    /**
+     * Deletes a queue. Use with caution as this will remove all messages in the queue.
+     * Deleta uma fila. Use com cuidado pois isso removerá todas as mensagens na fila.
+     *
+     * @param queue - Name of the queue to delete.
+     * @param queue - Nome da fila a deletar.
+     * @param options
+     * @returns Promise<void>
+     * @throws Error if channel is not initialized.
+     * @throws Error se o canal não estiver inicializado.
+     */
+    async deleteQueue(queue: string, options?: { ifUnused?: boolean; ifEmpty?: boolean }): Promise<void> {
         if (!this.channel) throw new Error("RABBITMQ_CHANNEL_NOT_INITIALIZED");
-        await this.channel.assertQueue(queue, { durable: true, ...(options || {}) });
+        try {
+            await this.channel.deleteQueue(queue, {});
+            this.logger.rabbitmq(`Queue deleted successfully: ${queue}`);
+        } catch (error: any) {
+            if (error?.code === 404) {
+                this.logger.rabbitmq(`Queue does not exist: ${queue}`);
+            } else if (error?.code === 406 || error?.message?.includes('PRECONDITION_FAILED')) {
+                try {
+                    await this.channel.deleteQueue(queue, options || { ifUnused: true, ifEmpty: true });
+                    this.logger.rabbitmq(`Queue deleted successfully with restrictions: ${queue}`);
+                } catch (retryError: any) {
+                    this.logger.rabbitmq(`Warning: Could not delete queue ${queue}: ${retryError?.message || String(retryError)}. Continuing anyway.`);
+                }
+            } else {
+                throw error;
+            }
+        }
     }
 
     /**

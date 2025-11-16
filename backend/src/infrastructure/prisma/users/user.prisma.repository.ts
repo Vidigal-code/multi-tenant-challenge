@@ -58,6 +58,7 @@ export class UserPrismaRepository implements UserRepository {
             data: updateData,
             include: {memberships: true},
         });
+        
         return this.toDomain(user);
     }
 

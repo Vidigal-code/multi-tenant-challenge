@@ -2,6 +2,7 @@ import {Module} from "@nestjs/common";
 import {ConfigModule, ConfigService} from "@nestjs/config";
 import {AuthInfraModule} from "@infrastructure/auth/modules/auth-infra.module";
 import {InfrastructureModule} from "@infrastructure/infrastructure.module";
+import {RealtimeModule} from "@modules/realtime/realtime.module";
 import {AuthController} from "@interfaces/http/auths/auth.controller";
 import {InvitesController} from "@interfaces/http/invites/invites.controller";
 import {SignupUseCase} from "@application/use-cases/auths/signup.usecase";
@@ -18,7 +19,7 @@ import {COMPANY_REPOSITORY} from "@domain/repositories/companys/company.reposito
 import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
 
 @Module({
-    imports: [ConfigModule, AuthInfraModule, InfrastructureModule],
+    imports: [ConfigModule, AuthInfraModule, InfrastructureModule, RealtimeModule],
     controllers: [AuthController, InvitesController],
     providers: [
         {

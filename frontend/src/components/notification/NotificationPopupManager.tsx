@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { subscribe, whenReady, RT_EVENTS } from '../../lib/realtime';
 import { NotificationPopup } from './NotificationPopup';
-import { NotificationData } from '../../lib/notification-messages';
+import { NotificationData, extractEventCode } from '../../lib/notification-messages';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
 import { http } from '../../lib/http';
@@ -53,8 +53,8 @@ const ROLE_CHANGE_KINDS: NotificationKind[] = [
     'role.changed', 'membership.role.updated'
 ];
 
-function shouldShowNotification(notification: NotificationData, preferences: any): boolean {
-    if (!preferences) return true;
+function shouldShowNotification(notification: NotificationData, derived: any): boolean {
+    if (!derived) return true;
 
     const kind = notification.meta?.kind as NotificationKind || '';
     const title = (notification.title || '').toUpperCase();
@@ -62,27 +62,27 @@ function shouldShowNotification(notification: NotificationData, preferences: any
 
     if (COMPANY_INVITATION_KINDS.includes(kind) ||
         title.includes('CONVITE') || title.includes('INVITE')) {
-        return preferences.companyInvitations;
+        return derived.companyInvitations !== false;
     }
 
     if (FRIEND_REQUEST_KINDS.includes(kind) ||
         title.includes('AMIGO') || title.includes('FRIEND')) {
-        return preferences.friendRequests;
+        return derived.friendRequests !== false;
     }
 
     if (COMPANY_MESSAGE_KINDS.includes(kind) ||
         title.includes('NOTIFICATION') || title.includes('MENSAGEM') || body.includes('MENSAGEM')) {
-        return preferences.companyMessages;
+        return derived.companyMessages !== false;
     }
 
     if (MEMBERSHIP_CHANGE_KINDS.includes(kind) ||
         title.includes('MEMBER') || title.includes('MEMBRO')) {
-        return preferences.membershipChanges;
+        return derived.membershipChanges !== false;
     }
 
     if (ROLE_CHANGE_KINDS.includes(kind) ||
         title.includes('ROLE') || title.includes('CARGO') || title.includes('PAPEL')) {
-        return preferences.roleChanges;
+        return derived.roleChanges !== false;
     }
 
     return true;
@@ -117,30 +117,43 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                 lastNotificationTime = now;
 
                 try {
-                    // Only show popup if realtime is enabled, popups are enabled, and icon badge is not selected
+                    const messageId = payload.messageId;
+                    
                     if (!notificationDerived.realtimeEnabled || !notificationDerived.realtimePopups || notificationDerived.realtimeIconBadge) {
+                        if (messageId) {
+                            try {
+                                const { emit } = await import('../../lib/realtime');
+                                emit(RT_EVENTS.NOTIFICATION_DELIVERED, { messageId });
+                                console.log('[NotificationPopupManager] Delivery confirmed (popup disabled):', messageId);
+                            } catch (error) {
+                                console.error('[NotificationPopupManager] Error confirming delivery:', error);
+                            }
+                        }
+                        queryClient.invalidateQueries({ 
+                            queryKey: queryKeys.notifications(),
+                        }).catch((error: any) => {
+                            if (error?.name !== 'CancelledError') {
+                                console.error('[NotificationPopupManager] Error invalidating queries:', error);
+                            }
+                        });
                         return;
                     }
 
                     let notification: NotificationData | null = null;
 
-                    if (payload.notificationId) {
-                        const cachedNotifications = queryClient.getQueryData<NotificationData[]>(queryKeys.notifications());
-                        notification = cachedNotifications?.find(n => n.id === payload.notificationId) || null;
+                    const notificationId = payload.notificationId || payload.id || payload.notification?.id;
 
-                        if (!notification) {
-                            const notifications = await queryClient.fetchQuery<NotificationData[]>({
+                    try {
+                        queryClient.invalidateQueries({ 
                                 queryKey: queryKeys.notifications(),
-                                queryFn: async () => {
-                                    const response = await http.get('/notifications');
-                                    return (response.data.items ?? []) as NotificationData[];
-                                },
-                                staleTime: 5000,
-                            });
-                            notification = notifications?.find(n => n.id === payload.notificationId) || null;
-                        }
-                    } else {
-                        queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+                        }).catch((error: any) => {
+                            if (error?.name !== 'CancelledError') {
+                                console.error('[NotificationPopupManager] Error invalidating queries:', error);
+                            }
+                        });
+                        
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
                         const notifications = await queryClient.fetchQuery<NotificationData[]>({
                             queryKey: queryKeys.notifications(),
                             queryFn: async () => {
@@ -149,14 +162,70 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                             },
                             staleTime: 5000,
                         });
-                        notification = notifications && notifications.length > 0 ? notifications[0] : null;
+
+                        if (notificationId) {
+                            notification = notifications?.find(n => n.id === notificationId) || null;
+                        } else {
+                            const eventId = payload.eventId || extractEventCode(payload.title || '');
+                            const eventName = payload.eventName || payload.meta?.kind;
+                            const companyId = payload.companyId || payload.company?.id;
+                            const receiverId = payload.receiver?.id || payload.recipientUserId;
+                            
+                            if (eventId || eventName) {
+                                notification = notifications?.find(n => {
+                                    const nEventId = extractEventCode(n.title || '');
+                                    const matchesEventId = eventId && (nEventId === eventId || n.title?.includes(eventId));
+                                    const matchesKind = eventName && n.meta?.kind === eventName;
+                                    const matchesCompany = companyId && n.companyId === companyId;
+                                    const matchesReceiver = receiverId && n.recipientUserId === receiverId;
+                                    
+                                    if (matchesEventId || matchesKind) {
+                                        if (companyId && receiverId) {
+                                            return matchesCompany && matchesReceiver;
+                                        }
+                                        return true;
+                                    }
+                                    return false;
+                                }) || null;
+                            }
+                            
+                            if (!notification && notifications && notifications.length > 0) {
+                                const recentNotification = notifications
+                                    .filter(n => {
+                                        if (companyId && n.companyId !== companyId) return false;
+                                        if (receiverId && n.recipientUserId !== receiverId) return false;
+                                        return true;
+                                    })
+                                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                                
+                                notification = recentNotification || notifications[0];
+                            }
+                        }
+                    } catch (fetchError) {
+                        console.error('[NotificationPopupManager] Error fetching notifications:', fetchError);
+                    }
+
+                    if (messageId) {
+                        try {
+                            const { emit } = await import('../../lib/realtime');
+                            emit(RT_EVENTS.NOTIFICATION_DELIVERED, { messageId });
+                            console.log('[NotificationPopupManager] Delivery confirmed:', messageId);
+                        } catch (error) {
+                            console.error('[NotificationPopupManager] Error confirming delivery:', error);
+                        }
                     }
 
                     if (notification) {
-                        if (shouldShowNotification(notification, preferences)) {
+                        if (shouldShowNotification(notification, notificationDerived)) {
                             setCurrentNotification(notification);
 
-                            queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+                            queryClient.invalidateQueries({ 
+                                queryKey: queryKeys.notifications(),
+                            }).catch((error: any) => {
+                                if (error?.name !== 'CancelledError') {
+                                    console.error('[NotificationPopupManager] Error invalidating queries:', error);
+                                }
+                            });
 
                             setTimeout(() => {
                                 if (active) {
@@ -165,10 +234,16 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                             }, 10000);
                         }
                     } else {
-                        queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+                        queryClient.invalidateQueries({ 
+                            queryKey: queryKeys.notifications(),
+                        }).catch((error: any) => {
+                            if (error?.name !== 'CancelledError') {
+                                console.error('[NotificationPopupManager] Error invalidating queries:', error);
+                            }
+                        });
                     }
                 } catch (error) {
-                    //console.error('[NotificationPopupManager] Erro ao buscar notificação:', error);
+                    console.error('[NotificationPopupManager] Error handling notification:', error);
                 }
             };
 
@@ -185,7 +260,7 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
             active = false;
             unsubscribers.forEach((unsubscribe) => unsubscribe());
         };
-    }, [enabled, queryClient, preferences, notificationDerived]);
+    }, [enabled, queryClient, notificationDerived]);
 
     if (!enabled || !currentNotification) return null;
 
@@ -195,7 +270,13 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
             onClose={() => setCurrentNotification(null)}
             onNavigate={() => {
                 setCurrentNotification(null);
-                queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+                queryClient.invalidateQueries({ 
+                    queryKey: queryKeys.notifications(),
+                }).catch((error: any) => {
+                    if (error?.name !== 'CancelledError') {
+                        console.error('[NotificationPopupManager] Error invalidating queries:', error);
+                    }
+                });
             }}
         />
     );

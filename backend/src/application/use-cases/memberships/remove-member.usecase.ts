@@ -8,6 +8,7 @@ import {DomainEventsService} from "@domain/services/domain-events.service";
 import {CompanyPermissionService} from "@domain/services/company-permission.service";
 import {ConfigService} from "@nestjs/config";
 import {LoggerService} from "@infrastructure/logging/logger.service";
+import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
 
 export interface RemoveMemberInput {
     requesterId: string;
@@ -23,6 +24,7 @@ export class RemoveMemberUseCase {
         private readonly companyRepository: CompanyRepository,
         private readonly userRepository: UserRepository,
         private readonly domainEvents?: DomainEventsService,
+        private readonly eventBuilder?: EventPayloadBuilderService,
         private readonly configService?: ConfigService,
     ) {
         this.logger = new LoggerService(RemoveMemberUseCase.name, configService);
@@ -68,26 +70,26 @@ export class RemoveMemberUseCase {
         const isRequesterPrimaryOwner = primaryOwner && primaryOwner.userId === input.requesterId;
 
         if (!isRequesterPrimaryOwner) {
-            if (targetMembership.role === Role.OWNER) {
-                const ownerCount = await this.membershipRepository.countByCompanyAndRole(
-                    input.companyId,
-                    Role.OWNER,
-                );
-                if (ownerCount <= 1) {
-                    this.logger.default(`Remove member failed: last owner cannot be removed - owner: ${input.targetUserId}, company: ${input.companyId}`);
-                    throw new ApplicationError(ErrorCode.LAST_OWNER_CANNOT_BE_REMOVED);
-                }
-            }
-
-            const allowed = CompanyPermissionService.canModify(
-                requesterMembership.role,
-                targetMembership.role,
-                "remove-member",
-                false,
+        if (targetMembership.role === Role.OWNER) {
+            const ownerCount = await this.membershipRepository.countByCompanyAndRole(
+                input.companyId,
+                Role.OWNER,
             );
-            if (!allowed) {
+            if (ownerCount <= 1) {
+                    this.logger.default(`Remove member failed: last owner cannot be removed - owner: ${input.targetUserId}, company: ${input.companyId}`);
+                throw new ApplicationError(ErrorCode.LAST_OWNER_CANNOT_BE_REMOVED);
+            }
+        }
+
+        const allowed = CompanyPermissionService.canModify(
+            requesterMembership.role,
+            targetMembership.role,
+            "remove-member",
+            false,
+        );
+        if (!allowed) {
                 this.logger.default(`Remove member failed: forbidden action - requester: ${input.requesterId}, target: ${input.targetUserId}, company: ${input.companyId}`);
-                throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
+            throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
             }
         }
 
@@ -113,19 +115,23 @@ export class RemoveMemberUseCase {
             });
         }
 
-        if (this.domainEvents) {
-
-            await this.domainEvents.publish({
-                name: "memberships.removed",
-                payload: {
+        if (this.domainEvents && this.eventBuilder) {
+            const eventPayload = await this.eventBuilder.build({
                     eventId: "USER_REMOVED",
+                senderId: input.requesterId,
+                receiverId: input.targetUserId,
                     companyId: input.companyId,
+                additionalData: {
                     userId: input.targetUserId,
                     initiatorId: input.requesterId,
                     notifiedUserIds: leadershipMembers,
                     role: targetMembership.role,
-                    timestamp: new Date().toISOString(),
                 },
+            });
+
+            await this.domainEvents.publish({
+                name: "memberships.removed",
+                payload: eventPayload,
             });
         }
 

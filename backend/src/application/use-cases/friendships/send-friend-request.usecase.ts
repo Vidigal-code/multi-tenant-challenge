@@ -6,6 +6,7 @@ import {ErrorCode} from "@application/errors/error-code";
 import {FriendshipStatus} from "@domain/entities/friendships/friendship.entity";
 import {ConfigService} from "@nestjs/config";
 import {LoggerService} from "@infrastructure/logging/logger.service";
+import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
 
 export interface SendFriendRequestInput {
     requesterId: string;
@@ -19,6 +20,7 @@ export class SendFriendRequestUseCase {
         private readonly users: UserRepository,
         private readonly friendships: FriendshipRepository,
         private readonly domainEvents: DomainEventsService,
+        private readonly eventBuilder: EventPayloadBuilderService,
         private readonly configService?: ConfigService,
     ) {
         this.logger = new LoggerService(SendFriendRequestUseCase.name, configService);
@@ -64,13 +66,20 @@ export class SendFriendRequestUseCase {
             addresseeId: addressee.id,
         });
 
-        await this.domainEvents.publish({
-            name: "friend.request.sent",
-            payload: {
+        const eventPayload = await this.eventBuilder.build({
+            eventId: "FRIEND_REQUEST_SENT",
+            senderId: input.requesterId,
+            receiverId: addressee.id,
+            additionalData: {
                 friendshipId: friendship.id,
                 requesterId: input.requesterId,
                 addresseeId: addressee.id,
             },
+        });
+
+        await this.domainEvents.publish({
+            name: "friend.request.sent",
+            payload: eventPayload,
         });
 
         return {friendship};

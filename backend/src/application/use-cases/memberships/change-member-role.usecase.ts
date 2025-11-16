@@ -6,6 +6,7 @@ import {DomainEventsService} from "@domain/services/domain-events.service";
 import {CompanyPermissionService} from "@domain/services/company-permission.service";
 import {ConfigService} from "@nestjs/config";
 import {LoggerService} from "@infrastructure/logging/logger.service";
+import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
 
 export interface ChangeMemberRoleInput {
     requesterId: string;
@@ -20,6 +21,7 @@ export class ChangeMemberRoleUseCase {
     constructor(
         private readonly membershipRepository: MembershipRepository,
         private readonly domainEvents: DomainEventsService,
+        private readonly eventBuilder: EventPayloadBuilderService,
         private readonly configService?: ConfigService,
     ) {
         this.logger = new LoggerService(ChangeMemberRoleUseCase.name, configService);
@@ -99,17 +101,22 @@ export class ChangeMemberRoleUseCase {
             input.newRole,
         );
 
-        await this.domainEvents.publish({
-            name: "memberships.role.updated",
-            payload: {
-                eventId: "USER_STATUS_UPDATED",
-                companyId: input.companyId,
-                userId: input.targetUserId,
+        const eventPayload = await this.eventBuilder.build({
+            eventId: "USER_STATUS_UPDATED",
+            senderId: input.requesterId,
+            receiverId: input.targetUserId,
+            companyId: input.companyId,
+            additionalData: {
                 oldRole: targetMembership.role,
                 newRole: input.newRole,
+                userId: input.targetUserId,
                 initiatorId: input.requesterId,
-                timestamp: new Date().toISOString(),
             },
+        });
+
+        await this.domainEvents.publish({
+            name: "memberships.role.updated",
+            payload: eventPayload,
         });
 
         return {success: true};

@@ -96,7 +96,13 @@ export function useSendFriendNotification() {
       await http.post('/notifications/friend', data);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.notifications(),
+      }).catch((error: any) => {
+        if (error?.name !== 'CancelledError') {
+          console.error('[useSendFriendNotification] Error invalidating queries:', error);
+        }
+      });
     },
   });
 }

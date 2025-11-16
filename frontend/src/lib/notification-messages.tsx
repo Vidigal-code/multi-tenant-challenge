@@ -1,6 +1,24 @@
 import React from 'react';
-import { getNotificationCodeMessage, isNotificationCode, formatNotificationMessageTemplate, getNotificationKindMessage, type NotificationMessageParams } from './messages';
-import { MdPerson, MdCancel, MdMail, MdCheck, MdPersonRemove, MdRefresh, MdBusiness, MdDelete, MdChat, MdNotifications } from 'react-icons/md';
+import {
+    getNotificationCodeMessage,
+    isNotificationCode,
+    formatNotificationMessageTemplate,
+    getNotificationKindMessage,
+    translateRole,
+    type NotificationMessageParams
+} from './messages';
+import {
+    MdPerson,
+    MdCancel,
+    MdMail,
+    MdCheck,
+    MdPersonRemove,
+    MdRefresh,
+    MdBusiness,
+    MdDelete,
+    MdChat,
+    MdNotifications
+} from 'react-icons/md';
 
 export type NotificationKind =
     | 'friend.request.sent'
@@ -61,14 +79,14 @@ export interface NotificationData {
 }
 
 export function formatNotificationMessage(notification: NotificationData): string {
-    const { meta, title, body } = notification;
+    const {meta, title, body} = notification;
     const kind = meta?.kind || 'notification.sent';
     const sender = meta?.sender;
 
     const params: NotificationMessageParams = {
         senderName: sender?.name,
         senderEmail: sender?.email,
-        companyName: meta?.companyName || 'uma empresa',
+        companyName: meta?.company?.name || meta?.companyName || 'uma empresa',
         inviteUrl: meta?.inviteUrl || (meta?.inviteId ? `/invite/${meta.inviteId}` : undefined),
         inviteId: meta?.inviteId,
         inviteEmail: meta?.inviteEmail,
@@ -76,19 +94,22 @@ export function formatNotificationMessage(notification: NotificationData): strin
         rejectedByEmail: meta?.rejectedByEmail || sender?.email,
         removedByName: meta?.removedBy?.name || sender?.name,
         removedByEmail: meta?.removedBy?.email || sender?.email,
-        role: meta?.role || 'N/A',
-        previousRole: meta?.previousRole || 'N/A',
+        role: translateRole(meta?.role) || 'N/A',
+        previousRole: translateRole(meta?.previousRole) || 'N/A',
         body: body,
         title: title,
         originalTitle: meta?.originalTitle || title,
     };
 
-    if (isNotificationCode(title)) {
-        const baseMessage = getNotificationCodeMessage(title);
+    const eventCode = extractEventCode(title);
+    const codeToCheck = eventCode || title;
 
-        switch (title) {
+    if (isNotificationCode(codeToCheck)) {
+        const baseMessage = getNotificationCodeMessage(eventCode || title);
+
+        switch (eventCode || title) {
             case 'FRIEND_REQUEST_SENT':
-                return sender 
+                return sender
                     ? formatNotificationMessageTemplate('friend.request.sent.withSender', params)
                     : formatNotificationMessageTemplate('friend.request.sent.withoutSender', params);
             case 'FRIEND_REQUEST_ACCEPTED':
@@ -148,34 +169,60 @@ export function formatNotificationMessage(notification: NotificationData): strin
     return getNotificationKindMessage(kind, params);
 }
 
+export function extractEventCode(title: string): string | null {
+    const match = title.match(/\[([^\]]+)\]/);
+    return match ? match[1] : null;
+}
+
+export function removeEventCodeFromTitle(title: string): string {
+    let cleaned = title.replace(/\s*\[([^\]]+)\]\s*$/, '').trim();
+    
+    cleaned = cleaned.replace(/\b(MEMBER|ADMIN|OWNER|member|admin|owner)\b/g, (match) => {
+        return translateRole(match);
+    });
+    
+    return cleaned;
+}
+
 export function getNotificationStyle(kind?: string): { color: string; icon: React.ReactNode } {
     switch (kind) {
         case 'friend.request.sent':
         case 'friend.request.accepted':
-            return { color: 'text-blue-600 dark:text-blue-400', icon: <MdPerson className="text-lg" /> };
+            return {color: 'text-blue-600 dark:text-blue-400', icon: <MdPerson className="text-lg"/>};
         case 'friend.request.rejected':
         case 'friend.removed':
-            return { color: 'text-red-600 dark:text-red-400', icon: <MdCancel className="text-lg" /> };
+            return {color: 'text-red-600 dark:text-red-400', icon: <MdCancel className="text-lg"/>};
+        case 'invite.created':
         case 'invites.created':
+        case 'invite.accepted':
         case 'invites.accepted':
-            return { color: 'text-green-600 dark:text-green-400', icon: <MdMail className="text-lg" /> };
+            return {color: 'text-green-600 dark:text-green-400', icon: <MdMail className="text-lg"/>};
+        case 'invite.rejected':
         case 'invites.rejected':
-            return { color: 'text-orange-600 dark:text-orange-400', icon: <MdCancel className="text-lg" /> };
+            return {color: 'text-orange-600 dark:text-orange-400', icon: <MdCancel className="text-lg"/>};
         case 'member.added':
-            return { color: 'text-green-600 dark:text-green-400', icon: <MdCheck className="text-lg" /> };
+        case 'membership.joined':
+        case 'memberships.joined':
+            return {color: 'text-green-600 dark:text-green-400', icon: <MdCheck className="text-lg"/>};
         case 'member.removed':
-            return { color: 'text-red-600 dark:text-red-400', icon: <MdPersonRemove className="text-lg" /> };
+        case 'membership.removed':
+        case 'memberships.removed':
+            return {color: 'text-red-600 dark:text-red-400', icon: <MdPersonRemove className="text-lg"/>};
         case 'role.changed':
-            return { color: 'text-blue-600 dark:text-blue-400', icon: <MdRefresh className="text-lg" /> };
+        case 'membership.role.updated':
+        case 'memberships.role.updated':
+            return {color: 'text-blue-600 dark:text-blue-400', icon: <MdRefresh className="text-lg"/>};
         case 'companys.created':
         case 'companys.updated':
-            return { color: 'text-blue-600 dark:text-blue-400', icon: <MdBusiness className="text-lg" /> };
+            return {color: 'text-blue-600 dark:text-blue-400', icon: <MdBusiness className="text-lg"/>};
         case 'companys.deleted':
-            return { color: 'text-red-600 dark:text-red-400', icon: <MdDelete className="text-lg" /> };
+            return {color: 'text-red-600 dark:text-red-400', icon: <MdDelete className="text-lg"/>};
+        case 'notification.sent':
         case 'notifications.sent':
+        case 'notification.reply':
         case 'notifications.reply':
-            return { color: 'text-blue-600 dark:text-blue-400', icon: <MdChat className="text-lg" /> };
+            return {color: 'text-blue-600 dark:text-blue-400', icon: <MdChat className="text-lg"/>};
         default:
-            return { color: 'text-gray-600 dark:text-gray-400', icon: <MdNotifications className="text-lg" /> };
+            return {color: 'text-gray-600 dark:text-gray-400', icon: <MdNotifications className="text-lg"/>};
     }
 }

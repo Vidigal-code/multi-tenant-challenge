@@ -4,10 +4,12 @@ import {MetricsController} from "./metrics.controller";
 import {MetricsService} from "./services/metrics.service";
 import {RequestMetricsInterceptor} from "./services/request-metrics.interceptor";
 import {InfrastructureModule} from "@infrastructure/infrastructure.module";
+import {RabbitMQModule} from "@infrastructure/messaging/modules/rabbitmq.module";
+import {WorkersController} from "@interfaces/http/workers/workers.controller";
 
 @Module({
-    imports: [InfrastructureModule],
-    controllers: [HealthController, MetricsController],
+    imports: [InfrastructureModule, RabbitMQModule],
+    controllers: [HealthController, MetricsController, WorkersController],
     providers: [MetricsService, RequestMetricsInterceptor],
     exports: [MetricsService, RequestMetricsInterceptor],
 })

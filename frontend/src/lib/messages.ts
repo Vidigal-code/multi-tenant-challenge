@@ -198,15 +198,22 @@ export type { SuccessCode, ErrorCode };
 const notificationCodeMessages: Record<string, string> = {
   FRIEND_REQUEST_SENT: 'Você recebeu uma nova solicitação de amizade',
   FRIEND_REQUEST_ACCEPTED: 'Sua solicitação de amizade foi aceita',
+  ACCEPTED_FRIEND: 'Sua solicitação de amizade foi aceita',
   FRIEND_REQUEST_REJECTED: 'Sua solicitação de amizade foi rejeitada',
+  REJECTED_FRIEND: 'Sua solicitação de amizade foi rejeitada',
   FRIEND_REMOVED: 'Você foi removido da lista de amigos',
   INVITE_CREATED: 'Você recebeu um convite para entrar em uma empresa',
   INVITE_ACCEPTED: 'Seu convite foi aceito',
   INVITE_REJECTED: 'Seu convite foi rejeitado',
+  REJECT_COMPANY_INVITE: 'Seu convite foi rejeitado',
   MEMBER_ADDED: 'Você foi adicionado a uma empresa',
+  USER_JOINED: 'Você foi adicionado a uma empresa',
   MEMBER_REMOVED: 'Você foi removido de uma empresa',
+  USER_REMOVED: 'Você foi removido de uma empresa',
   ROLE_CHANGED: 'Seu cargo em uma empresa foi alterado',
+  USER_STATUS_UPDATED: 'Seu cargo em uma empresa foi alterado',
   COMPANY_CREATED: 'Empresa criada com sucesso',
+  NOTIFICATION_SENT: 'Você recebeu uma nova notificação',
   NOTIFICATION_REPLY: 'Você recebeu uma resposta à sua notificação',
 };
 
@@ -225,11 +232,111 @@ export function isNotificationCode(code: string): boolean {
   return code in notificationCodeMessages;
 }
 
+const genericMessageTranslations: Record<string, string> = {
+  // Friend request sent
+  'friend_request_sent:[a_friend_request_has_been_sent_to_you.]': 'Você recebeu uma nova solicitação de amizade',
+  '[a_friend_request_has_been_sent_to_you.]': 'Você recebeu uma nova solicitação de amizade',
+  'a_friend_request_has_been_sent_to_you.': 'Você recebeu uma nova solicitação de amizade',
+  
+  // Friend request accepted
+  'accepted_friend:[your_friend_request_has_been_accepted.]': 'Sua solicitação de amizade foi aceita',
+  '[your_friend_request_has_been_accepted.]': 'Sua solicitação de amizade foi aceita',
+  'your_friend_request_has_been_accepted.': 'Sua solicitação de amizade foi aceita',
+  
+  // Friend request rejected
+  'rejected_friend:[your_friend_request_has_been_rejected.]': 'Sua solicitação de amizade foi rejeitada',
+  '[your_friend_request_has_been_rejected.]': 'Sua solicitação de amizade foi rejeitada',
+  'your_friend_request_has_been_rejected.': 'Sua solicitação de amizade foi rejeitada',
+  
+  // Friend removed
+  'friend_removed:[you_have_been_removed_as_a_friend.]': 'Você foi removido da lista de amigos',
+  '[you_have_been_removed_as_a_friend.]': 'Você foi removido da lista de amigos',
+  'you_have_been_removed_as_a_friend.': 'Você foi removido da lista de amigos',
+  
+  // Invite created
+  'invite_created:[you_have_received_an_invitation_to_join_a_company.]': 'Você recebeu um convite para entrar em uma empresa',
+  '[you_have_received_an_invitation_to_join_a_company.]': 'Você recebeu um convite para entrar em uma empresa',
+  'you_have_received_an_invitation_to_join_a_company.': 'Você recebeu um convite para entrar em uma empresa',
+  
+  // Invite accepted
+  'invite_accepted:[your_company_invitation_has_been_accepted.]': 'Seu convite foi aceito',
+  '[your_company_invitation_has_been_accepted.]': 'Seu convite foi aceito',
+  'your_company_invitation_has_been_accepted.': 'Seu convite foi aceito',
+  
+  // Invite rejected
+  'reject_company_invite:[your_company_invitation_has_been_rejected.]': 'Seu convite foi rejeitado',
+  '[your_company_invitation_has_been_rejected.]': 'Seu convite foi rejeitado',
+  'your_company_invitation_has_been_rejected.': 'Seu convite foi rejeitado',
+  
+  // Member added
+  'member_added:[you_have_joined_a_company.]': 'Você foi adicionado a uma empresa',
+  '[you_have_joined_a_company.]': 'Você foi adicionado a uma empresa',
+  'you_have_joined_a_company.': 'Você foi adicionado a uma empresa',
+  
+  // Member removed
+  'member_removed:[you_have_been_removed_from_a_company.]': 'Você foi removido de uma empresa',
+  '[you_have_been_removed_from_a_company.]': 'Você foi removido de uma empresa',
+  'you_have_been_removed_from_a_company.': 'Você foi removido de uma empresa',
+  
+  // Role changed
+  'role_changed:[your_role_in_the_company_has_been_changed.]': 'Seu cargo na empresa foi alterado',
+  '[your_role_in_the_company_has_been_changed.]': 'Seu cargo na empresa foi alterado',
+  'your_role_in_the_company_has_been_changed.': 'Seu cargo na empresa foi alterado',
+  
+  // Company created
+  'company_created:[a_company_has_been_created.]': 'Uma empresa foi criada',
+  '[a_company_has_been_created.]': 'Uma empresa foi criada',
+  'a_company_has_been_created.': 'Uma empresa foi criada',
+  
+  // Notification sent
+  'notification_sent:[you_have_received_a_new_notification.]': 'Você recebeu uma nova notificação',
+  '[you_have_received_a_new_notification.]': 'Você recebeu uma nova notificação',
+  'you_have_received_a_new_notification.': 'Você recebeu uma nova notificação',
+};
+
+export function translateGenericMessage(message: string): string {
+  if (!message) return message;
+  
+  const normalized = message.toLowerCase().trim();
+  
+  if (genericMessageTranslations[normalized]) {
+    return genericMessageTranslations[normalized];
+  }
+  
+  const match = normalized.match(/\[([^\]]+)\]/);
+  if (match) {
+    const extractedMessage = match[1];
+    if (genericMessageTranslations[extractedMessage]) {
+      return genericMessageTranslations[extractedMessage];
+    }
+    if (genericMessageTranslations[`[${extractedMessage}]`]) {
+      return genericMessageTranslations[`[${extractedMessage}]`];
+    }
+  }
+  
+  return message;
+}
+
 const channelTranslations: Record<string, string> = {
   'friend': 'Amigo',
   'company': 'Empresa',
 };
 
+const roleTranslations: Record<string, string> = {
+  'MEMBER': 'Membro',
+  'ADMIN': 'Administrador',
+  'OWNER': 'Proprietário',
+  'member': 'Membro',
+  'admin': 'Administrador',
+  'owner': 'Proprietário',
+};
+
+export function translateRole(role: string | undefined | null): string {
+  if (!role) return role || '';
+  
+  const normalizedRole = role.toUpperCase().trim();
+  return roleTranslations[normalizedRole] || roleTranslations[role] || role;
+}
 
 export function translateChannel(channel: string | undefined | null): string {
   if (!channel) return '';
@@ -284,8 +391,8 @@ const notificationMessageTemplates: Record<string, string> = {
   'member.removed.withoutSender': 'Você foi removido de {companyName}',
 
   // Role notifications
-  'role.changed.withSender': 'Seu papel em {companyName} foi alterado de {previousRole} para {role} por {senderName} ({senderEmail})',
-  'role.changed.withoutSender': 'Seu papel foi alterado para {role}',
+  'role.changed.withSender': 'Seu cargo em {companyName} foi alterado de {previousRole} para {role} por {senderName} ({senderEmail})',
+  'role.changed.withoutSender': 'Seu cargo foi alterado para {role}',
 
   // Company notifications
   'company.created': 'Empresa {companyName} foi criada',

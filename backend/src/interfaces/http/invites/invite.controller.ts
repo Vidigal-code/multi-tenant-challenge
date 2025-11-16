@@ -1,4 +1,4 @@
-import {Body, Controller, Param, Post, UseGuards} from "@nestjs/common";
+import {Body, Controller, Inject, Param, Post, UseGuards} from "@nestjs/common";
 import {ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags} from "@nestjs/swagger";
 import {ErrorResponse} from "@application/dto/errors/error.response.dto";
 import {JwtAuthGuard} from "@common/guards/jwt.guard";
@@ -12,6 +12,7 @@ import {InviteUserUseCase} from "@application/use-cases/memberships/invite-user.
 import {SuccessCode} from "@application/success/success-code";
 import {ConfigService} from "@nestjs/config";
 import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
+import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
 
 @ApiTags("invite")
 @ApiCookieAuth()
@@ -22,6 +23,7 @@ export class InviteController {
         private readonly inviteUserUseCase: InviteUserUseCase,
         private readonly configService: ConfigService,
         private readonly rabbit: RabbitMQService,
+        @Inject('EventPayloadBuilderService') private readonly eventBuilder: EventPayloadBuilderService,
     ) {
     }
 
@@ -51,19 +53,25 @@ export class InviteController {
         const frontendBase = appCfg?.frontendBaseUrl || "http://localhost:3000";
         const inviteUrl = `${frontendBase}/invite/${invite.token}`;
 
+        const eventPayload = await this.eventBuilder.build({
+            eventId: SuccessCode.INVITE_CREATED,
+            senderId: user.sub,
+            receiverEmail: invite.email.toString(),
+            companyId: invite.companyId,
+            additionalData: {
+                inviteId: invite.id,
+                inviterId: user.sub,
+                invitedEmail: invite.email.toString(),
+                role: invite.role,
+                token: invite.token,
+                inviteUrl,
+            },
+        });
+
         await this.rabbit.assertEventQueue("events.invites", "dlq.events.invites");
         await this.rabbit.sendToQueue(
             "events.invites",
-            Buffer.from(
-                JSON.stringify({
-                    eventId: SuccessCode.INVITE_CREATED,
-                    inviteId: invite.id,
-                    companyId: invite.companyId,
-                    inviterId: user.sub,
-                    invitedEmail: invite.email.toString(),
-                    timestamp: new Date().toISOString(),
-                }),
-            ),
+            Buffer.from(JSON.stringify(eventPayload)),
         );
 
         return {

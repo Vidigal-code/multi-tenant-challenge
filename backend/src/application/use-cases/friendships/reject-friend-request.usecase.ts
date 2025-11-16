@@ -3,6 +3,7 @@ import {DomainEventsService} from "@domain/services/domain-events.service";
 import {ApplicationError} from "@application/errors/application-error";
 import {ErrorCode} from "@application/errors/error-code";
 import {FriendshipStatus} from "@domain/entities/friendships/friendship.entity";
+import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
 
 export interface RejectFriendRequestInput {
     friendshipId: string;
@@ -13,6 +14,7 @@ export class RejectFriendRequestUseCase {
     constructor(
         private readonly friendships: FriendshipRepository,
         private readonly domainEvents: DomainEventsService,
+        private readonly eventBuilder: EventPayloadBuilderService,
     ) {
     }
 
@@ -32,13 +34,20 @@ export class RejectFriendRequestUseCase {
 
         await this.friendships.delete(input.friendshipId);
 
-        await this.domainEvents.publish({
-            name: "friend.request.rejected",
-            payload: {
+        const eventPayload = await this.eventBuilder.build({
+            eventId: "FRIEND_REQUEST_REJECTED",
+            senderId: input.userId,
+            receiverId: friendship.requesterId,
+            additionalData: {
                 friendshipId: input.friendshipId,
                 requesterId: friendship.requesterId,
                 addresseeId: friendship.addresseeId,
             },
+        });
+
+        await this.domainEvents.publish({
+            name: "friend.request.rejected",
+            payload: eventPayload,
         });
 
         return {success: true};

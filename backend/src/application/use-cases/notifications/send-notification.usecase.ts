@@ -9,6 +9,7 @@ import {UserRepository} from "@domain/repositories/users/user.repository";
 import {FriendshipRepository} from "@domain/repositories/friendships/friendship.repository";
 import {ConfigService} from "@nestjs/config";
 import {LoggerService} from "@infrastructure/logging/logger.service";
+import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
 
 export interface SendNotificationInput {
     companyId: string;
@@ -33,6 +34,7 @@ export class SendNotificationUseCase {
         private readonly userRepo: UserRepository,
         private readonly friendshipRepo: FriendshipRepository,
         private readonly domainEvents: DomainEventsService,
+        private readonly eventBuilder: EventPayloadBuilderService,
         private readonly configService?: ConfigService,
     ) {
         this.logger = new LoggerService(SendNotificationUseCase.name, configService);
@@ -182,20 +184,23 @@ export class SendNotificationUseCase {
             });
             createdNotifications.push(notification);
 
-            await this.domainEvents.publish({
-                name: "notifications.sent",
-                payload: {
+            const eventPayload = await this.eventBuilder.build({
+                eventId: "NOTIFICATION_SENT",
+                senderId: input.senderUserId,
+                receiverId: recipient.userId,
+                companyId: input.companyId || null,
+                additionalData: {
                     notificationId: notification.id,
-                    companyId: input.companyId,
                     recipientUserId: recipient.userId,
                     senderUserId: input.senderUserId,
                     title: input.title,
-                    sender: {
-                        id: senderUser.id,
-                        name: senderUser.name,
-                        email: senderUser.email.toString(),
-                    },
+                    body: input.body,
                 },
+            });
+
+            await this.domainEvents.publish({
+                name: "notifications.sent",
+                payload: eventPayload,
             });
         }
 

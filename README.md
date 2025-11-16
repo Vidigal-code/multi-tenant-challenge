@@ -140,8 +140,9 @@ Exposição de métricas de processo e HTTP em `/metrics` para observabilidade (
 | POST | `/notifications` | Cria notificação interna (ADMIN/OWNER) - envia para membros ou amigos |
 | GET | `/notifications` | Lista notificações visíveis ao usuário |
 | PATCH | `/notifications/:id/read` | Marca notificação como lida |
-| POST | `/notifications/:id/reply` | Responde a uma notificação |
-| DELETE | `/notifications/:id` | Exclui notificação |
+| POST | `/notifications/:id/reply` | Responde a uma notificação; valida que o usuário é remetente ou destinatário e inclui contexto completo da notificação original em `meta` |
+| DELETE | `/notifications/:id` | Exclui uma notificação específica (remetente ou destinatário) |
+| DELETE | `/notifications` | Exclui múltiplas notificações em lote (body `{ notificationIds: string[] }`) |
 | GET | `/invites/rejected` | Lista convites rejeitados com razão |
 | GET | `/realtime/rooms` | Retorna rooms e catálogo de eventos para conexão WebSocket |
 | GET | `/invites` | Lista convites recebidos (paginação) |
@@ -238,11 +239,11 @@ frontend/
   - `ApplicationError` class usa `ErrorCode` enum.
   - `SuccessMessage` class usa `SuccessCode` enum.
   - Todos os use cases retornam códigos genéricos, não mensagens localizadas.
-  - **Notificações**: Backend sempre envia códigos genéricos em `title` e `body` (ex: `FRIEND_REQUEST_SENT`, `INVITE_CREATED`, `MEMBER_REMOVED`).
+  - **Notificações**: Backend sempre envia códigos genéricos em `title` e `body` (ex: `FRIEND_REQUEST_SENT`, `INVITE_CREATED`, `MEMBER_REMOVED`, `NOTIFICATION_REPLY`).
   - Exceção: Mensagens manuais do usuário (via `POST /notifications` ou `POST /friendships/message`) contêm texto do usuário, não códigos.
 - **Frontend**: Tradução de códigos para mensagens amigáveis em `src/lib/messages.ts`.
   - `getErrorMessage(code)` e `getSuccessMessage(code)` com suporte a parâmetros.
-  - Sistema de tradução para códigos de notificação (ex: `FRIEND_REQUEST_SENT` → "You received a new friend request").
+  - Sistema de tradução para códigos de notificação (ex: `FRIEND_REQUEST_SENT`, `INVITE_CREATED`, `MEMBER_REMOVED`, `NOTIFICATION_REPLY`) em mensagens interativas em **português**, incluindo tradução de roles (`MEMBER` → `Membro`, `ADMIN` → `Administrador`) e de mensagens genéricas como `[your_role_in_the_company_has_been_changed.]`.
   - Emojis e formatação adicionados no frontend, não no backend.
   - Separação clara de responsabilidades: backend = códigos, frontend = tradução.
 - Axios normaliza casos genéricos para fallback.

@@ -2,6 +2,7 @@ import {FriendshipRepository} from "@domain/repositories/friendships/friendship.
 import {DomainEventsService} from "@domain/services/domain-events.service";
 import {ApplicationError} from "@application/errors/application-error";
 import {ErrorCode} from "@application/errors/error-code";
+import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
 
 export interface DeleteFriendshipInput {
     friendshipId: string;
@@ -12,6 +13,7 @@ export class DeleteFriendshipUseCase {
     constructor(
         private readonly friendships: FriendshipRepository,
         private readonly domainEvents: DomainEventsService,
+        private readonly eventBuilder: EventPayloadBuilderService,
     ) {
     }
 
@@ -27,13 +29,25 @@ export class DeleteFriendshipUseCase {
 
         await this.friendships.delete(input.friendshipId);
 
-        await this.domainEvents.publish({
-            name: "friend.removed",
-            payload: {
+        const recipientId = friendship.requesterId === input.userId 
+            ? friendship.addresseeId 
+            : friendship.requesterId;
+
+        const eventPayload = await this.eventBuilder.build({
+            eventId: "FRIEND_REMOVED",
+            senderId: input.userId,
+            receiverId: recipientId,
+            additionalData: {
                 friendshipId: input.friendshipId,
                 requesterId: friendship.requesterId,
                 addresseeId: friendship.addresseeId,
+                userId: input.userId,
             },
+        });
+
+        await this.domainEvents.publish({
+            name: "friend.removed",
+            payload: eventPayload,
         });
 
         return {success: true};

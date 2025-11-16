@@ -343,14 +343,17 @@ MEMBER (Menor privilégio)
 
 - **Marcar como lida**: `PATCH /notifications/:id/read`
 - **Responder**: `POST /notifications/:id/reply`
-  - Modal de resposta mostra: Subject, From (nome), Email, Date & Time, Company ID, mensagem original
+  - Modal de resposta mostra: Assunto (traduzido a partir do código, ex.: `NOTIFICATION_REPLY`), De (nome), Email, Data & Hora, ID da Empresa, mensagem original
   - Indica claramente para quem a resposta será enviada (nome e email)
-  - Apenas remetente original vê respostas
-  - Resposta cria nova notificação para remetente original com informações do sender (nome, email) no `meta`
-  - Backend inclui informações do sender automaticamente nas respostas
-- **Deletar**: `DELETE /notifications/:id`
-- **Deletar múltiplas**: seleção com checkboxes
-- **Clear All**: deletar todas com confirmação
+  - **Quem pode responder**: apenas quem é `senderUserId` **ou** `recipientUserId` da notificação original (regra de backend)
+  - Resposta cria **nova notificação** para o remetente original com informações completas do replier em `meta.sender` (id, nome, email)
+  - Backend inclui automaticamente contexto completo da notificação original em `meta.originalNotificationId`, `meta.originalTitle`, `meta.originalBody` e `meta.originalMeta` (empresa, roles, convite, etc.), permitindo que o frontend exiba o “Contexto” da resposta e a “Mensagem Original” sem nova consulta ao banco
+- **Deletar** (única): `DELETE /notifications/:id`
+- **Deletar múltiplas**: `DELETE /notifications` com body `{ notificationIds: string[] }`
+  - Seleção no frontend via checkboxes por linha
+  - Ações de lista: **Selecionar todos**, **Deletar selecionados**, **Limpar todos**
+  - Backend valida que o usuário é `recipientUserId` **ou** `senderUserId` de cada notificação antes de deletar (`NOT_AUTHORIZED` caso contrário)
+  - Resposta inclui `deletedCount` com quantidade de notificações removidas
 
 ### 5.5. Informações do Sender em Notificações
 

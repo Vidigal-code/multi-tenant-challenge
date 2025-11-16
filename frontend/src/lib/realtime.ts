@@ -12,6 +12,8 @@ export const RT_EVENTS = {
   FRIEND_REQUEST_SENT: 'friend.request.sent',
   FRIEND_REQUEST_ACCEPTED: 'friend.request.accepted',
   FRIEND_REMOVED: 'friend.removed',
+  NOTIFICATION_DELIVERED: 'notifications.delivered',
+  NOTIFICATION_DELIVERY_FAILED: 'notifications.delivery.failed',
 } as const;
 
 let socket: Socket | null = null;
@@ -50,6 +52,21 @@ export function subscribe(event: string, handler: (payload: any) => void) {
   const s = getRealtimeSocket();
   s.on(event, handler);
   return () => s.off(event, handler);
+}
+
+/**
+ * Emit an event to the WebSocket server
+ * 
+ * EN: Sends an event to the WebSocket server. Used for delivery confirmation and other client-to-server events.
+ * 
+ * PT: Envia um evento ao servidor WebSocket. Usado para confirmação de entrega e outros eventos cliente-para-servidor.
+ * 
+ * @param event - Event name
+ * @param payload - Event payload
+ */
+export function emit(event: string, payload: any) {
+  const s = getRealtimeSocket();
+  s.emit(event, payload);
 }
 
 export async function whenReady() {

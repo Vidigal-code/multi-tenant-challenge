@@ -28,6 +28,10 @@ export class ReplyToNotificationUseCase {
     }
 
     async execute(input: ReplyToNotificationInput) {
+        if (!input.replyBody || !input.replyBody.trim()) {
+            this.logger.default(`Reply to notification failed: reply body is required - notification: ${input.notificationId}, user: ${input.userId}`);
+            throw new ApplicationError(ErrorCode.MISSING_USER_DATA);
+        }
 
         const originalNotification = await this.notificationRepo.findById(input.notificationId);
         if (!originalNotification) {
@@ -50,22 +54,44 @@ export class ReplyToNotificationUseCase {
             throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
         }
 
+        const originalMeta = originalNotification.meta || {};
+        const originalContext = {
+            originalNotificationId: input.notificationId,
+            originalTitle: originalNotification.title,
+            originalBody: originalNotification.body,
+            originalMeta: {
+                kind: originalMeta.kind,
+                channel: originalMeta.channel,
+                sender: originalMeta.sender,
+                company: originalMeta.company,
+                companyName: originalMeta.companyName,
+                companyId: originalMeta.companyId,
+                inviteId: originalMeta.inviteId,
+                inviteUrl: originalMeta.inviteUrl,
+                inviteEmail: originalMeta.inviteEmail,
+                role: originalMeta.role,
+                previousRole: originalMeta.previousRole,
+                removedBy: originalMeta.removedBy,
+                rejectedByName: originalMeta.rejectedByName,
+                rejectedByEmail: originalMeta.rejectedByEmail,
+            },
+        };
+
         const replyNotification = await this.notificationRepo.create({
             companyId: originalNotification.companyId,
             senderUserId: input.userId,
             recipientUserId: originalNotification.senderUserId,
             title: "NOTIFICATION_REPLY",
-            body: input.replyBody,
+            body: input.replyBody.trim(),
             meta: {
                 kind: "notifications.reply",
-                originalNotificationId: input.notificationId,
-                originalTitle: originalNotification.title,
                 replyTo: originalNotification.senderUserId,
                 sender: {
                     id: replier.id,
                     name: replier.name,
                     email: replier.email.toString(),
                 },
+                ...originalContext,
             },
         });
 

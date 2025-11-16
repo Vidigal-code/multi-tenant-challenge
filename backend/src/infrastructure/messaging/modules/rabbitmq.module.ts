@@ -4,11 +4,13 @@ import {RabbitMQService} from "../services/rabbitmq.service";
 import {InviteProducer} from "../producers/invite.producer";
 import {RabbitMQDomainEventsService} from "../services/domain-events.service";
 import {EventsProducer} from "../producers/events.producer";
+import {DeliveryConfirmationService} from "../services/delivery-confirmation.service";
 
 @Module({
     imports: [ConfigModule],
     providers: [
         RabbitMQService,
+        DeliveryConfirmationService,
         {
             provide: InviteProducer,
             useFactory: (rabbitmqService: RabbitMQService, configService: ConfigService) => {
@@ -31,6 +33,7 @@ import {EventsProducer} from "../producers/events.producer";
     ],
     exports: [
         RabbitMQService,
+        DeliveryConfirmationService,
         InviteProducer,
         EventsProducer,
         RabbitMQDomainEventsService,

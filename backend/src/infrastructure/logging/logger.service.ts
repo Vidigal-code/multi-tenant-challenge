@@ -10,6 +10,7 @@ export class LoggerService {
 
     private readonly BLUE = '\x1b[34m';
     private readonly GREEN = '\x1b[32m';
+    private readonly PINK = '\x1b[35m';
     private readonly RESET = '\x1b[0m';
 
     constructor(
@@ -77,6 +78,12 @@ export class LoggerService {
     log(message: any, ...args: any[]): void {
         if (this.defaultLogging) {
             this.logger.log(message, ...args);
+        }
+    }
+
+    notificationCreator(message: string, ...args: any[]): void {
+        if (this.defaultLogging) {
+            console.log(`${this.PINK}[NotificationCreator] ${message}${this.RESET}`, ...args);
         }
     }
 }

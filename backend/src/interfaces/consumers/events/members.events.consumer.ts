@@ -5,6 +5,7 @@ import {LoggerService} from '@infrastructure/logging/logger.service';
 
 const MEMBERS_EVENTS_QUEUE = 'events.members';
 const NOTIFICATIONS_REALTIME_QUEUE = 'notifications.realtimes';
+const DLQ_REALTIME_NOTIFICATIONS = 'dlq.notifications.realtimes';
 const DLQ_MEMBERS = 'dlq.events.members';
 
 class MembersEventsConsumer extends BaseResilientConsumer<any> {
@@ -20,11 +21,17 @@ class MembersEventsConsumer extends BaseResilientConsumer<any> {
     }
 
     protected async process(payload: any): Promise<void> {
-        await this.rabbit.assertQueue(NOTIFICATIONS_REALTIME_QUEUE);
+        this.logger.rabbitmq(`Processing member event: ${payload?.eventId || 'unknown'}`);
+        await this.rabbit.assertQueueWithOptions(NOTIFICATIONS_REALTIME_QUEUE, {
+            deadLetterExchange: '',
+            deadLetterRoutingKey: DLQ_REALTIME_NOTIFICATIONS,
+        });
+        await this.rabbit.assertQueue(DLQ_REALTIME_NOTIFICATIONS);
         await this.rabbit.sendToQueue(
             NOTIFICATIONS_REALTIME_QUEUE,
             Buffer.from(JSON.stringify(payload)),
         );
+        this.logger.rabbitmq(`Forwarded member event to ${NOTIFICATIONS_REALTIME_QUEUE}: ${payload?.eventId || 'unknown'}`);
     }
 }
 
