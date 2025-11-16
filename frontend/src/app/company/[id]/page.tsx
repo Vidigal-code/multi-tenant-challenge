@@ -78,6 +78,8 @@ export default function CompanyPage() {
     const [newRole, setNewRole] = useState<'OWNER' | 'ADMIN' | 'MEMBER' | ''>('');
     const [removeMemberConfirm, setRemoveMemberConfirm] = useState<Member | null>(null);
     const [showDeleteCompanyModal, setShowDeleteCompanyModal] = useState(false);
+    const [membersPage, setMembersPage] = useState(1);
+    const MEMBERS_PAGE_SIZE = 10;
     const { show } = useToast();
     const qc = useQueryClient();
 
@@ -186,6 +188,10 @@ export default function CompanyPage() {
             </div>
         );
     }
+
+    useEffect(() => {
+        setMembersPage(1);
+    }, [membersQuery.data?.members?.length]);
 
     if (companyQuery.isLoading || roleQuery.isLoading) {
         return <Skeleton className="h-32" />;
@@ -348,52 +354,54 @@ export default function CompanyPage() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <img
-                    src={logoError || !company.logoUrl ? defaultLogo : company.logoUrl}
-                    alt="Logo da empresa"
-                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0"
-                    onError={() => setLogoError(true)}
-                />
-                <div className="min-w-0 flex-1">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">{company.name}</h1>
-                    {company.description && (
-                        <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                            {company.is_public && !isMember ? (
-                                <span>{truncate(company.description, 400)}</span>
-                            ) : (
-                                <>
-                                    <span>{showFullDescription ? company.description : truncate(company.description, 400)}</span>
-                                    {company.description.length > 400 && (
-                                        <button
-                                            className="text-gray-900 dark:text-white underline ml-2 hover:no-underline"
-                                            onClick={() => setShowFullDescription((prev) => !prev)}
-                                        >
-                                            {showFullDescription ? 'Mostrar menos' : 'Ler mais'}
-                                        </button>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    )}
-                    {isMember && (
-                        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 space-y-1">
-                            {company.createdAt && (roleQuery.data?.role === 'OWNER' || roleQuery.data?.role === 'ADMIN') && (
-                                <div>Criado: {formatDate(company.createdAt)}</div>
-                            )}
-                            {membersQuery.data?.total !== undefined && (
-                                <div>Membros: {membersQuery.data.total}</div>
-                            )}
-                        </div>
-                    )}
+            <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 p-6 shadow-sm">
+                <div className="flex flex-col items-center gap-4 text-center justify-center">
+                    <img
+                        src={logoError || !company.logoUrl ? defaultLogo : company.logoUrl}
+                        alt="Logo da empresa"
+                        className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg flex-shrink-0"
+                        onError={() => setLogoError(true)}
+                    />
+                    <div className="min-w-0 w-full">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2 break-words">{company.name}</h1>
+                        {company.description && (
+                            <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+                                {company.is_public && !isMember ? (
+                                    <span>{truncate(company.description, 400)}</span>
+                                ) : (
+                                    <>
+                                        <span>{showFullDescription ? company.description : truncate(company.description, 400)}</span>
+                                        {company.description.length > 400 && (
+                                            <button
+                                                className="text-gray-900 dark:text-white underline ml-2 hover:no-underline"
+                                                onClick={() => setShowFullDescription((prev) => !prev)}
+                                            >
+                                                {showFullDescription ? 'Mostrar menos' : 'Ler mais'}
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        )}
+                        {isMember && (
+                            <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 space-y-1">
+                                {company.createdAt && (roleQuery.data?.role === 'OWNER' || roleQuery.data?.role === 'ADMIN') && (
+                                    <div>Criado: {formatDate(company.createdAt)}</div>
+                                )}
+                                {membersQuery.data?.total !== undefined && (
+                                    <div>Membros: {membersQuery.data.total}</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-            {message && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">{message}</div>}
+            {message && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-center">{message}</div>}
             {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border
-            border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">{error}</div>}
-            <div className="flex flex-wrap gap-3">
+            border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-center">{error}</div>}
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 items-center justify-center">
                 {canLeave && (
-                    <button className="px-4 py-2 border border-red-200 dark:border-red-800
+                    <button className="w-full sm:w-auto px-4 py-2 border border-red-200 dark:border-red-800
                      bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-600
                      transition-colors font-medium text-sm sm:text-base"
                         onClick={() => setShowLeaveModal(true)}>
@@ -401,18 +409,18 @@ export default function CompanyPage() {
                     </button>
                 )}
                 {canSendNotification && (
-                    <button className="px-4 py-2 border border-gray-200 dark:border-gray-800
+                    <button className="w-full sm:w-auto px-4 py-2 border border-gray-200 dark:border-gray-800
                     rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800
-                     dark:hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base flex items-center gap-2"
+                     dark:hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base flex items-center justify-center gap-2"
                         onClick={() => setShowNotificationModal(true)}>
                         <MdNotifications className="text-base" />
                         <span>Enviar mensagem global</span>
                     </button>
                 )}
                 {canTransferOwnership && (
-                    <button className="px-4 py-2 border border-gray-200 dark:border-gray-800
+                    <button className="w-full sm:w-auto px-4 py-2 border border-gray-200 dark:border-gray-800
                     rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800
-                    dark:hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base flex items-center gap-2"
+                    dark:hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base flex items-center justify-center gap-2"
                         onClick={() => setShowTransferModal(true)}>
                         <MdSupervisorAccount className="text-base" />
                         <span>Transferir Propriedade</span>
@@ -421,12 +429,12 @@ export default function CompanyPage() {
             </div>
             {canManage && (
                 <>
-                    <div className="flex flex-wrap gap-3 items-center">
-                        <button onClick={() => setShowInvite(s => !s)} className="text-sm text-gray-900 dark:text-white hover:underline">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-center justify-center">
+                        <button onClick={() => setShowInvite(s => !s)} className="w-full sm:w-auto text-center text-sm text-gray-900 dark:text-white hover:underline">
                             {showInvite ? 'Ocultar formulário de convite' : 'Mostrar formulário de convite'}
                         </button>
                         {canEdit && (
-                            <button className="px-4 py-2 border border-gray-200 dark:border-gray-800
+                            <button className="w-full sm:w-auto px-4 py-2 border border-gray-200 dark:border-gray-800
                             rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white
                             hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm"
                                 onClick={() => {
@@ -437,7 +445,7 @@ export default function CompanyPage() {
                         )}
                         {canDelete && (
                             <button
-                                className="px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950
+                                className="w-full sm:w-auto px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950
                              text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
                              transition-colors font-medium text-sm"
                                 onClick={() => setShowDeleteCompanyModal(true)}
@@ -619,20 +627,62 @@ export default function CompanyPage() {
                     <Skeleton className="h-8" />
                 </div>
             ) : (
-                <MemberList
-                    members={membersQuery.data?.members || []}
-                    currentRole={(roleQuery.data?.role ?? null) as any}
-                    currentUserId={profileQuery.data?.id}
-                    primaryOwnerUserId={primaryOwnerQuery.data?.primaryOwnerUserId || null}
-                    onMemberClick={(m) => {
-                        setSelectedMember({
-                            ...m,
-                            role: m.role as 'OWNER' | 'ADMIN' | 'MEMBER'
-                        });
-                        setShowMemberModal(true);
-                    }}
-                    loadingIds={[]}
-                />
+                (() => {
+                    const allMembers = membersQuery.data?.members || [];
+                    const totalMembers = membersQuery.data?.total ?? allMembers.length;
+                    const totalPages = Math.max(1, Math.ceil(totalMembers / MEMBERS_PAGE_SIZE));
+                    const currentPage = Math.min(membersPage, totalPages);
+                    const startIndex = (currentPage - 1) * MEMBERS_PAGE_SIZE;
+                    const endIndex = startIndex + MEMBERS_PAGE_SIZE;
+                    const pageMembers = allMembers.slice(startIndex, endIndex);
+
+                    return (
+                        <div className="space-y-3">
+                            <MemberList
+                                members={pageMembers}
+                                currentRole={(roleQuery.data?.role ?? null) as any}
+                                currentUserId={profileQuery.data?.id}
+                                primaryOwnerUserId={primaryOwnerQuery.data?.primaryOwnerUserId || null}
+                                onMemberClick={(m) => {
+                                    setSelectedMember({
+                                        ...m,
+                                        role: m.role as 'OWNER' | 'ADMIN' | 'MEMBER'
+                                    });
+                                    setShowMemberModal(true);
+                                }}
+                                loadingIds={[]}
+                            />
+                            {totalPages > 1 && (
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                                    <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                                        Membros {startIndex + 1}–{Math.min(endIndex, totalMembers)} de {totalMembers}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setMembersPage((p) => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                            className="px-3 py-1.5 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                                        >
+                                            Anterior
+                                        </button>
+                                        <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                                            Página {currentPage} de {totalPages}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setMembersPage((p) => Math.min(totalPages, p + 1))}
+                                            disabled={currentPage === totalPages}
+                                            className="px-3 py-1.5 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                                        >
+                                            Próxima
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()
             )}
             <ConfirmModal
                 open={showLeaveModal}

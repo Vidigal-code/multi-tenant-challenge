@@ -218,8 +218,13 @@ const notificationCodeMessages: Record<string, string> = {
 };
 
 export function getNotificationCodeMessage(code: string, params?: Record<string, any>): string {
-  const message = notificationCodeMessages[code];
+  if (!code) return code;
+  
+  const normalizedCode = code.toUpperCase().trim();
+  const message = notificationCodeMessages[normalizedCode] || notificationCodeMessages[code];
+  
   if (!message) return code;
+  
   if (params) {
     return message.replace(/\{(\w+)\}/g, (match, key) => {
       return params[key] !== undefined ? String(params[key]) : match;

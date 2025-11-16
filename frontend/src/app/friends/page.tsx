@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { getErrorMessage } from '../../lib/error';
 import { getSuccessMessage } from '../../lib/messages';
 import { useToast } from '../../hooks/useToast';
@@ -8,6 +8,7 @@ import Skeleton from '../../components/skeleton/Skeleton';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { Modal } from '../../components/modals/Modal';
 import { subscribe, whenReady, RT_EVENTS } from '../../lib/realtime';
+import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import {
     useFriendships,
     useFriendRequests,
@@ -33,6 +34,8 @@ export default function FriendsPage() {
   const [messageTitle, setMessageTitle] = useState('');
   const [messageBody, setMessageBody] = useState('');
   const [removeConfirm, setRemoveConfirm] = useState<string | null>(null);
+  const [tabIndex, setTabIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const { show } = useToast();
   const queryClient = useQueryClient();
 
@@ -47,6 +50,67 @@ export default function FriendsPage() {
     if (!req.addressee || !req.requester) return false;
     return req.addressee.id === currentUserId;
   });
+
+  const allTabs = useMemo(() => [
+    { id: 'friends', label: `Amigos (${friends.length})` },
+    { id: 'requests', label: `Solicitações Pendentes (${requests.length})` },
+    { id: 'messages', label: 'Enviar Mensagem' },
+  ], [friends.length, requests.length]);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const maxVisibleTabs = useMemo(() => isMobile ? 1 : 3, [isMobile]);
+
+  const activeIndex = useMemo(() => {
+    return allTabs.findIndex(tab => tab.id === activeTab);
+  }, [allTabs, activeTab]);
+
+  useEffect(() => {
+    const currentActiveIndex = allTabs.findIndex(tab => tab.id === activeTab);
+    if (currentActiveIndex !== -1 && allTabs.length > 0) {
+      const maxStart = Math.max(0, allTabs.length - maxVisibleTabs);
+      const newTabIndex = Math.max(0, Math.min(currentActiveIndex, maxStart));
+      
+      setTabIndex(prev => {
+        const currentStart = Math.max(0, Math.min(prev, maxStart));
+        const currentEnd = currentStart + maxVisibleTabs;
+        
+        if (currentActiveIndex < currentStart || currentActiveIndex >= currentEnd) {
+          return newTabIndex;
+        }
+        return prev;
+      });
+    }
+  }, [activeTab, allTabs, maxVisibleTabs]);
+
+  const startTabIndex = useMemo(() => {
+    return Math.max(0, Math.min(tabIndex, Math.max(0, allTabs.length - maxVisibleTabs)));
+  }, [tabIndex, allTabs.length, maxVisibleTabs]);
+
+  const visibleTabsSlice = useMemo(() => {
+    return allTabs.slice(startTabIndex, startTabIndex + maxVisibleTabs);
+  }, [allTabs, startTabIndex, maxVisibleTabs]);
+
+  const handlePreviousTab = () => {
+    setTabIndex(prev => {
+      const newIndex = Math.max(0, prev - 1);
+      return newIndex;
+    });
+  };
+
+  const handleNextTab = () => {
+    setTabIndex(prev => {
+      const newIndex = Math.min(Math.max(0, allTabs.length - maxVisibleTabs), prev + 1);
+      return newIndex;
+    });
+  };
 
   const searchMutation = useSearchUsers();
   const sendRequestMutation = useSendFriendRequest();
@@ -293,37 +357,46 @@ export default function FriendsPage() {
       </div>
 
       <div className="mb-6">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide border-b border-gray-200 dark:border-gray-800">
-          <button
-            onClick={() => setActiveTab('friends')}
-            className={`px-4 py-2 font-medium text-sm sm:text-base whitespace-nowrap transition-colors border-b-2 ${
-              activeTab === 'friends' 
-                ? 'border-gray-900 dark:border-white text-gray-900 dark:text-white' 
-                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-          >
-            Amigos ({friends.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('requests')}
-            className={`px-4 py-2 font-medium text-sm sm:text-base whitespace-nowrap transition-colors border-b-2 ${
-              activeTab === 'requests' 
-                ? 'border-gray-900 dark:border-white text-gray-900 dark:text-white' 
-                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-          >
-            Solicitações Pendentes ({requests.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('messages')}
-            className={`px-4 py-2 font-medium text-sm sm:text-base whitespace-nowrap transition-colors border-b-2 ${
-              activeTab === 'messages' 
-                ? 'border-gray-900 dark:border-white text-gray-900 dark:text-white' 
-                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-          >
-            Enviar Mensagem
-          </button>
+        <div className="border-b border-gray-200 dark:border-gray-800 w-full">
+          <div className="flex items-center gap-2 w-full justify-center">
+            {startTabIndex > 0 && (
+              <button
+                onClick={handlePreviousTab}
+                className="flex-shrink-0 p-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                aria-label="Aba anterior"
+              >
+                <MdChevronLeft className="text-xl text-gray-600 dark:text-gray-400" />
+              </button>
+            )}
+            
+            <nav className="flex-1 flex justify-center items-center space-x-1 overflow-x-auto scrollbar-hide" aria-label="Tabs">
+              {visibleTabsSlice.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as 'friends' | 'requests' | 'messages')}
+                  className={`
+                    flex items-center justify-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0 w-full sm:w-auto
+                    ${activeTab === tab.id
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }
+                  `}
+                >
+                  <span className="text-xs sm:text-sm text-center">{tab.label}</span>
+                </button>
+              ))}
+            </nav>
+
+            {(startTabIndex + maxVisibleTabs < allTabs.length) && allTabs.length > maxVisibleTabs && (
+              <button
+                onClick={handleNextTab}
+                className="flex-shrink-0 p-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                aria-label="Próxima aba"
+              >
+                <MdChevronRight className="text-xl text-gray-600 dark:text-gray-400" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -532,7 +605,7 @@ export default function FriendsPage() {
         <form className="space-y-4" onSubmit={handleSubmitMessage}>
           {messageMode === 'selective' && selectedFriends.length > 0 && (
             <div className="mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-lg">
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Para ({selectedFriends.length} amigo(s)):</div>
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Para ({selectedFriends.length}) amigo:</div>
               <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-h-32 overflow-y-auto space-y-1">
                 {selectedFriends.map(f => (
                   <div key={f.id} className="truncate">{f.name} ({f.email})</div>
@@ -543,7 +616,7 @@ export default function FriendsPage() {
           {messageMode === 'global' && (
             <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
               <div className="text-sm sm:text-base font-medium text-blue-800 dark:text-blue-300">
-                Enviando para todos os {friends.length} amigo(s)
+                Enviando para todos os {friends.length} amigos
               </div>
             </div>
           )}

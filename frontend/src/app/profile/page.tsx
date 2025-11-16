@@ -153,14 +153,14 @@ export default function ProfilePage() {
                                 : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                         }`}
                     >
-                        Configurações de Privacidade
+                        Privacidade
                     </button>
                 </nav>
             </div>
 
             {activeTab === 'profile' && (
                 <>
-                    <div className="space-y-6">
+                    <div className="space-y-2">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome atual</label>
@@ -176,9 +176,9 @@ export default function ProfilePage() {
                             </div>
                         </div>
                         {message && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800
-                        rounded-lg text-green-700 dark:text-green-400 text-sm">{message}</div>}
+                        rounded-lg text-green-700 dark:text-green-400 text-center">{message}</div>}
                         {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800
-                        rounded-lg text-red-700 dark:text-red-400 text-sm" data-testid="profile-error">{error}</div>}
+                        rounded-lg text-red-700 dark:text-red-400 text-center" data-testid="profile-error">{error}</div>}
                         <form className="space-y-4" onSubmit={async e => {
                             e.preventDefault();
                             setError(null);
@@ -237,13 +237,12 @@ export default function ProfilePage() {
                                 {loading ? 'Salvando...' : 'Salvar alterações'}</button>
                         </form>
 
-                        <div className="pt-8 border-t border-gray-200 dark:border-gray-800">
-                            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Excluir conta</h2>
-                            <button className="px-4 py-3 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700
-                            dark:hover:bg-red-600 transition-colors font-medium" onClick={handleDeleteAccountClick}>
-                                Excluir permanentemente
-                            </button>
-                        </div>
+                            <div className="mt-4 flex justify-center sm:justify-start">
+                                <button className="w-full px-4 py-3 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700
+                                dark:hover:bg-red-600 transition-colors font-medium" onClick={handleDeleteAccountClick}>
+                                    Excluir permanentemente
+                                </button>
+                            </div>
                     </div>
                     <ConfirmModal
                         open={showDeleteModal}

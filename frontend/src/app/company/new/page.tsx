@@ -20,8 +20,8 @@ export default function NewCompanyPage() {
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Criar Empresa</h1>
                 <p className="text-gray-600 dark:text-gray-400">Crie uma nova empresa para gerenciar</p>
             </div>
-            {success && <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm">{success}</div>}
-            {error && <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">{error}</div>}
+            {success && <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-center">{success}</div>}
+            {error && <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-center">{error}</div>}
             <form className="space-y-4" onSubmit={async e => {
                 e.preventDefault();
                 setError(null);

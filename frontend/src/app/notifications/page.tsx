@@ -53,6 +53,35 @@ function normalizeInviteUrl(rawUrl: string | undefined | null): string {
     }
 }
 
+function getTranslatedTitle(title: string): string {
+    if (!title) return title;
+    
+    const normalizedTitle = title.toUpperCase().trim();
+    
+    if (normalizedTitle === 'NOTIFICATION_REPLY' || normalizedTitle === '[NOTIFICATION_REPLY]') {
+        return getNotificationCodeMessage('NOTIFICATION_REPLY');
+    }
+    
+    const eventCode = extractEventCode(title);
+    if (eventCode && eventCode.toUpperCase() === 'NOTIFICATION_REPLY') {
+        return getNotificationCodeMessage('NOTIFICATION_REPLY');
+    }
+    
+    if (eventCode) {
+        const translated = getNotificationCodeMessage(eventCode);
+        if (translated !== eventCode) {
+            return translated;
+        }
+    }
+    
+    const translated = getNotificationCodeMessage(normalizedTitle);
+    if (translated !== normalizedTitle) {
+        return translated;
+    }
+    
+    return removeEventCodeFromTitle(title);
+}
+
 function formatNotificationBody(body: string, title?: string): FormattedLine[] {
     if (!body) return [];
     
@@ -94,7 +123,7 @@ function formatNotificationBody(body: string, title?: string): FormattedLine[] {
                     label: '',
                     value: translatedLine
                 });
-                continue;
+            continue;
             }
         }
         
@@ -636,7 +665,18 @@ export default function NotificationsPage() {
         return tabs;
     }, [allCategories, categoryCounts]);
 
-    const maxVisibleTabs = 3;
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 640);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    const maxVisibleTabs = useMemo(() => isMobile ? 1 : 3, [isMobile]);
     
     const activeIndex = useMemo(() => {
         return visibleTabs.findIndex(tab => tab.id === activeTab);
@@ -658,7 +698,7 @@ export default function NotificationsPage() {
                 return prev;
             });
         }
-    }, [activeTab, visibleTabs]); 
+    }, [activeTab, visibleTabs, maxVisibleTabs]); 
     
     const startTabIndex = useMemo(() => {
         return Math.max(0, Math.min(tabIndex, Math.max(0, visibleTabs.length - maxVisibleTabs)));
@@ -757,7 +797,7 @@ export default function NotificationsPage() {
         if (ids.length === 1) {
             deleteMutation.mutate(ids[0], {
                 onSuccess: () => {
-                    setSelected([]);
+                    setSelected(prev => prev.filter(id => id !== ids[0]));
                     setDeleteIds([]);
                     show({message: 'Notificação deletada', type: 'success'});
                 },
@@ -769,7 +809,7 @@ export default function NotificationsPage() {
         } else {
             deleteNotificationsMutation.mutate(ids, {
                 onSuccess: () => {
-                    setSelected([]);
+                    setSelected(prev => prev.filter(id => !ids.includes(id)));
                     setDeleteIds([]);
                     show({message: 'Notificações deletadas', type: 'success'});
                 },
@@ -780,10 +820,6 @@ export default function NotificationsPage() {
             });
         }
     }
-
-    useEffect(() => {
-        setSelected([]);
-    }, [activeTab]);
 
     if (isLoading) {
         return (
@@ -807,7 +843,7 @@ export default function NotificationsPage() {
             </div>
 
             <div className="border-b border-gray-200 dark:border-gray-800 w-full">
-                <div className="flex items-center gap-2 w-full">
+                <div className="flex items-center gap-2 w-full justify-center">
                     {startTabIndex > 0 && (
                         <button
                             onClick={handlePreviousTab}
@@ -818,13 +854,13 @@ export default function NotificationsPage() {
                         </button>
                     )}
                     
-                    <nav className="flex-1 flex space-x-1 overflow-x-auto scrollbar-hide" aria-label="Tabs">
+                    <nav className="flex-1 flex justify-center items-center space-x-1 overflow-x-auto scrollbar-hide" aria-label="Tabs">
                         {visibleTabsSlice.map((category) => (
                             <button
                                 key={category.id}
                                 onClick={() => setActiveTab(category.id)}
                                 className={`
-                                    flex items-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0
+                                    flex items-center justify-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0 w-full sm:w-auto
                                     ${activeTab === category.id
                                         ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
@@ -832,7 +868,7 @@ export default function NotificationsPage() {
                                 `}
                             >
                                 <span className="hidden xs:inline">{category.icon}</span>
-                                <span className="text-xs sm:text-sm">{category.label}</span>
+                                <span className="text-xs sm:text-sm text-center">{category.label}</span>
                                 {categoryCounts[category.id] > 0 && (
                                     <span className={`
                                         ml-1 px-1.5 sm:px-2 py-0.5 text-xs rounded-full flex-shrink-0
@@ -871,15 +907,15 @@ export default function NotificationsPage() {
                 </div>
             ) : (
                 <>
-                    <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-4 justify-center">
                         <button 
-                            className="px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-sm font-medium whitespace-nowrap" 
+                            className="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-sm font-medium whitespace-nowrap" 
                             onClick={() => handleSelectAll(paginatedNotifications)}
                         >
                             Selecionar todos
                         </button>
                         <button 
-                            className="px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
+                            className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
                             disabled={!selected.length} 
                             onClick={() => { 
                                 setDeleteIds(selected); 
@@ -889,7 +925,7 @@ export default function NotificationsPage() {
                             Deletar selecionados
                         </button>
                         <button 
-                            className="px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
+                            className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
                             disabled={!paginatedNotifications.length} 
                             onClick={() => { 
                                 setDeleteIds(paginatedNotifications.map(n => n.id)); 
@@ -922,6 +958,37 @@ export default function NotificationsPage() {
                                             : 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20'
                                     }`}
                                 >
+                                    <div className="flex flex-wrap gap-2 justify-center mb-4 p-3 border border-gray-200 dark:border-gray-800 rounded-lg">
+                                        <button
+                                            onClick={() => setReplyingTo(notification.id)}
+                                            className="px-4 py-2 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium whitespace-nowrap flex-1 min-w-[120px]"
+                                        >
+                                            Responder
+                                        </button>
+                                        <button
+                                            onClick={() => setDeleteConfirm(notification.id)}
+                                            className="px-4 py-2 text-xs sm:text-sm border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium whitespace-nowrap flex-1 min-w-[120px]"
+                                        >
+                                            Excluir
+                                        </button>
+                                        {!notification.read && (
+                                            <button
+                                                onClick={() => markReadMutation.mutate(notification.id, {
+                                                    onSuccess: () => {
+                                                        show({message: 'Notificação marcada como lida', type: 'success'});
+                                                    },
+                                                    onError: (error) => {
+                                                        show({message: getErrorMessage(error), type: 'error'});
+                                                    },
+                                                })}
+                                                className="px-4 py-2 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 transition-colors font-medium whitespace-nowrap flex-1 min-w-[120px]"
+                                                disabled={markReadMutation.isPending}
+                                            >
+                                                Marcar como lida
+                                            </button>
+                                        )}
+                                    </div>
+
                                     <div className="flex items-start gap-3 mb-4">
                                         <input 
                                             type="checkbox" 
@@ -951,10 +1018,10 @@ export default function NotificationsPage() {
                                             <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1">
                                                 <div><strong>De:</strong> {notification.meta?.sender?.name || notification.senderName || 'Usuário Desconhecido'} ({notification.meta?.sender?.email || notification.senderUserId || notification.senderId || 'N/A'})</div>
                                                 <div><strong>Data e Hora:</strong> {notification.createdAt ? formatDate(notification.createdAt) : '-'}</div>
-                                                {notification.meta?.channel && (
-                                                    <div><strong>Canal:</strong> {translateChannel(notification.meta.channel)}</div>
-                                                )}
-                                                {notification.companyId && (
+                                                    {notification.meta?.channel && (
+                                                        <div><strong>Canal:</strong> {translateChannel(notification.meta.channel)}</div>
+                                                    )}
+                                                    {notification.companyId && (
                                                     <div>
                                                         <strong>ID da Empresa:</strong>{' '}
                                                         <Link
@@ -969,34 +1036,34 @@ export default function NotificationsPage() {
                                         </div>
                                     </div>
 
-                                    {notification.meta?.company && (
+                                                    {notification.meta?.company && (
                                         <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-800">
                                             <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Empresa:</div>
                                             <div className="flex items-start gap-3">
                                                 {notification.meta.company.logoUrl && (
-                                                    <img 
-                                                        src={notification.meta.company.logoUrl || DEFAULT_COMPANY_LOGO} 
-                                                        alt={notification.meta.company.name}
+                                                                    <img 
+                                                                        src={notification.meta.company.logoUrl || DEFAULT_COMPANY_LOGO} 
+                                                                        alt={notification.meta.company.name}
                                                         className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-800 flex-shrink-0"
-                                                        onError={(e) => {
-                                                            const target = e.target as HTMLImageElement;
-                                                            if (target.src !== DEFAULT_COMPANY_LOGO) {
-                                                                target.src = DEFAULT_COMPANY_LOGO;
-                                                            }
-                                                        }}
-                                                    />
+                                                                        onError={(e) => {
+                                                                            const target = e.target as HTMLImageElement;
+                                                                            if (target.src !== DEFAULT_COMPANY_LOGO) {
+                                                                                target.src = DEFAULT_COMPANY_LOGO;
+                                                                            }
+                                                                        }}
+                                                                    />
                                                 )}
                                                 <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1">
                                                     <div><strong>Nome:</strong> {notification.meta.company.name}</div>
                                                     {notification.meta.company.description && (
                                                         <div><strong>Descrição:</strong> {notification.meta.company.description}</div>
                                                     )}
-                                                    {notification.meta.company.memberCount !== undefined && (
-                                                        <div><strong>Membros:</strong> {notification.meta.company.memberCount}</div>
-                                                    )}
+                                                                {notification.meta.company.memberCount !== undefined && (
+                                                                    <div><strong>Membros:</strong> {notification.meta.company.memberCount}</div>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                 </div>
-                                            </div>
-                                        </div>
                                     )}
 
                                     <div className="mb-4">
@@ -1037,36 +1104,6 @@ export default function NotificationsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-2 justify-center mb-4 p-3 border border-gray-200 dark:border-gray-800 rounded-lg">
-                                        {!notification.read && (
-                                            <button
-                                                onClick={() => markReadMutation.mutate(notification.id, {
-                                                    onSuccess: () => {
-                                                        show({message: 'Notificação marcada como lida', type: 'success'});
-                                                    },
-                                                    onError: (error) => {
-                                                        show({message: getErrorMessage(error), type: 'error'});
-                                                    },
-                                                })}
-                                                className="px-4 py-2 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 transition-colors font-medium whitespace-nowrap flex-1 min-w-[120px]"
-                                                disabled={markReadMutation.isPending}
-                                            >
-                                                Marcar como lida
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => setReplyingTo(notification.id)}
-                                            className="px-4 py-2 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium whitespace-nowrap flex-1 min-w-[120px]"
-                                        >
-                                            Responder
-                                        </button>
-                                        <button
-                                            onClick={() => setDeleteConfirm(notification.id)}
-                                            className="px-4 py-2 text-xs sm:text-sm border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium whitespace-nowrap flex-1 min-w-[120px]"
-                                        >
-                                            Excluir
-                                        </button>
-                                    </div>
 
                                     {notification.meta?.kind === 'notifications.reply' && (() => {
                                         const originalNotificationId = notification.meta?.originalNotificationId;
@@ -1087,7 +1124,7 @@ export default function NotificationsPage() {
                                                     </div>
                                                     <div className="space-y-2 text-sm">
                                                         <div>
-                                                            <strong className="text-gray-600 dark:text-gray-400">Assunto:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{removeEventCodeFromTitle(originalNotification.title)}</span>
+                                                            <strong className="text-gray-600 dark:text-gray-400">Assunto:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{getTranslatedTitle(originalNotification.title)}</span>
                                                         </div>
                                                         <div>
                                                             <strong className="text-gray-600 dark:text-gray-400">De:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{originalNotification.meta?.sender?.name || originalNotification.senderName || 'Usuário Desconhecido'}</span>
@@ -1107,9 +1144,9 @@ export default function NotificationsPage() {
                                                                 >
                                                                     {originalNotification.companyId}
                                                                 </Link>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                            </div>
+                                        )}
+                                    </div>
                                                     {originalNotification.meta?.company && (
                                                         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
                                                             <strong className="text-sm text-gray-600 dark:text-gray-400">Empresa:</strong>
@@ -1196,7 +1233,7 @@ export default function NotificationsPage() {
                                                         </div>
                                                         <div className="space-y-2 text-sm">
                                                             <div>
-                                                                <strong className="text-gray-600 dark:text-gray-400">Assunto:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{removeEventCodeFromTitle(originalTitle)}</span>
+                                                                <strong className="text-gray-600 dark:text-gray-400">Assunto:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{getTranslatedTitle(originalTitle)}</span>
                                                             </div>
                                                             {originalMeta?.sender && (
                                                                 <>
@@ -1301,7 +1338,7 @@ export default function NotificationsPage() {
                     {totalPages > 1 && (
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                             <div className="flex items-center gap-2 flex-wrap justify-center">
-                                <button 
+                                <button
                                     className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium" 
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
                                     disabled={currentPage === 1}
@@ -1309,7 +1346,7 @@ export default function NotificationsPage() {
                                     Anterior
                                 </button>
                                 <span className="text-sm text-gray-600 dark:text-gray-400">Página {currentPage}</span>
-                                <button 
+                                <button
                                     className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium" 
                                     onClick={() => setCurrentPage(p => p + 1)} 
                                     disabled={currentPage >= totalPages}
@@ -1335,21 +1372,7 @@ export default function NotificationsPage() {
                                     </div>
                                     <div className="space-y-1">
                                         <div className="text-sm">
-                                            <strong>Assunto:</strong> <span className="text-gray-700 dark:text-gray-300">{(() => {
-                                                const eventCode = extractEventCode(notification.title);
-                                                if (eventCode) {
-                                                    const translated = getNotificationCodeMessage(eventCode);
-                                                    if (translated !== eventCode) {
-                                                        return translated;
-                                                    }
-                                                }
-                                                const titleUpper = notification.title.toUpperCase().trim();
-                                                const translated = getNotificationCodeMessage(titleUpper);
-                                                if (translated !== titleUpper) {
-                                                    return translated;
-                                                }
-                                                return removeEventCodeFromTitle(notification.title);
-                                            })()}</span>
+                                            <strong>Assunto:</strong> <span className="text-gray-700 dark:text-gray-300">{getTranslatedTitle(notification.title)}</span>
                                         </div>
                                         <div className="text-sm">
                                             <strong>De:</strong>
@@ -1378,7 +1401,7 @@ export default function NotificationsPage() {
                                             <div className="text-sm">
                                                 <strong>Canal:</strong>
                                                 <span className="text-gray-700 dark:text-gray-300">{translateChannel(notification.meta.channel)}</span>
-                                            </div>
+                                    </div>
                                         )}
                                     </div>
                                     {notification.meta?.company && (
@@ -1485,13 +1508,8 @@ export default function NotificationsPage() {
                             </button>
                         </div>
                     </div>
-                    {replyMutation.isSuccess && (
-                        <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm text-center max-w-md w-full">
-                            Resposta enviada com sucesso!
-                        </div>
-                    )}
                     {replyMutation.isError && (
-                        <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm text-center max-w-md w-full">
+                        <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-center text-center max-w-md w-full">
                             {getErrorMessage(replyMutation.error)}
                         </div>
                     )}
