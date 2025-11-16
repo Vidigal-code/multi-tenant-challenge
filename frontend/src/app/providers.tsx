@@ -7,16 +7,17 @@ import { QueryClient, QueryClientProvider, DefaultOptions } from '@tanstack/reac
 import { setAuthenticated } from '../store/slices/authSlice';
 import { initializeTheme } from '../store/slices/themeSlice';
 
-const defaultQueryOptions: DefaultOptions<unknown> = {
+const STALE_TIME = Number(process.env.NEXT_PUBLIC_QUERY_STALE_TIME ?? '30000');
+const GC_TIME = Number(process.env.NEXT_PUBLIC_QUERY_GC_TIME ?? String(5 * 60 * 1000));
+
+const defaultQueryOptions: DefaultOptions = {
   queries: {
-    staleTime: 30_000, // 30 seconds
-    gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
     retry: (failureCount, error: any) => {
-      // Don't retry on 4xx errors (client errors)
       if (error?.response?.status >= 400 && error?.response?.status < 500) {
         return false;
       }
-      // Retry up to 2 times for other errors
       return failureCount < 2;
     },
     refetchOnWindowFocus: false,
@@ -41,8 +42,6 @@ export default function Providers({ children, initialAuth = false }: { children:
   }, [initialAuth]);
 
   useEffect(() => {
-    // Initialize theme on client side - syncs Redux state with DOM and localStorage
-    // This runs after the blocking script in layout.tsx has set the initial class
     if (typeof window !== 'undefined') {
       store.dispatch(initializeTheme());
     }
