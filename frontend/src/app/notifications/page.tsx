@@ -1,5 +1,6 @@
 "use client";
 import React, {useEffect, useState, useMemo} from 'react';
+import Link from 'next/link';
 import {getErrorMessage} from '../../lib/error';
 import {useToast} from '../../hooks/useToast';
 import {useQueryClient} from '@tanstack/react-query';
@@ -937,7 +938,15 @@ export default function NotificationsPage() {
                                                     <div><strong>Canal:</strong> {translateChannel(notification.meta.channel)}</div>
                                                 )}
                                                 {notification.companyId && (
-                                                    <div><strong>ID da Empresa:</strong> {notification.companyId}</div>
+                                                    <div>
+                                                        <strong>ID da Empresa:</strong>{' '}
+                                                        <Link
+                                                            href={`/company/${notification.companyId}`}
+                                                            className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                                        >
+                                                            {notification.companyId}
+                                                        </Link>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -1011,7 +1020,7 @@ export default function NotificationsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-2 justify-center mb-4 p-3 border border-gray-900 dark:border-white rounded-lg">
+                                    <div className="flex flex-wrap gap-2 justify-center mb-4 p-3 border border-gray-200 dark:border-gray-800 rounded-lg">
                                         {!notification.read && (
                                             <button
                                                 onClick={() => markReadMutation.mutate(notification.id, {
@@ -1074,7 +1083,13 @@ export default function NotificationsPage() {
                                                         </div>
                                                         {originalNotification.companyId && (
                                                             <div>
-                                                                <strong className="text-gray-600 dark:text-gray-400">ID da Empresa:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{originalNotification.companyId}</span>
+                                                                <strong className="text-gray-600 dark:text-gray-400">ID da Empresa:</strong>{' '}
+                                                                <Link
+                                                                    href={`/company/${originalNotification.companyId}`}
+                                                                    className="text-blue-600 dark:text-blue-400 ml-1 hover:underline break-all"
+                                                                >
+                                                                    {originalNotification.companyId}
+                                                                </Link>
                                                             </div>
                                                         )}
                                                     </div>
@@ -1125,7 +1140,7 @@ export default function NotificationsPage() {
                                                     )}
                                                     {originalNotification.meta?.channel && originalNotification.meta.channel === 'friend' && (
                                                         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
-                                                            <div className="text-sm"><strong className="text-gray-600 dark:text-gray-400">Canal:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{translateChannel(originalNotification.meta.channel)}</span></div>
+                                                            <div className="text-sm"><strong className="text-gray-600 dark:text-gray-400">Canal: </strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{translateChannel(originalNotification.meta.channel)}</span></div>
                                                         </div>
                                                     )}
                                                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
@@ -1168,7 +1183,13 @@ export default function NotificationsPage() {
                                                             )}
                                                             {notification.companyId && (
                                                                 <div>
-                                                                    <strong className="text-gray-600 dark:text-gray-400">ID da Empresa:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{notification.companyId}</span>
+                                                                    <strong className="text-gray-600 dark:text-gray-400">ID da Empresa:</strong>{' '}
+                                                                    <Link
+                                                                        href={`/company/${notification.companyId}`}
+                                                                        className="text-blue-600 dark:text-blue-400 ml-1 hover:underline break-all"
+                                                                    >
+                                                                        {notification.companyId}
+                                                                    </Link>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1219,7 +1240,7 @@ export default function NotificationsPage() {
                                                         )}
                                                         {originalMeta?.channel && originalMeta.channel === 'friend' && (
                                                             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
-                                                                <div className="text-sm"><strong className="text-gray-600 dark:text-gray-400">Canal:</strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{translateChannel(originalMeta.channel)}</span></div>
+                                                                <div className="text-sm"><strong className="text-gray-600 dark:text-gray-400">Canal: </strong> <span className="text-gray-700 dark:text-gray-300 ml-1">{translateChannel(originalMeta.channel)}</span></div>
                                                             </div>
                                                         )}
                                                         {originalBody && (
@@ -1307,8 +1328,13 @@ export default function NotificationsPage() {
                                         </div>
                                         {notification.companyId && (
                                             <div className="text-sm">
-                                                <strong>ID da Empresa:</strong>
-                                                <span className="text-gray-700 dark:text-gray-300">{notification.companyId}</span>
+                                                <strong>ID da Empresa:</strong>{' '}
+                                                <Link
+                                                    href={`/company/${notification.companyId}`}
+                                                    className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                                >
+                                                    {notification.companyId}
+                                                </Link>
                                             </div>
                                         )}
                                         {notification.meta?.channel && (
