@@ -1,7 +1,7 @@
-import {Logger} from '@nestjs/common';
 import {RabbitMQService} from '@infrastructure/messaging/services/rabbitmq.service';
 import {BaseResilientConsumer} from '../base.resilient.consumer';
 import {ConfigService} from '@nestjs/config';
+import {LoggerService} from '@infrastructure/logging/logger.service';
 
 const MEMBERS_EVENTS_QUEUE = 'events.members';
 const NOTIFICATIONS_REALTIME_QUEUE = 'notifications.realtimes';
@@ -16,7 +16,7 @@ class MembersEventsConsumer extends BaseResilientConsumer<any> {
             retryMax: parseInt((config.get('app.rabbitmq.retryMax') as any) ?? '5', 10),
             redisUrl: (config.get('app.redisUrl') as string) || process.env.REDIS_URL || 'redis://redis:6379',
             dedupTtlSeconds: 60,
-        });
+        }, config);
     }
 
     protected async process(payload: any): Promise<void> {
@@ -29,13 +29,14 @@ class MembersEventsConsumer extends BaseResilientConsumer<any> {
 }
 
 async function bootstrap() {
-    const logger = new Logger('MembersEventsConsumer');
     const config = new ConfigService();
+    const logger = new LoggerService('MembersEventsConsumer', config);
+    logger.default('Starting members events consumer...');
     const rabbit = new (require('@infrastructure/messaging/services/rabbitmq.service').RabbitMQService)(config);
     await rabbit.onModuleInit();
     const consumer = new MembersEventsConsumer(rabbit, config);
     await consumer.start();
-    logger.log('Members events consumer started.');
+    logger.default('Members events consumer started.');
 }
 
 if (require.main === module) {

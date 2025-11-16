@@ -5,14 +5,42 @@ import { extractNotificationsData } from '../../lib/api-response';
 
 export interface Notification {
   id: string;
-  companyId?: string;
+  companyId?: string | null;
   title: string;
   body: string;
   read: boolean;
   createdAt: string;
   senderId?: string;
   senderName?: string;
-  recipientUserId?: string;
+  senderUserId?: string;
+  recipientUserId?: string | null;
+  meta?: {
+    kind?: string;
+    channel?: string;
+    sender?: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    companyName?: string;
+    companyId?: string;
+    inviteId?: string;
+    inviteUrl?: string;
+    role?: string;
+    previousRole?: string;
+    removedBy?: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    originalNotificationId?: string;
+    replyTo?: string;
+    originalTitle?: string;
+    rejectedByName?: string;
+    rejectedByEmail?: string;
+    inviteEmail?: string;
+    [key: string]: any;
+  };
 }
 
 export function useNotifications(page?: number, pageSize?: number) {

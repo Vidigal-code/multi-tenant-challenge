@@ -1,5 +1,5 @@
 import {Module} from "@nestjs/common";
-import {ConfigModule} from "@nestjs/config";
+import {ConfigModule, ConfigService} from "@nestjs/config";
 import {AuthInfraModule} from "@infrastructure/auth/modules/auth-infra.module";
 import {InfrastructureModule} from "@infrastructure/infrastructure.module";
 import {AuthController} from "@interfaces/http/auths/auth.controller";
@@ -35,18 +35,20 @@ import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
         },
         {
             provide: AcceptInviteUseCase,
-            useFactory: (inviteRepo, membershipRepo, userRepo, hashingService) =>
+            useFactory: (inviteRepo, membershipRepo, userRepo, hashingService, configService) =>
                 new AcceptInviteUseCase(
                     inviteRepo,
                     membershipRepo,
                     userRepo,
                     hashingService,
+                    configService,
                 ),
             inject: [
                 INVITE_REPOSITORY,
                 MEMBERSHIP_REPOSITORY,
                 USER_REPOSITORY,
                 HASHING_SERVICE,
+                ConfigService,
             ],
         },
         {
@@ -70,6 +72,7 @@ import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
                 domainEvents,
                 listPrimaryOwnerCompanies,
                 prisma,
+                configService,
             ) =>
                 new DeleteAccountUseCase(
                     userRepo,
@@ -78,6 +81,7 @@ import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
                     domainEvents,
                     listPrimaryOwnerCompanies,
                     prisma,
+                    configService,
                 ),
             inject: [
                 USER_REPOSITORY,
@@ -86,6 +90,7 @@ import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
                 "DOMAIN_EVENTS_SERVICE",
                 ListPrimaryOwnerCompaniesUseCase,
                 PrismaService,
+                ConfigService,
             ],
         },
     ],

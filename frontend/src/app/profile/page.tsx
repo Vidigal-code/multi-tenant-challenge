@@ -14,8 +14,9 @@ import {
     type PrimaryOwnerCompany,
     type MemberCompany,
 } from '../../services/api/auth.api';
+import { useNotificationPreferences } from '../../hooks/useNotificationPreferences';
 import {FaExclamationTriangle} from "react-icons/fa";
-import {MdBusiness, MdPerson, MdMail, MdPersonAdd, MdPersonRemove, MdRefresh} from "react-icons/md";
+import {MdBusiness, MdPerson, MdMail, MdPersonAdd, MdPersonRemove, MdRefresh, MdNotifications, MdNotificationsActive, MdBadge} from "react-icons/md";
 import { formatDate, formatDateOnly } from '../../lib/date-utils';
 import Link from 'next/link';
 import { DEFAULT_COMPANY_LOGO } from '../../types';
@@ -36,8 +37,8 @@ export default function ProfilePage() {
     const [activeCompanyTab, setActiveCompanyTab] = useState<'owner' | 'member'>('owner');
     const [activeTab, setActiveTab] = useState<'profile' | 'privacy'>('profile');
     const [logoErrors, setLogoErrors] = useState<Record<string, boolean>>({});
-    const [notificationPreferences, setNotificationPreferences] = useState<Record<string, boolean>>({});
     const { show } = useToast();
+    const { preferences: notificationPreferences, derived: notificationDerived } = useNotificationPreferences();
     const qc = useQueryClient();
 
     const profileQuery = useProfile();
@@ -86,11 +87,32 @@ export default function ProfilePage() {
     const currentName = profileQuery.data?.name ?? '';
     const currentEmail = profileQuery.data?.email ?? '';
 
-    useEffect(() => {
-        if (profileQuery.data?.notificationPreferences) {
-            setNotificationPreferences(profileQuery.data.notificationPreferences);
-        }
-    }, [profileQuery.data]);
+    // Helper function to update notification preferences
+    const updateNotificationPreference = (key: string, value: boolean) => {
+        const newPrefs = { ...notificationPreferences, [key]: value };
+        updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+            onSuccess: () => {
+                show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+            },
+            onError: (err: any) => {
+                const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                show({ type: 'error', message: m });
+            },
+        });
+    };
+
+    const updateMultipleNotificationPreferences = (updates: Record<string, boolean>) => {
+        const newPrefs = { ...notificationPreferences, ...updates };
+        updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+            onSuccess: () => {
+                show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+            },
+            onError: (err: any) => {
+                const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                show({ type: 'error', message: m });
+            },
+        });
+    };
 
     useEffect(() => {
         if (showPrimaryOwnerModal) {
@@ -718,6 +740,145 @@ export default function ProfilePage() {
                         Controle quais notificações você recebe do sistema.
                     </p>
 
+                    {/* Configuração de Notificações em Tempo Real */}
+                    <div className="space-y-4 border border-gray-200 dark:border-gray-800 rounded-lg p-4 bg-white dark:bg-gray-900">
+                        <div className="border-b border-gray-200 dark:border-gray-800 pb-4 mb-4">
+                            <h3 className="text-md font-semibold dark:text-white mb-2 flex items-center gap-2">
+                                <MdNotificationsActive className="text-xl text-blue-600 dark:text-blue-400" />
+                                Configuração de Notificações em Tempo Real
+                            </h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                Habilite a opção para receber notificações imediatas via WebSocket. Ao ativar, todas as categorias selecionadas passam a enviar alertas em tempo real.
+                            </p>
+                            
+                            <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                <div className="flex-shrink-0 mt-1">
+                                    <MdNotificationsActive className="text-xl text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex-1">
+                                            <label className="font-medium text-gray-900 dark:text-white block mb-1">
+                                                Ativar Notificações em Tempo Real
+                                            </label>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                Receber notificações imediatas via WebSocket para todas as categorias selecionadas
+                                            </p>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            checked={notificationDerived.realtimeEnabled}
+                                            onChange={(e) => updateNotificationPreference('realtimeEnabled', e.target.checked)}
+                                            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {notificationDerived.realtimeEnabled && (
+                                <div className="mt-4 space-y-3">
+                                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Escolha como deseja visualizar as notificações em tempo real:
+                                    </p>
+                                    
+                                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border border-gray-200 dark:border-gray-700">
+                                        <div className="flex-shrink-0 mt-1">
+                                            <MdNotifications className="text-xl text-purple-600 dark:text-purple-400" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex-1">
+                                                    <label className="font-medium text-gray-900 dark:text-white block mb-1">
+                                                        Popup Instantâneo
+                                                    </label>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                        Um pequeno popup aparece no canto inferior direito sempre que chega uma notificação. Some automaticamente após alguns segundos.
+                                                    </p>
+                                                </div>
+                                                <input
+                                                    type="radio"
+                                                    name="realtimeDisplay"
+                                                    checked={notificationDerived.realtimePopups && !notificationDerived.realtimeIconBadge}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            updateMultipleNotificationPreferences({ realtimePopups: true, realtimeIconBadge: false });
+                                                        }
+                                                    }}
+                                                    className="w-5 h-5 text-purple-600 border-gray-300 focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border border-gray-200 dark:border-gray-700">
+                                        <div className="flex-shrink-0 mt-1">
+                                            <MdBadge className="text-xl text-green-600 dark:text-green-400" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex-1">
+                                                    <label className="font-medium text-gray-900 dark:text-white block mb-1">
+                                                        Ícone Fixo com Contador
+                                                    </label>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                        Um ícone de notificação permanece visível no canto superior direito da página com um contador de novas notificações.
+                                                    </p>
+                                                </div>
+                                                <input
+                                                    type="radio"
+                                                    name="realtimeDisplay"
+                                                    checked={notificationDerived.realtimeIconBadge}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            updateMultipleNotificationPreferences({ realtimePopups: false, realtimeIconBadge: true });
+                                                        }
+                                                    }}
+                                                    className="w-5 h-5 text-green-600 border-gray-300 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border border-gray-200 dark:border-gray-700">
+                                        <div className="flex-shrink-0 mt-1">
+                                            <MdNotifications className="text-xl text-gray-600 dark:text-gray-400" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex-1">
+                                                    <label className="font-medium text-gray-900 dark:text-white block mb-1">
+                                                        Nenhuma Exibição Especial
+                                                    </label>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                        As notificações continuam sendo recebidas em tempo real via WebSocket, mas não aparece popup nem ícone. Acesse a página Notificações para visualizar.
+                                                    </p>
+                                                </div>
+                                                <input
+                                                    type="radio"
+                                                    name="realtimeDisplay"
+                                                    checked={!notificationDerived.realtimePopups && !notificationDerived.realtimeIconBadge}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            updateMultipleNotificationPreferences({ realtimePopups: false, realtimeIconBadge: false });
+                                                        }
+                                                    }}
+                                                    className="w-5 h-5 text-gray-600 border-gray-300 focus:ring-gray-500 dark:bg-gray-700 dark:border-gray-600"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+                            <h3 className="text-md font-semibold dark:text-white mb-4">Categorias de Notificações</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                Quando a opção de Notificações em Tempo Real estiver ativa, as seguintes categorias passam a ser monitoradas:
+                            </p>
+                        </div>
+                    </div>
+
                     <div className="space-y-3 border border-gray-200 dark:border-gray-800 rounded-lg p-4 bg-white dark:bg-gray-900">
                         <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                             <div className="flex-shrink-0 mt-1">
@@ -735,20 +896,8 @@ export default function ProfilePage() {
                                     </div>
                                     <input
                                         type="checkbox"
-                                        checked={notificationPreferences.companyInvitations !== false}
-                                        onChange={(e) => {
-                                            const newPrefs = { ...notificationPreferences, companyInvitations: e.target.checked };
-                                            setNotificationPreferences(newPrefs);
-                                            updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                                onSuccess: () => {
-                                                    show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                                },
-                                                onError: (err: any) => {
-                                                    const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                                    show({ type: 'error', message: m });
-                                                },
-                                            });
-                                        }}
+                                        checked={notificationDerived.companyInvitations}
+                                        onChange={(e) => updateNotificationPreference('companyInvitations', e.target.checked)}
                                         className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
                                     />
                                 </div>
@@ -771,20 +920,8 @@ export default function ProfilePage() {
                                     </div>
                                     <input
                                         type="checkbox"
-                                        checked={notificationPreferences.friendRequests !== false}
-                                        onChange={(e) => {
-                                            const newPrefs = { ...notificationPreferences, friendRequests: e.target.checked };
-                                            setNotificationPreferences(newPrefs);
-                                            updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                                onSuccess: () => {
-                                                    show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                                },
-                                                onError: (err: any) => {
-                                                    const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                                    show({ type: 'error', message: m });
-                                                },
-                                            });
-                                        }}
+                                        checked={notificationDerived.friendRequests}
+                                        onChange={(e) => updateNotificationPreference('friendRequests', e.target.checked)}
                                         className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600"
                                     />
                                 </div>
@@ -807,20 +944,8 @@ export default function ProfilePage() {
                                     </div>
                                     <input
                                         type="checkbox"
-                                        checked={notificationPreferences.companyMessages !== false}
-                                        onChange={(e) => {
-                                            const newPrefs = { ...notificationPreferences, companyMessages: e.target.checked };
-                                            setNotificationPreferences(newPrefs);
-                                            updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                                onSuccess: () => {
-                                                    show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                                },
-                                                onError: (err: any) => {
-                                                    const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                                    show({ type: 'error', message: m });
-                                                },
-                                            });
-                                        }}
+                                        checked={notificationDerived.companyMessages}
+                                        onChange={(e) => updateNotificationPreference('companyMessages', e.target.checked)}
                                         className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600"
                                     />
                                 </div>
@@ -843,20 +968,8 @@ export default function ProfilePage() {
                                     </div>
                                     <input
                                         type="checkbox"
-                                        checked={notificationPreferences.membershipChanges !== false}
-                                        onChange={(e) => {
-                                            const newPrefs = { ...notificationPreferences, membershipChanges: e.target.checked };
-                                            setNotificationPreferences(newPrefs);
-                                            updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                                onSuccess: () => {
-                                                    show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                                },
-                                                onError: (err: any) => {
-                                                    const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                                    show({ type: 'error', message: m });
-                                                },
-                                            });
-                                        }}
+                                        checked={notificationDerived.membershipChanges}
+                                        onChange={(e) => updateNotificationPreference('membershipChanges', e.target.checked)}
                                         className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 dark:bg-gray-700 dark:border-gray-600"
                                     />
                                 </div>
@@ -879,20 +992,8 @@ export default function ProfilePage() {
                                     </div>
                                     <input
                                         type="checkbox"
-                                        checked={notificationPreferences.roleChanges !== false}
-                                        onChange={(e) => {
-                                            const newPrefs = { ...notificationPreferences, roleChanges: e.target.checked };
-                                            setNotificationPreferences(newPrefs);
-                                            updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                                onSuccess: () => {
-                                                    show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                                },
-                                                onError: (err: any) => {
-                                                    const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                                    show({ type: 'error', message: m });
-                                                },
-                                            });
-                                        }}
+                                        checked={notificationDerived.roleChanges}
+                                        onChange={(e) => updateNotificationPreference('roleChanges', e.target.checked)}
                                         className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
                                     />
                                 </div>

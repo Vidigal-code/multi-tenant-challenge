@@ -1,5 +1,5 @@
 import {Module} from "@nestjs/common";
-import {ConfigModule} from "@nestjs/config";
+import {ConfigModule, ConfigService} from "@nestjs/config";
 import {RabbitMQService} from "../services/rabbitmq.service";
 import {InviteProducer} from "../producers/invite.producer";
 import {RabbitMQDomainEventsService} from "../services/domain-events.service";
@@ -9,8 +9,20 @@ import {EventsProducer} from "../producers/events.producer";
     imports: [ConfigModule],
     providers: [
         RabbitMQService,
-        InviteProducer,
-        EventsProducer,
+        {
+            provide: InviteProducer,
+            useFactory: (rabbitmqService: RabbitMQService, configService: ConfigService) => {
+                return new InviteProducer(rabbitmqService, configService);
+            },
+            inject: [RabbitMQService, ConfigService],
+        },
+        {
+            provide: EventsProducer,
+            useFactory: (rabbitmqService: RabbitMQService, configService: ConfigService) => {
+                return new EventsProducer(rabbitmqService, configService);
+            },
+            inject: [RabbitMQService, ConfigService],
+        },
         RabbitMQDomainEventsService,
         {
             provide: "DOMAIN_EVENTS_SERVICE",

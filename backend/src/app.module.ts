@@ -58,7 +58,10 @@ import {RealtimeModule} from "@modules/realtime/realtime.module";
     providers: [
         {
             provide: APP_FILTER,
-            useClass: AllExceptionsFilter,
+            useFactory: (configService: ConfigService) => {
+                return new AllExceptionsFilter(configService);
+            },
+            inject: [ConfigService],
         },
         RabbitMQDomainEventsService,
         {

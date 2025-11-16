@@ -38,6 +38,8 @@ export const appConfig = registerAs("app", () => ({
         ),
     },
     logging: {
-        enabled: (process.env.ENABLE_LOGGING ?? "true").toLowerCase() === "true",
+        enabled: (process.env.BACKEND_LOGGING ?? "true").toLowerCase() !== "false",
+        rabbitmq: (process.env.RABBITMQ_LOGGING ?? "false").toLowerCase() === "true",
+        websocket: (process.env.WEBSOCKET_LOGGING ?? "false").toLowerCase() === "true",
     },
 }));

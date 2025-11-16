@@ -7,12 +7,16 @@ import {ErrorCode} from "@application/errors/error-code";
 import {Role} from "@domain/enums/role.enum";
 import {ListPrimaryOwnerCompaniesUseCase} from "@application/use-cases/companys/list-primary-owner-companies.usecase";
 import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
+import {ConfigService} from "@nestjs/config";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 export interface DeleteAccountInput {
     userId: string;
 }
 
 export class DeleteAccountUseCase {
+    private readonly logger: LoggerService;
+
     constructor(
         private readonly users: UserRepository,
         private readonly companies: CompanyRepository,
@@ -20,12 +24,17 @@ export class DeleteAccountUseCase {
         private readonly domainEvents: DomainEventsService,
         private readonly listPrimaryOwnerCompanies: ListPrimaryOwnerCompaniesUseCase,
         private readonly prisma: PrismaService,
+        private readonly configService?: ConfigService,
     ) {
+        this.logger = new LoggerService(DeleteAccountUseCase.name, configService);
     }
 
     async execute(input: DeleteAccountInput) {
         const userToDelete = await this.users.findById(input.userId);
-        if (!userToDelete) throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
+        if (!userToDelete) {
+            this.logger.default(`Delete account failed: user not found - user: ${input.userId}`);
+            throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
+        }
 
        
         const allPrimaryOwnerCompanies: Array<{ id: string; name: string }> = [];
@@ -76,6 +85,7 @@ export class DeleteAccountUseCase {
                     Role.OWNER
                 );
                 if (ownerCount <= 1) {
+                    this.logger.default(`Delete account failed: cannot delete last owner - user: ${input.userId}, company: ${membership.companyId}`);
                     throw new ApplicationError(ErrorCode.CANNOT_DELETE_LAST_OWNER);
                 }
             }

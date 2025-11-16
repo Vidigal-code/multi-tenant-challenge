@@ -5,6 +5,8 @@ import {ErrorCode} from "@application/errors/error-code";
 import {UserRepository} from "@domain/repositories/users/user.repository";
 import {USER_REPOSITORY} from "@domain/repositories/users/user.repository";
 import {Inject} from "@nestjs/common";
+import {ConfigService} from "@nestjs/config";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 export interface ReplyToNotificationInput {
     notificationId: string;
@@ -13,18 +15,23 @@ export interface ReplyToNotificationInput {
 }
 
 export class ReplyToNotificationUseCase {
+    private readonly logger: LoggerService;
+
     constructor(
         private readonly notificationRepo: NotificationRepository,
         private readonly domainEvents: DomainEventsService,
         @Inject(USER_REPOSITORY)
         private readonly userRepo: UserRepository,
+        private readonly configService?: ConfigService,
     ) {
+        this.logger = new LoggerService(ReplyToNotificationUseCase.name, configService);
     }
 
     async execute(input: ReplyToNotificationInput) {
 
         const originalNotification = await this.notificationRepo.findById(input.notificationId);
         if (!originalNotification) {
+            this.logger.default(`Reply to notification failed: notification not found - notification: ${input.notificationId}, user: ${input.userId}`);
             throw new ApplicationError(ErrorCode.NOTIFICATION_NOT_FOUND);
         }
 
@@ -33,11 +40,13 @@ export class ReplyToNotificationUseCase {
             originalNotification.recipientUserId === input.userId;
 
         if (!canReply) {
+            this.logger.default(`Reply to notification failed: cannot reply - notification: ${input.notificationId}, user: ${input.userId}, sender: ${originalNotification.senderUserId}, recipient: ${originalNotification.recipientUserId}`);
             throw new ApplicationError(ErrorCode.CANNOT_REPLY_TO_NOTIFICATION);
         }
 
         const replier = await this.userRepo.findById(input.userId);
         if (!replier) {
+            this.logger.default(`Reply to notification failed: user not found - user: ${input.userId}`);
             throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
         }
 

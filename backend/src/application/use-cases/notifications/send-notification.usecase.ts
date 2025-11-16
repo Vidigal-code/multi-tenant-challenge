@@ -7,6 +7,8 @@ import {Role} from "@domain/enums/role.enum";
 import {MembershipRepository} from "@domain/repositories/memberships/membership.repository";
 import {UserRepository} from "@domain/repositories/users/user.repository";
 import {FriendshipRepository} from "@domain/repositories/friendships/friendship.repository";
+import {ConfigService} from "@nestjs/config";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 export interface SendNotificationInput {
     companyId: string;
@@ -23,13 +25,17 @@ export interface SendNotificationResult {
 }
 
 export class SendNotificationUseCase {
+    private readonly logger: LoggerService;
+
     constructor(
         private readonly membershipRepo: MembershipRepository,
         private readonly notificationRepo: NotificationRepository,
         private readonly userRepo: UserRepository,
         private readonly friendshipRepo: FriendshipRepository,
         private readonly domainEvents: DomainEventsService,
+        private readonly configService?: ConfigService,
     ) {
+        this.logger = new LoggerService(SendNotificationUseCase.name, configService);
     }
 
     async execute(input: SendNotificationInput): Promise<SendNotificationResult> {
@@ -38,8 +44,12 @@ export class SendNotificationUseCase {
                 input.senderUserId,
                 input.companyId,
             );
-            if (!senderMembership) throw new ApplicationError(ErrorCode.NOT_A_MEMBER);
+            if (!senderMembership) {
+                this.logger.default(`Notification failed: sender is not a member - user: ${input.senderUserId}, company: ${input.companyId}`);
+                throw new ApplicationError(ErrorCode.NOT_A_MEMBER);
+            }
             if (![Role.OWNER, Role.ADMIN].includes(senderMembership.role)) {
+                this.logger.default(`Notification failed: insufficient role - user: ${input.senderUserId}, company: ${input.companyId}, role: ${senderMembership.role}`);
                 throw new ApplicationError(ErrorCode.INSUFFICIENT_ROLE);
             }
         }
@@ -49,6 +59,7 @@ export class SendNotificationUseCase {
         
         const senderUser = await this.userRepo.findById(input.senderUserId);
         if (!senderUser) {
+            this.logger.default(`Notification failed: sender not found - user: ${input.senderUserId}`);
             throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
         }
 
@@ -160,7 +171,7 @@ export class SendNotificationUseCase {
                 title: input.title,
                 body: input.body,
                 meta: {
-                    kind: "notifications.sent",
+                    kind: "notification.sent",
                     channel: recipient.via,
                     sender: {
                         id: senderUser.id,

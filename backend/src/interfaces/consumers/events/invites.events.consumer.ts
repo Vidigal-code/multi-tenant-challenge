@@ -1,7 +1,7 @@
-import {Logger} from "@nestjs/common";
 import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
 import {BaseResilientConsumer} from "../base.resilient.consumer";
 import {ConfigService} from "@nestjs/config";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 const INVITES_EVENTS_QUEUE = "events.invites";
 const NOTIFICATIONS_REALTIME_QUEUE = "notifications.realtimes";
@@ -16,7 +16,7 @@ class InvitesEventsConsumer extends BaseResilientConsumer<any> {
             retryMax: parseInt((config.get("app.rabbitmq.retryMax") as any) ?? "5", 10),
             redisUrl: (config.get('app.redisUrl') as string) || process.env.REDIS_URL || 'redis://redis:6379',
             dedupTtlSeconds: 60,
-        });
+        }, config);
     }
 
     protected async process(payload: any): Promise<void> {
@@ -29,13 +29,14 @@ class InvitesEventsConsumer extends BaseResilientConsumer<any> {
 }
 
 async function bootstrap() {
-    const logger = new Logger("InvitesEventsConsumer");
     const config = new ConfigService();
+    const logger = new LoggerService("InvitesEventsConsumer", config);
+    logger.default("Starting invites events consumer...");
     const rabbit = new (require("@infrastructure/messaging/services/rabbitmq.service").RabbitMQService)(config);
     await rabbit.onModuleInit();
     const consumer = new InvitesEventsConsumer(rabbit, config);
     await consumer.start();
-    logger.log("Invites events consumer started.");
+    logger.default("Invites events consumer started.");
 }
 
 if (require.main === module) {

@@ -15,11 +15,14 @@ import {InviteInfoResponse, SuccessResponse} from "@application/dto/invites/invi
 import {COMPANY_REPOSITORY, CompanyRepository} from "@domain/repositories/companys/company.repository";
 import {ConfigService} from "@nestjs/config";
 import {Role} from "@domain/enums/role.enum";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 @ApiTags("invites")
 @ApiCookieAuth()
 @Controller("invites")
 export class InvitesController {
+    private readonly logger: LoggerService;
+
     constructor(
         @Inject(INVITE_REPOSITORY) private readonly invites: InviteRepository,
         @Inject(COMPANY_REPOSITORY) private readonly companies: CompanyRepository,
@@ -29,6 +32,7 @@ export class InvitesController {
         private readonly rabbit: RabbitMQService,
         private readonly configService: ConfigService,
     ) {
+        this.logger = new LoggerService(InvitesController.name, configService);
     }
 
     @Get()
@@ -124,7 +128,10 @@ export class InvitesController {
     @ApiResponse({status: 404, description: "Invite not found", type: ErrorResponse})
     async getByCode(@CurrentUser() user: any, @Param("inviteCode") inviteCode: string) {
         const invite = await this.invites.findByToken(inviteCode);
-        if (!invite) throw new ApplicationError(ErrorCode.INVITE_NOT_FOUND);
+        if (!invite) {
+            this.logger.default(`Get invite failed: invite not found - code: ${inviteCode}, user: ${user.sub}`);
+            throw new ApplicationError(ErrorCode.INVITE_NOT_FOUND);
+        }
         
         const company = await this.companies.findById(invite.companyId);
         const inviter = invite.inviterId ? await this.users.findById(invite.inviterId) : null;
@@ -144,8 +151,8 @@ export class InvitesController {
             inviterName: inviter?.name || null,
             status: invite.status,
             role: invite.role,
-            createdAt: invite.createdAt instanceof Date ? invite.createdAt.toISOString() : invite.createdAt,
-            expiresAt: invite.expiresAt instanceof Date ? invite.expiresAt.toISOString() : invite.expiresAt,
+            createdAt: invite.createdAt.toISOString(),
+            expiresAt: invite.expiresAt.toISOString(),
             inviterId: invite.inviterId || undefined,
             isInviter,
             isRecipient,
@@ -161,16 +168,28 @@ export class InvitesController {
     @ApiResponse({status: 400, description: "Invalid or expired", type: ErrorResponse})
     async acceptByCode(@CurrentUser() user: any, @Param("inviteCode") inviteCode: string) {
         const invite = await this.invites.findByToken(inviteCode);
-        if (!invite) throw new ApplicationError("INVITE_NOT_FOUND");
-        if (!invite.isPending()) throw new ApplicationError("INVITE_ALREADY_USED");
+        if (!invite) {
+            this.logger.default(`Accept invite failed: invite not found - code: ${inviteCode}, user: ${user.sub}`);
+            throw new ApplicationError("INVITE_NOT_FOUND");
+        }
+        if (!invite.isPending()) {
+            this.logger.default(`Accept invite failed: invite already used - invite: ${invite.id}, user: ${user.sub}`);
+            throw new ApplicationError("INVITE_ALREADY_USED");
+        }
         if (invite.isExpired()) {
             await this.invites.markExpired(invite.id);
+            this.logger.default(`Accept invite failed: invite expired - invite: ${invite.id}, user: ${user.sub}`);
             throw new ApplicationError("INVITE_EXPIRED");
         }
         
         const currentUser = await this.users.findById(user.sub);
-        if (!currentUser) throw new ApplicationError("USER_NOT_FOUND");
+        if (!currentUser) {
+            this.logger.default(`Accept invite failed: user not found - user: ${user.sub}`);
+            throw new ApplicationError("USER_NOT_FOUND");
+        }
         if (invite.email.toString().toLowerCase() !== currentUser.email.toString().toLowerCase()) {
+            this.logger.default(`Accept invite failed: invite not for user - invite: 
+            ${invite.id}, invite email: ${invite.email}, user email: ${currentUser.email}, user: ${user.sub}`);
             throw new ApplicationError("INVITE_NOT_FOR_USER");
         }
         
@@ -216,8 +235,14 @@ export class InvitesController {
     @ApiResponse({status: 400, description: "Invalid or expired", type: ErrorResponse})
     async rejectByCode(@CurrentUser() user: any, @Param("inviteCode") inviteCode: string) {
         const invite = await this.invites.findByToken(inviteCode);
-        if (!invite) throw new ApplicationError(ErrorCode.INVITE_NOT_FOUND);
-        if (!invite.isPending()) throw new ApplicationError(ErrorCode.INVITE_ALREADY_USED);
+        if (!invite) {
+            this.logger.default(`Reject invite failed: invite not found - code: ${inviteCode}, user: ${user.sub}`);
+            throw new ApplicationError(ErrorCode.INVITE_NOT_FOUND);
+        }
+        if (!invite.isPending()) {
+            this.logger.default(`Reject invite failed: invite already used - invite: ${invite.id}, user: ${user.sub}`);
+            throw new ApplicationError(ErrorCode.INVITE_ALREADY_USED);
+        }
         
         await this.invites.updateStatus(invite.id, InviteStatus.REJECTED);
         
@@ -272,7 +297,10 @@ export class InvitesController {
     @ApiResponse({status: 404, description: "Invite not found", type: ErrorResponse})
     async deleteInvite(@CurrentUser() user: any, @Param("inviteId") inviteId: string) {
         const invite = await this.invites.findById(inviteId);
-        if (!invite) throw new ApplicationError("INVITE_NOT_FOUND");
+        if (!invite) {
+            this.logger.default(`Delete invite failed: invite not found - invite: ${inviteId}, user: ${user.sub}`);
+            throw new ApplicationError("INVITE_NOT_FOUND");
+        }
 
         const userEmail = user.email?.toLowerCase();
         const inviteEmail = invite.email.toString().toLowerCase();
@@ -280,6 +308,8 @@ export class InvitesController {
         const isRecipient = userEmail === inviteEmail;
 
         if (!isInviter && !isRecipient) {
+            this.logger.default(`Delete invite failed: forbidden action - invite: ${inviteId}, user:
+             ${user.sub}, is inviter: ${isInviter}, is recipient: ${isRecipient}`);
             throw new ApplicationError("FORBIDDEN_ACTION");
         }
 
@@ -305,6 +335,8 @@ export class InvitesController {
             if (!invite) continue;
 
             if (invite.inviterId !== user.sub) {
+                this.logger.default(`Delete multiple invites failed: forbidden action - invite: ${inviteId}, user:
+                 ${user.sub}, inviter: ${invite.inviterId}`);
                 throw new ApplicationError("FORBIDDEN_ACTION");
             }
         }

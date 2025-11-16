@@ -39,6 +39,7 @@ import {IS_PUBLIC_KEY} from "@common/guards/jwt.guard";
 import {JwtService} from "@nestjs/jwt";
 import {ConfigService} from "@nestjs/config";
 import {Response} from "express";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 @ApiTags("company")
 @ApiCookieAuth()
@@ -46,6 +47,7 @@ import {Response} from "express";
 @UseGuards(JwtAuthGuard)
 export class CompanyController {
     private readonly cookieName: string;
+    private readonly logger: LoggerService;
 
     constructor(
         private readonly createCompanyUseCase: CreateCompanyUseCase,
@@ -66,6 +68,7 @@ export class CompanyController {
     ) {
         this.cookieName =
             this.configService.get<string>("app.jwt.cookieName") ?? "session";
+        this.logger = new LoggerService(CompanyController.name, configService);
     }
 
     @Post()
@@ -82,6 +85,7 @@ export class CompanyController {
         }
     })
     async create(@CurrentUser() user: any, @Body() body: CreateCompanyDto, @Res({passthrough: true}) res: Response) {
+        this.logger.default(`POST /company - user: ${user.sub}, name: ${body.name}`);
         const {company} = await this.createCompanyUseCase.execute({
             ownerId: user.sub,
             name: body.name,
@@ -90,7 +94,6 @@ export class CompanyController {
             is_public: body.is_public,
         });
 
-        // Atualiza o token JWT com o novo activeCompanyId
         const updatedUser = await this.userRepository.findById(user.sub);
         if (updatedUser) {
             const token = await this.jwtService.signAsync({
@@ -101,6 +104,7 @@ export class CompanyController {
             this.attachCookie(res, token);
         }
 
+        this.logger.default(`Company created successfully: ${company.id}, name: ${body.name}, owner: ${user.sub}`);
         return company.toJSON();
     }
 
@@ -113,11 +117,14 @@ export class CompanyController {
         @Query("page") page = 1,
         @Query("pageSize") pageSize = 10,
     ) {
-        return this.listCompaniesUseCase.execute({
+        this.logger.default(`GET /company - user: ${user.sub}, page: ${page}, size: ${pageSize}`);
+        const result = await this.listCompaniesUseCase.execute({
             userId: user.sub,
             page: Number(page),
             pageSize: Number(pageSize),
         });
+        this.logger.default(`Companies listed: ${result.total} found for user: ${user.sub}`);
+        return result;
     }
 
     @Post(":id/select")
@@ -130,7 +137,6 @@ export class CompanyController {
             companyId,
         });
 
-        // Atualiza o token JWT com o novo activeCompanyId
         const updatedUser = await this.userRepository.findById(user.sub);
         if (updatedUser) {
             const token = await this.jwtService.signAsync({
@@ -167,10 +173,12 @@ export class CompanyController {
     async getPublicInfo(@Param("id") companyId: string) {
         const company = await this.companyRepository.findById(companyId);
         if (!company) {
+            this.logger.default(`Get company public info failed: company not found - company: ${companyId}`);
             throw new ApplicationError(ErrorCode.COMPANY_NOT_FOUND);
         }
         
         if (!company.isPublic) {
+            this.logger.default(`Get company public info failed: company is private - company: ${companyId}`);
             throw new ApplicationError(ErrorCode.NOT_A_MEMBER);
         }
 

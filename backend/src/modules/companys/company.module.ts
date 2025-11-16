@@ -1,4 +1,5 @@
 import {Module} from "@nestjs/common";
+import {ConfigModule, ConfigService} from "@nestjs/config";
 import {InfrastructureModule} from "@infrastructure/infrastructure.module";
 import {AuthInfraModule} from "@infrastructure/auth/modules/auth-infra.module";
 import {CompanyController} from "@interfaces/http/companys/company.controller";
@@ -15,14 +16,14 @@ import {COMPANY_REPOSITORY} from "@domain/repositories/companys/company.reposito
 import {MEMBERSHIP_REPOSITORY} from "@domain/repositories/memberships/membership.repository";
 
 @Module({
-    imports: [InfrastructureModule, AuthInfraModule],
+    imports: [ConfigModule, InfrastructureModule, AuthInfraModule],
     controllers: [CompanyController, CompaniesController],
     providers: [
         {
             provide: CreateCompanyUseCase,
-            useFactory: (companyRepo, userRepo, membershipRepo) =>
-                new CreateCompanyUseCase(companyRepo, userRepo, membershipRepo),
-            inject: [COMPANY_REPOSITORY, USER_REPOSITORY, MEMBERSHIP_REPOSITORY],
+            useFactory: (companyRepo, userRepo, membershipRepo, configService) =>
+                new CreateCompanyUseCase(companyRepo, userRepo, membershipRepo, configService),
+            inject: [COMPANY_REPOSITORY, USER_REPOSITORY, MEMBERSHIP_REPOSITORY, ConfigService],
         },
         {
             provide: ListCompaniesUseCase,
@@ -31,9 +32,9 @@ import {MEMBERSHIP_REPOSITORY} from "@domain/repositories/memberships/membership
         },
         {
             provide: SelectCompanyUseCase,
-            useFactory: (membershipRepo, userRepo) =>
-                new SelectCompanyUseCase(membershipRepo, userRepo),
-            inject: [MEMBERSHIP_REPOSITORY, USER_REPOSITORY],
+            useFactory: (membershipRepo, userRepo, configService) =>
+                new SelectCompanyUseCase(membershipRepo, userRepo, configService),
+            inject: [MEMBERSHIP_REPOSITORY, USER_REPOSITORY, ConfigService],
         },
         {
             provide: GetCompanyUseCase,
@@ -52,8 +53,8 @@ import {MEMBERSHIP_REPOSITORY} from "@domain/repositories/memberships/membership
         },
         {
             provide: LeaveCompanyUseCase,
-            useFactory: (membershipRepo, domainEvents) => new LeaveCompanyUseCase(membershipRepo, domainEvents),
-            inject: [MEMBERSHIP_REPOSITORY, 'DOMAIN_EVENTS_SERVICE'],
+            useFactory: (membershipRepo, domainEvents, configService) => new LeaveCompanyUseCase(membershipRepo, domainEvents, configService),
+            inject: [MEMBERSHIP_REPOSITORY, 'DOMAIN_EVENTS_SERVICE', ConfigService],
         },
     ],
 })

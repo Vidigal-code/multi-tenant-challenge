@@ -21,11 +21,13 @@ import {ListMemberCompaniesUseCase} from "@application/use-cases/companys/list-m
 import {ConfigService} from "@nestjs/config";
 import {JwtService} from "@nestjs/jwt";
 import {ApplicationError} from "@application/errors/application-error";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
     private readonly cookieName: string;
+    private readonly logger: LoggerService;
 
     constructor(
         private readonly signupUseCase: SignupUseCase,
@@ -41,6 +43,7 @@ export class AuthController {
     ) {
         this.cookieName =
             this.configService.get<string>("app.jwt.cookieName") ?? "session";
+        this.logger = new LoggerService(AuthController.name, configService);
     }
 
     @Get("profile")
@@ -48,10 +51,13 @@ export class AuthController {
     @ApiOperation({summary: "Get data from the authenticated users."})
     @ApiResponse({status: 200, description: "Profile returned"})
     async profile(@CurrentUser() user: any) {
+        this.logger.default(`GET /auth/profile - user: ${user.sub}`);
         const dbUser = await this.userRepo.findById(user.sub);
         if (!dbUser) {
+            this.logger.default(`Profile not found in database for user: ${user.sub}`);
             return {id: user.sub, email: user.email, activeCompanyId: user.activeCompanyId ?? null};
         }
+        this.logger.default(`Profile returned for user: ${user.sub}`);
         return {
             id: dbUser.id,
             name: dbUser.name,
@@ -77,6 +83,7 @@ export class AuthController {
         @Body() body: SignupDto,
         @Res({passthrough: true}) res: Response,
     ) {
+        this.logger.default(`POST /auth/signup - email: ${body.email}`);
         const {user} = await this.signupUseCase.execute(body);
         const token = await this.jwtService.signAsync({
             sub: user.id,
@@ -84,6 +91,7 @@ export class AuthController {
             activeCompanyId: user.activeCompanyId,
         });
         this.attachCookie(res, token);
+        this.logger.default(`User created successfully: ${user.id}, email: ${body.email}`);
         return user.toJSON();
     }
 
@@ -97,6 +105,7 @@ export class AuthController {
         @Body() body: LoginDto,
         @Res({passthrough: true}) res: Response,
     ) {
+        this.logger.default(`POST /auth/login - email: ${body.email}`);
         const {user} = await this.loginUseCase.execute(body);
         const token = await this.jwtService.signAsync({
             sub: user.id,
@@ -104,6 +113,7 @@ export class AuthController {
             activeCompanyId: user.activeCompanyId,
         });
         this.attachCookie(res, token);
+        this.logger.default(`Login successful: user ${user.id}, email: ${body.email}`);
         return user.toJSON();
     }
 
@@ -147,10 +157,12 @@ export class AuthController {
         @Res({passthrough: true}) res: Response,
     ) {
         if (!dto.name && !dto.email && !dto.newPassword && !dto.notificationPreferences) {
+            this.logger.default(`Profile update failed: no fields to update - user: ${user.sub}`);
             throw new ApplicationError('NO_FIELDS_TO_UPDATE');
         }
 
         if ((dto.email || dto.newPassword) && !dto.currentPassword) {
+            this.logger.default(`Profile update failed: current password required - user: ${user.sub}`);
             throw new ApplicationError('CURRENT_PASSWORD_REQUIRED');
         }
 
@@ -158,10 +170,12 @@ export class AuthController {
         if (dto.newPassword) {
             const dbUser = await this.userRepo.findById(user.sub);
             if (!dbUser) {
+                this.logger.default(`Profile update failed: user not found - user: ${user.sub}`);
                 throw new ApplicationError('USER_NOT_FOUND');
             }
             const ok = await this.hashing.compare(dto.currentPassword || "", dbUser.passwordHash);
             if (!ok) {
+                this.logger.default(`Profile update failed: invalid current password - user: ${user.sub}`);
                 throw new ApplicationError('INVALID_CURRENT_PASSWORD');
             }
             passwordHash = await this.hashing.hash(dto.newPassword);
@@ -170,6 +184,7 @@ export class AuthController {
         if (dto.email) {
             const existing = await this.userRepo.findByEmail(dto.email);
             if (existing && existing.id !== user.sub) {
+                this.logger.default(`Profile update failed: email already in use - user: ${user.sub}, email: ${dto.email}`);
                 throw new ApplicationError('EMAIL_ALREADY_USED');
             }
         }
@@ -195,21 +210,22 @@ export class AuthController {
     @UseGuards(JwtAuthGuard)
     @ApiOperation({summary: "List companies where users is primary owner (creator)"})
     @ApiResponse({status: 200, description: "Primary owner companies listed", type: PrimaryOwnerCompaniesResponseDto})
-    async getPrimaryOwnerCompanies(@CurrentUser() user: any, @Query("page") page = "1", @Query("pageSize") pageSize = "10"): Promise<PrimaryOwnerCompaniesResponseDto> {
+    async getPrimaryOwnerCompanies(@CurrentUser() user: any, @Query("page") page = "1", @Query("pageSize") pageSize = "10"):
+        Promise<PrimaryOwnerCompaniesResponseDto> {
         const result = await this.listPrimaryOwnerCompanies.execute({
             userId: user.sub,
             page: parseInt(page, 10) || 1,
             pageSize: parseInt(pageSize, 10) || 10,
         });
-        
-        const response: PrimaryOwnerCompaniesResponseDto = {
+
+        return {
             data: result.data.map(company => ({
                 id: company.id,
                 name: company.name,
                 logoUrl: company.logoUrl ?? null,
                 description: company.description ?? null,
                 isPublic: company.isPublic,
-                createdAt: company.createdAt instanceof Date ? company.createdAt.toISOString() : (typeof company.createdAt === 'string' ? company.createdAt : new Date(company.createdAt).toISOString()),
+                createdAt: company.createdAt.toISOString(),
                 memberCount: company.memberCount,
                 primaryOwnerName: company.primaryOwnerName,
                 primaryOwnerEmail: company.primaryOwnerEmail,
@@ -218,29 +234,28 @@ export class AuthController {
             page: result.page,
             pageSize: result.pageSize,
         };
-        
-        return response;
     }
 
     @Get("account/member-companies")
     @UseGuards(JwtAuthGuard)
     @ApiOperation({summary: "List companies where user is a member (ADMIN or MEMBER) but not primary owner"})
     @ApiResponse({status: 200, description: "Member companies listed", type: MemberCompaniesResponseDto})
-    async getMemberCompanies(@CurrentUser() user: any, @Query("page") page = "1", @Query("pageSize") pageSize = "10"): Promise<MemberCompaniesResponseDto> {
+    async getMemberCompanies(@CurrentUser() user: any, @Query("page") page = "1", @Query("pageSize") pageSize = "10"):
+        Promise<MemberCompaniesResponseDto> {
         const result = await this.listMemberCompanies.execute({
             userId: user.sub,
             page: parseInt(page, 10) || 1,
             pageSize: parseInt(pageSize, 10) || 10,
         });
-        
-        const response: MemberCompaniesResponseDto = {
+
+        return {
             data: result.data.map(company => ({
                 id: company.id,
                 name: company.name,
                 logoUrl: company.logoUrl ?? null,
                 description: company.description ?? null,
                 isPublic: company.isPublic,
-                createdAt: company.createdAt instanceof Date ? company.createdAt.toISOString() : (typeof company.createdAt === 'string' ? company.createdAt : new Date(company.createdAt).toISOString()),
+                createdAt: company.createdAt.toISOString(),
                 memberCount: company.memberCount,
                 userRole: company.userRole,
                 primaryOwnerName: company.primaryOwnerName,
@@ -250,8 +265,6 @@ export class AuthController {
             page: result.page,
             pageSize: result.pageSize,
         };
-        
-        return response;
     }
 
     @Delete("account")

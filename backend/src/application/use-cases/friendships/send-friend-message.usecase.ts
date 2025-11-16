@@ -5,6 +5,8 @@ import {ErrorCode} from "@application/errors/error-code";
 import {SuccessCode} from "@application/success/success-code";
 import {UserRepository} from "@domain/repositories/users/user.repository";
 import {FriendshipRepository} from "@domain/repositories/friendships/friendship.repository";
+import {ConfigService} from "@nestjs/config";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 export interface SendFriendMessageInput {
     senderUserId: string;
@@ -19,17 +21,22 @@ export interface SendFriendMessageResult {
 }
 
 export class SendFriendMessageUseCase {
+    private readonly logger: LoggerService;
+
     constructor(
         private readonly notificationRepo: NotificationRepository,
         private readonly userRepo: UserRepository,
         private readonly friendshipRepo: FriendshipRepository,
         private readonly domainEvents: DomainEventsService,
+        private readonly configService?: ConfigService,
     ) {
+        this.logger = new LoggerService(SendFriendMessageUseCase.name, configService);
     }
 
     async execute(input: SendFriendMessageInput): Promise<SendFriendMessageResult> {
         const senderUser = await this.userRepo.findById(input.senderUserId);
         if (!senderUser) {
+            this.logger.default(`Send friend message failed: sender not found - user: ${input.senderUserId}`);
             throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
         }
 
@@ -77,7 +84,7 @@ export class SendFriendMessageUseCase {
             title: input.title,
             body: input.body,
             meta: {
-                kind: "notifications.sent",
+                kind: "notification.sent",
                 channel: "friend",
                 sender: {
                     id: senderUser.id,

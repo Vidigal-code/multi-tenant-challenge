@@ -3,6 +3,8 @@ import {DomainEventsService} from "@domain/services/domain-events.service";
 import {ApplicationError} from "@application/errors/application-error";
 import {ErrorCode} from "@application/errors/error-code";
 import {Role} from "@domain/enums/role.enum";
+import {ConfigService} from "@nestjs/config";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 export interface LeaveCompanyInput {
     userId: string;
@@ -10,10 +12,14 @@ export interface LeaveCompanyInput {
 }
 
 export class LeaveCompanyUseCase {
+    private readonly logger: LoggerService;
+
     constructor(
         private readonly memberships: MembershipRepository,
         private readonly domainEvents: DomainEventsService,
+        private readonly configService?: ConfigService,
     ) {
+        this.logger = new LoggerService(LeaveCompanyUseCase.name, configService);
     }
 
     async execute(input: LeaveCompanyInput) {
@@ -21,8 +27,12 @@ export class LeaveCompanyUseCase {
             input.userId,
             input.companyId,
         );
-        if (!membership) throw new ApplicationError(ErrorCode.NOT_A_MEMBER);
+        if (!membership) {
+            this.logger.default(`Leave company failed: user is not a member - user: ${input.userId}, company: ${input.companyId}`);
+            throw new ApplicationError(ErrorCode.NOT_A_MEMBER);
+        }
         if (membership.role === Role.OWNER) {
+            this.logger.default(`Leave company failed: owner must transfer before leave - user: ${input.userId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.OWNER_MUST_TRANSFER_BEFORE_LEAVE);
         }
         await this.memberships.remove(membership.id);

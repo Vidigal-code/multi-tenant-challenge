@@ -12,7 +12,7 @@ export const RT_EVENTS = {
   FRIEND_REQUEST_SENT: 'friend.request.sent',
   FRIEND_REQUEST_ACCEPTED: 'friend.request.accepted',
   FRIEND_REMOVED: 'friend.removed',
-};
+} as const;
 
 let socket: Socket | null = null;
 let readyPromise: Promise<void> | null = null;

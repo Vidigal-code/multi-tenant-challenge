@@ -70,7 +70,7 @@ export class Company {
             name: this.name,
             logoUrl: this.logoUrl,
             description: this.description,
-            is_public: this.isPublic, // Retornar como is_public para consistência com frontend
+            is_public: this.isPublic,
             createdAt: this.props.createdAt.toISOString(),
             updatedAt: this.props.updatedAt.toISOString(),
         };

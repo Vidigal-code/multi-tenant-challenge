@@ -12,12 +12,16 @@ import {ErrorResponse} from "@application/dto/errors/error.response.dto";
 import {NotificationReadPayloadDto} from "@application/dto/realtimes/realtime.dto";
 import {SuccessCode} from "@application/success/success-code";
 import {ErrorCode} from "@application/errors/error-code";
+import {ConfigService} from "@nestjs/config";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 @ApiTags("notifications")
 @ApiCookieAuth()
 @Controller("notifications")
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
+    private readonly logger: LoggerService;
+
     constructor(
         private readonly sendNotification: SendNotificationUseCase,
         private readonly sendFriendMessage: SendFriendMessageUseCase,
@@ -25,7 +29,9 @@ export class NotificationsController {
         private readonly markRead: MarkNotificationReadUseCase,
         private readonly deleteNotification: DeleteNotificationUseCase,
         private readonly replyToNotification: ReplyToNotificationUseCase,
+        private readonly configService: ConfigService,
     ) {
+        this.logger = new LoggerService(NotificationsController.name, configService);
     }
 
     @Post()
@@ -64,6 +70,7 @@ export class NotificationsController {
         @CurrentUser() user: any,
         @Body() body: { companyId: string; title: string; body: string; recipientsEmails?: string[]; onlyOwnersAndAdmins?: boolean },
     ) {
+        this.logger.default(`POST /notifications - user: ${user.sub}, company: ${body.companyId}, recipients: ${body.recipientsEmails?.length || 'all'}`);
         const result = await this.sendNotification.execute({
             companyId: body.companyId,
             senderUserId: user.sub,
@@ -72,6 +79,7 @@ export class NotificationsController {
             body: body.body,
             onlyOwnersAndAdmins: body.onlyOwnersAndAdmins,
         });
+        this.logger.default(`Notification sent - ${result.notifications.length} notifications created`);
         return {
             notifications: result.notifications.map((notification) => notification.toJSON()),
             validationResults: result.validationResults,

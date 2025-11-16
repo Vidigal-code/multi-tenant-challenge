@@ -226,7 +226,7 @@ export class NotificationCreatorService {
                 title: "INVITE_CREATED",
                 body: "INVITE_CREATED",
                 meta: {
-                    kind: "invites.created",
+                    kind: "invite.created",
                     channel: "company",
                     sender: {
                         id: inviter.id,
@@ -263,7 +263,7 @@ export class NotificationCreatorService {
             title: "INVITE_ACCEPTED",
             body: "INVITE_ACCEPTED",
             meta: {
-                kind: "invites.accepted",
+                kind: "invite.accepted",
                 channel: "company",
                 sender: {
                     id: acceptedBy.id,
@@ -298,7 +298,7 @@ export class NotificationCreatorService {
             title: "MEMBER_ADDED",
             body: "MEMBER_ADDED",
             meta: {
-                kind: "member.added",
+                kind: "membership.joined",
                 channel: "company",
                 companyName: company.name,
                 companyId,
@@ -323,7 +323,7 @@ export class NotificationCreatorService {
             title: "MEMBER_REMOVED",
             body: "MEMBER_REMOVED",
             meta: {
-                kind: "member.removed",
+                kind: "membership.removed",
                 channel: "company",
                 sender: {
                     id: removedBy.id,
@@ -358,7 +358,7 @@ export class NotificationCreatorService {
             title: "ROLE_CHANGED",
             body: "ROLE_CHANGED",
             meta: {
-                kind: "role.changed",
+                kind: "membership.role.updated",
                 channel: "company",
                 sender: changer ? {
                     id: changer.id,

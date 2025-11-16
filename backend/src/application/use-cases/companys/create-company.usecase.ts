@@ -4,6 +4,8 @@ import {MembershipRepository} from "@domain/repositories/memberships/membership.
 import {ApplicationError} from "@application/errors/application-error";
 import {ErrorCode} from "@application/errors/error-code";
 import {Role} from "@domain/enums/role.enum";
+import {ConfigService} from "@nestjs/config";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 export interface CreateCompanyInput {
     ownerId: string;
@@ -14,16 +16,21 @@ export interface CreateCompanyInput {
 }
 
 export class CreateCompanyUseCase {
+    private readonly logger: LoggerService;
+
     constructor(
         private readonly companyRepository: CompanyRepository,
         private readonly userRepository: UserRepository,
         private readonly membershipRepository: MembershipRepository,
+        private readonly configService?: ConfigService,
     ) {
+        this.logger = new LoggerService(CreateCompanyUseCase.name, configService);
     }
 
     async execute(input: CreateCompanyInput) {
         const owner = await this.userRepository.findById(input.ownerId);
         if (!owner) {
+            this.logger.default(`Create company failed: owner not found - owner: ${input.ownerId}`);
             throw new ApplicationError(ErrorCode.OWNER_NOT_FOUND);
         }
 

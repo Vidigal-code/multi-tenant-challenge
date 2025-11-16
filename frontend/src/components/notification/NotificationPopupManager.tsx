@@ -3,9 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { subscribe, whenReady, RT_EVENTS } from '../../lib/realtime';
 import { NotificationPopup } from './NotificationPopup';
 import { NotificationData } from '../../lib/notification-messages';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
 import { http } from '../../lib/http';
+import { useNotificationPreferences } from '../../hooks/useNotificationPreferences';
 
 interface NotificationPopupManagerProps {
     enabled: boolean;
@@ -13,14 +14,19 @@ interface NotificationPopupManagerProps {
 
 type NotificationKind =
     | 'invite.created'
+    | 'invites.created'
     | 'invite.accepted'
+    | 'invites.accepted'
     | 'invite.rejected'
+    | 'invites.rejected'
     | 'friend.request.sent'
     | 'friend.request.accepted'
     | 'friend.request.rejected'
     | 'friend.removed'
     | 'notification.sent'
+    | 'notifications.sent'
     | 'notification.reply'
+    | 'notifications.replied'
     | 'member.added'
     | 'member.removed'
     | 'membership.joined'
@@ -28,11 +34,24 @@ type NotificationKind =
     | 'role.changed'
     | 'membership.role.updated';
 
-const COMPANY_INVITATION_KINDS: NotificationKind[] = ['invite.created', 'invite.accepted', 'invite.rejected'];
+const COMPANY_INVITATION_KINDS: NotificationKind[] = [
+    'invite.created', 'invites.created', 
+    'invite.accepted', 'invites.accepted',
+    'invite.rejected', 'invites.rejected'
+];
+
 const FRIEND_REQUEST_KINDS: NotificationKind[] = ['friend.request.sent', 'friend.request.accepted', 'friend.request.rejected', 'friend.removed'];
-const COMPANY_MESSAGE_KINDS: NotificationKind[] = ['notification.sent', 'notification.reply'];
-const MEMBERSHIP_CHANGE_KINDS: NotificationKind[] = ['member.added', 'member.removed', 'membership.joined', 'membership.removed'];
-const ROLE_CHANGE_KINDS: NotificationKind[] = ['role.changed', 'membership.role.updated'];
+const COMPANY_MESSAGE_KINDS: NotificationKind[] = [
+    'notification.sent', 'notifications.sent',
+    'notification.reply', 'notifications.replied' 
+];
+const MEMBERSHIP_CHANGE_KINDS: NotificationKind[] = [
+    'member.added', 'membership.joined', 
+    'member.removed', 'membership.removed' 
+];
+const ROLE_CHANGE_KINDS: NotificationKind[] = [
+    'role.changed', 'membership.role.updated'
+];
 
 function shouldShowNotification(notification: NotificationData, preferences: any): boolean {
     if (!preferences) return true;
@@ -72,20 +91,7 @@ function shouldShowNotification(notification: NotificationData, preferences: any
 export function NotificationPopupManager({ enabled }: NotificationPopupManagerProps) {
     const [currentNotification, setCurrentNotification] = useState<NotificationData | null>(null);
     const queryClient = useQueryClient();
-
-    const { data: profile } = useQuery({
-        queryKey: queryKeys.profile(),
-        queryFn: async () => {
-            try {
-                const { data } = await http.get('/auth/profile');
-                return data;
-            } catch {
-                return null;
-            }
-        },
-        staleTime: 30_000,
-        retry: false,
-    });
+    const { preferences, derived: notificationDerived } = useNotificationPreferences();
 
     useEffect(() => {
         if (!enabled) {
@@ -111,10 +117,8 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                 lastNotificationTime = now;
 
                 try {
-                    const preferences = profile?.notificationPreferences || {};
-                    const realtimePopupsEnabled = preferences.realtimePopups;
-
-                    if (!realtimePopupsEnabled) {
+                    // Only show popup if realtime is enabled, popups are enabled, and icon badge is not selected
+                    if (!notificationDerived.realtimeEnabled || !notificationDerived.realtimePopups || notificationDerived.realtimeIconBadge) {
                         return;
                     }
 
@@ -164,7 +168,7 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                         queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
                     }
                 } catch (error) {
-                   // console.errors('[NotificationPopupManager] Erro ao buscar notificação:', errors);
+                    //console.error('[NotificationPopupManager] Erro ao buscar notificação:', error);
                 }
             };
 
@@ -181,7 +185,7 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
             active = false;
             unsubscribers.forEach((unsubscribe) => unsubscribe());
         };
-    }, [enabled, queryClient, profile]);
+    }, [enabled, queryClient, preferences, notificationDerived]);
 
     if (!enabled || !currentNotification) return null;
 

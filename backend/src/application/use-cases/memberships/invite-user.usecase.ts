@@ -9,7 +9,7 @@ import {InviteTokenService} from "@application/ports/invite-token.service";
 import {EmailValidationService} from "@application/ports/email-validation.service";
 import {UserRepository} from "@domain/repositories/users/user.repository";
 import {ConfigService} from "@nestjs/config";
-import {InviteStatus} from "@domain/enums/invite-status.enum";
+import {LoggerService} from "@infrastructure/logging/logger.service";
 
 export interface InviteUserInput {
     inviterUserId: string;
@@ -20,6 +20,8 @@ export interface InviteUserInput {
 }
 
 export class InviteUserUseCase {
+    private readonly logger: LoggerService;
+
     constructor(
         private readonly membershipRepository: MembershipRepository,
         private readonly inviteRepository: InviteRepository,
@@ -29,6 +31,7 @@ export class InviteUserUseCase {
         private readonly emailValidation: EmailValidationService,
         private readonly config?: ConfigService,
     ) {
+        this.logger = new LoggerService(InviteUserUseCase.name, config);
     }
 
     async execute(input: InviteUserInput): Promise<{ invite: Invite }> {
@@ -38,14 +41,17 @@ export class InviteUserUseCase {
         );
 
         if (!membership) {
+            this.logger.default(`Invite failed: user is not a member - user: ${input.inviterUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.NOT_A_MEMBER);
         }
 
         if (membership.role === Role.MEMBER) {
+            this.logger.default(`Invite failed: insufficient role - user: ${input.inviterUserId}, company: ${input.companyId}, role: ${membership.role}`);
             throw new ApplicationError(ErrorCode.INSUFFICIENT_ROLE);
         }
 
         if (input.role === Role.OWNER && membership.role !== Role.OWNER) {
+            this.logger.default(`Invite failed: only owner can invite owner - user: ${input.inviterUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.ONLY_OWNER_CAN_INVITE_OWNER);
         }
 
@@ -53,6 +59,7 @@ export class InviteUserUseCase {
 
         const inviterUser = await this.userRepository.findById(input.inviterUserId);
         if (inviterUser && inviterUser.email.toString().toLowerCase() === email) {
+            this.logger.default(`Invite failed: cannot invite self - user: ${input.inviterUserId}, email: ${email}`);
             throw new ApplicationError(ErrorCode.CANNOT_INVITE_SELF);
         }
 
@@ -61,6 +68,7 @@ export class InviteUserUseCase {
         if (requireExisting) {
             const exists = await this.emailValidation.exists(email);
             if (!exists) {
+                this.logger.default(`Invite failed: user not found - email: ${email}, company: ${input.companyId}`);
                 throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
             }
             invitedUser = await this.userRepository.findByEmail(email);
@@ -72,6 +80,7 @@ export class InviteUserUseCase {
                 input.companyId,
             );
             if (existingMember) {
+                this.logger.default(`Invite failed: user is already a member - user: ${invitedUser.id}, company: ${input.companyId}`);
                 throw new ApplicationError(ErrorCode.CANNOT_INVITE_MEMBER);
             }
         }

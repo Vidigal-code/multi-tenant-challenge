@@ -1,4 +1,5 @@
 import {Module} from "@nestjs/common";
+import {ConfigModule, ConfigService} from "@nestjs/config";
 import {PrismaService} from "./prisma/services/prisma.service";
 import {userRepositoryProvider} from "@infrastructure/prisma/users/user.prisma.repository";
 import {companyRepositoryProvider} from "@infrastructure/prisma/companys/company.prisma.repository";
@@ -19,8 +20,18 @@ const repositoryProviders = [
 ];
 
 @Module({
-    imports: [RabbitMQModule],
-    providers: [PrismaService, ...repositoryProviders, emailValidationProvider],
+    imports: [ConfigModule, RabbitMQModule],
+    providers: [
+        {
+            provide: PrismaService,
+            useFactory: (configService: ConfigService) => {
+                return new PrismaService(configService);
+            },
+            inject: [ConfigService],
+        },
+        ...repositoryProviders,
+        emailValidationProvider,
+    ],
     exports: [PrismaService, RabbitMQModule, ...repositoryProviders, emailValidationProvider],
 })
 export class InfrastructureModule {

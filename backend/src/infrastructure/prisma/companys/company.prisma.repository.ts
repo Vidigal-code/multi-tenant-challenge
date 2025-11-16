@@ -103,7 +103,6 @@ export class CompanyPrismaRepository implements CompanyRepository {
     }
 
     async update(data: UpdateCompanyInput): Promise<Company> {
-        // Construir objeto de atualização apenas com campos fornecidos
         const updateData: any = {};
         if (data.name !== undefined) {
             updateData.name = data.name;

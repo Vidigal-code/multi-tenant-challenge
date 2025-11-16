@@ -72,7 +72,7 @@ export class Notification {
             recipientsEmails: this.recipientsEmails,
             title: this.title,
             body: this.body,
-            createdAt: this.createdAt instanceof Date ? this.createdAt.toISOString() : (typeof this.createdAt === 'string' ? this.createdAt : new Date(this.createdAt).toISOString()),
+            createdAt: this.createdAt.toISOString(),
             read: this.read,
             meta: this.meta
         };

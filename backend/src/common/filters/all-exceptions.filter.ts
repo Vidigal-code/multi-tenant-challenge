@@ -1,11 +1,17 @@
-import {ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger,} from "@nestjs/common";
+import {ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus} from "@nestjs/common";
 import {Response} from "express";
 import {ApplicationError} from "@application/errors/application-error";
 import {ErrorCode} from "@application/errors/error-code";
+import {LoggerService} from "@infrastructure/logging/logger.service";
+import {ConfigService} from "@nestjs/config";
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-    private readonly logger = new Logger(AllExceptionsFilter.name);
+    private readonly logger: LoggerService;
+
+    constructor(private readonly configService?: ConfigService) {
+        this.logger = new LoggerService(AllExceptionsFilter.name, configService);
+    }
 
     catch(exception: unknown, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
@@ -20,6 +26,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
             status = this.mapApplicationErrorToStatus(exception.code);
             message = exception.message;
             code = exception.code;
+            this.logger.default(`ApplicationError: ${code} - ${message} - Path: ${request.method} ${request.url}`);
+            this.logger.default(`ApplicationError: ${code} - ${message} - Path: ${request.method} ${request.url}`);
         } else if (exception instanceof HttpException) {
             status = exception.getStatus();
             const exceptionResponse = exception.getResponse();
@@ -32,12 +40,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
                 (exceptionResponse as any).error
                     ? (exceptionResponse as any).error
                     : "HTTP_ERROR";
+            this.logger.default(`HttpException: ${status} - ${message} - Path: ${request.method} ${request.url}`);
+            this.logger.default(`HttpException: ${status} - ${message} - Path: ${request.method} ${request.url}`);
         } else if (exception instanceof Error) {
             message = exception.message;
-            this.logger.error(
-                `Unhandled error: ${exception.message}`,
-                exception.stack,
-            );
+            this.logger.error(`Erro não tratado: ${exception.message} - Path: ${request.method} ${request.url} - Stack: ${exception.stack?.substring(0, 200)}`);
+            this.logger.error(`Unhandled error: ${exception.message} - Path: ${request.method} ${request.url} - Stack: ${exception.stack?.substring(0, 200)}`);
+        } else {
+            this.logger.error(`Erro desconhecido: ${String(exception)} - Path: ${request.method} ${request.url}`);
+            this.logger.error(`Unknown error: ${String(exception)} - Path: ${request.method} ${request.url}`);
         }
 
         response.status(status).json({

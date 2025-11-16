@@ -85,7 +85,7 @@ export class ListMemberCompaniesUseCase {
                     logoUrl: company.logoUrl,
                     description: company.description,
                     isPublic: company.isPublic,
-                    createdAt: company.createdAt instanceof Date ? company.createdAt : new Date(company.createdAt),
+                    createdAt: company.createdAt,
                     memberCount,
                     userRole: membership.role,
                     primaryOwnerName: primaryOwnerUser?.name ?? 'N/A',

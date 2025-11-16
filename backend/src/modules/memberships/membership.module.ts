@@ -78,21 +78,21 @@ import {EMAIL_VALIDATION_SERVICE} from "@application/ports/email-validation.serv
         },
         {
             provide: ChangeMemberRoleUseCase,
-            useFactory: (membershipRepo, domainEvents) =>
-                new ChangeMemberRoleUseCase(membershipRepo, domainEvents),
-            inject: [MEMBERSHIP_REPOSITORY, "DOMAIN_EVENTS_SERVICE"],
+            useFactory: (membershipRepo, domainEvents, configService) =>
+                new ChangeMemberRoleUseCase(membershipRepo, domainEvents, configService),
+            inject: [MEMBERSHIP_REPOSITORY, "DOMAIN_EVENTS_SERVICE", ConfigService],
         },
         {
             provide: LeaveCompanyUseCase,
-            useFactory: (membershipRepo, domainEvents) =>
-                new LeaveCompanyUseCase(membershipRepo, domainEvents),
-            inject: [MEMBERSHIP_REPOSITORY, "DOMAIN_EVENTS_SERVICE"],
+            useFactory: (membershipRepo, domainEvents, configService) =>
+                new LeaveCompanyUseCase(membershipRepo, domainEvents, configService),
+            inject: [MEMBERSHIP_REPOSITORY, "DOMAIN_EVENTS_SERVICE", ConfigService],
         },
         {
             provide: TransferOwnershipUseCase,
-            useFactory: (membershipRepo, domainEvents) =>
-                new TransferOwnershipUseCase(membershipRepo, domainEvents),
-            inject: [MEMBERSHIP_REPOSITORY, "DOMAIN_EVENTS_SERVICE"],
+            useFactory: (membershipRepo, domainEvents, configService) =>
+                new TransferOwnershipUseCase(membershipRepo, domainEvents, configService),
+            inject: [MEMBERSHIP_REPOSITORY, "DOMAIN_EVENTS_SERVICE", ConfigService],
         },
         {
             provide: SendNotificationUseCase,

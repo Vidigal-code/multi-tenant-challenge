@@ -1,35 +1,27 @@
 "use client";
 import React from 'react';
 import { NotificationPopupManager } from './NotificationPopupManager';
-import { useQuery } from '@tanstack/react-query';
-import { http } from '../../lib/http';
-import { queryKeys } from '../../lib/queryKeys';
+import { NotificationIconBadge } from './NotificationIconBadge';
 import { usePathname } from 'next/navigation';
+import { useNotificationPreferences } from '../../hooks/useNotificationPreferences';
 
 export function NotificationPopupWrapper() {
     const pathname = usePathname();
     
     const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/';
-    
-    const { data: profile } = useQuery({
-        queryKey: queryKeys.profile(),
-        queryFn: async () => {
-            try {
-                const { data } = await http.get('/auth/profile');
-                return data;
-            } catch {
-                return null;
-            }
-        },
-        enabled: !isAuthPage,
-        staleTime: 30_000,
-        retry: false,
-    });
+    const { derived: notificationDerived, isLoading } = useNotificationPreferences();
 
-    if (isAuthPage || !profile) return null;
+    if (isAuthPage || isLoading) return null;
 
-    const enabled = profile?.notificationPreferences?.realtimePopups !== false;
-
-    return <NotificationPopupManager enabled={enabled} />;
+    return (
+        <>
+            {notificationDerived.realtimeEnabled && notificationDerived.realtimePopups && !notificationDerived.realtimeIconBadge && (
+                <NotificationPopupManager enabled={true} />
+            )}
+            {notificationDerived.realtimeEnabled && notificationDerived.realtimeIconBadge && (
+                <NotificationIconBadge enabled={true} />
+            )}
+        </>
+    );
 }
 
