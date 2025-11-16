@@ -785,7 +785,7 @@ export default function NotificationsPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
             <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Notificações</h1>
-                <p className="text-gray-600 dark:text-gray-400">Gerencie suas notificações e mensagens. Atualizada em tempo real quando WebSocket está ativado.</p>
+                <p className="text-gray-600 dark:text-gray-400">Gerencie suas notificações e mensagens.</p>
             </div>
 
             <div className="border-b border-gray-200 dark:border-gray-800 w-full">
