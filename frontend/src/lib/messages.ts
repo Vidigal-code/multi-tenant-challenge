@@ -225,3 +225,133 @@ export function isNotificationCode(code: string): boolean {
   return code in notificationCodeMessages;
 }
 
+const channelTranslations: Record<string, string> = {
+  'friend': 'Amigo',
+  'company': 'Empresa',
+};
+
+
+export function translateChannel(channel: string | undefined | null): string {
+  if (!channel) return '';
+  
+  const normalizedChannel = channel.toLowerCase().trim();
+  return channelTranslations[normalizedChannel] || channel;
+}
+
+export interface NotificationMessageParams {
+  senderName?: string;
+  senderEmail?: string;
+  companyName?: string;
+  inviteUrl?: string;
+  inviteId?: string;
+  inviteEmail?: string;
+  rejectedByName?: string;
+  rejectedByEmail?: string;
+  removedByName?: string;
+  removedByEmail?: string;
+  role?: string;
+  previousRole?: string;
+  body?: string;
+  title?: string;
+  originalTitle?: string;
+}
+
+const notificationMessageTemplates: Record<string, string> = {
+  // Friend notifications
+  'friend.request.sent.withSender': '{senderName} ({senderEmail}) enviou uma solicitação de amizade',
+  'friend.request.sent.withoutSender': 'Nova solicitação de amizade enviada para você',
+  'friend.request.accepted.withSender': '{senderName} ({senderEmail}) aceitou sua solicitação de amizade',
+  'friend.request.accepted.withoutSender': 'Sua solicitação de amizade foi aceita',
+  'friend.request.rejected.withSender': '{senderName} ({senderEmail}) rejeitou sua solicitação de amizade',
+  'friend.request.rejected.withoutSender': 'Sua solicitação de amizade foi rejeitada',
+  'friend.removed.withSender': '{senderName} ({senderEmail}) removeu você da lista de amigos',
+  'friend.removed.withoutSender': 'Você foi removido da lista de amigos',
+
+  // Invite notifications
+  'invite.created.withSender': '{senderName} ({senderEmail}) convidou você para participar {companyName}',
+  'invite.created.withoutSender': 'Você recebeu um convite para {companyName}',
+  'invite.created.withSenderAndUrl': 'Convite enviado para você por {senderName} ({senderEmail}) para {companyName}. Link: {inviteUrl}',
+  'invite.accepted.withSender': '{senderName} ({senderEmail}) aceitou seu convite para {companyName}',
+  'invite.accepted.withoutSender': 'Seu convite foi aceito',
+  'invite.rejected.withSender': '{senderName} ({senderEmail}) rejeitou seu convite para {companyName}',
+  'invite.rejected.withoutSender': 'Seu convite foi rejeitado',
+  'invite.rejected.detailed': 'Seu convite para {inviteEmail} para {companyName} foi rejeitado por {rejectedByName} ({rejectedByEmail})',
+
+  // Member notifications
+  'member.added.withSender': 'Você foi adicionado a {companyName} por {senderName} ({senderEmail})',
+  'member.added.withoutSender': 'Você foi adicionado a {companyName}',
+  'member.removed.withSender': 'Você foi removido de {companyName} por {removedByName} ({removedByEmail})',
+  'member.removed.withoutSender': 'Você foi removido de {companyName}',
+
+  // Role notifications
+  'role.changed.withSender': 'Seu papel em {companyName} foi alterado de {previousRole} para {role} por {senderName} ({senderEmail})',
+  'role.changed.withoutSender': 'Seu papel foi alterado para {role}',
+
+  // Company notifications
+  'company.created': 'Empresa {companyName} foi criada',
+  'company.updated': 'Empresa {companyName} foi atualizada',
+  'company.deleted': 'Empresa {companyName} foi deletada',
+
+  // Notification messages
+  'notification.sent': '{body}',
+  'notification.reply.withSender': 'Resposta de {senderName} ({senderEmail}): {body}',
+  'notification.reply.withoutSender': 'Resposta: {body}',
+  'notification.default': 'Você tem uma nova notificação',
+  'notification.newMessage': 'Você recebeu uma nova mensagem',
+};
+
+
+export function formatNotificationMessageTemplate(
+  templateKey: string,
+  params?: NotificationMessageParams
+): string {
+  const template = notificationMessageTemplates[templateKey];
+  if (!template) return templateKey;
+
+  if (!params) return template;
+
+  let message = template;
+
+  message = message.replace(/\{(\w+)\}/g, (match, key) => {
+    const value = params[key as keyof NotificationMessageParams];
+    if (value !== undefined && value !== null) {
+      return String(value);
+    }
+    return match;
+  });
+
+
+  if (templateKey === 'notification.sent') {
+    if (params?.body) {
+      return params.body;
+    }
+    return params?.title || notificationMessageTemplates['notification.newMessage'];
+  }
+
+  return message;
+}
+
+
+export function getNotificationKindMessage(
+  kind: string,
+  params?: NotificationMessageParams
+): string {
+  const sender = params?.senderName && params?.senderEmail;
+  
+  if (kind === 'invite.created' && sender && params?.inviteUrl) {
+    return formatNotificationMessageTemplate('invite.created.withSenderAndUrl', params);
+  }
+  
+  const key = `${kind}.${sender ? 'withSender' : 'withoutSender'}`;
+  
+  if (notificationMessageTemplates[key]) {
+    return formatNotificationMessageTemplate(key, params);
+  }
+
+  if (notificationMessageTemplates[kind]) {
+    return formatNotificationMessageTemplate(kind, params);
+  }
+
+  return params?.body || params?.title || notificationMessageTemplates['notification.default'];
+}
+

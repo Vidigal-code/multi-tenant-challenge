@@ -1,5 +1,5 @@
 import React from 'react';
-import { getNotificationCodeMessage, isNotificationCode } from './messages';
+import { getNotificationCodeMessage, isNotificationCode, formatNotificationMessageTemplate, getNotificationKindMessage, type NotificationMessageParams } from './messages';
 import { MdPerson, MdCancel, MdMail, MdCheck, MdPersonRemove, MdRefresh, MdBusiness, MdDelete, MdChat, MdNotifications } from 'react-icons/md';
 
 export type NotificationKind =
@@ -62,8 +62,26 @@ export interface NotificationData {
 
 export function formatNotificationMessage(notification: NotificationData): string {
     const { meta, title, body } = notification;
-    const kind = meta?.kind || 'notifications.sent';
+    const kind = meta?.kind || 'notification.sent';
     const sender = meta?.sender;
+
+    const params: NotificationMessageParams = {
+        senderName: sender?.name,
+        senderEmail: sender?.email,
+        companyName: meta?.companyName || 'uma empresa',
+        inviteUrl: meta?.inviteUrl || (meta?.inviteId ? `/invite/${meta.inviteId}` : undefined),
+        inviteId: meta?.inviteId,
+        inviteEmail: meta?.inviteEmail,
+        rejectedByName: meta?.rejectedByName || sender?.name || 'Alguém',
+        rejectedByEmail: meta?.rejectedByEmail || sender?.email,
+        removedByName: meta?.removedBy?.name || sender?.name,
+        removedByEmail: meta?.removedBy?.email || sender?.email,
+        role: meta?.role || 'N/A',
+        previousRole: meta?.previousRole || 'N/A',
+        body: body,
+        title: title,
+        originalTitle: meta?.originalTitle || title,
+    };
 
     if (isNotificationCode(title)) {
         const baseMessage = getNotificationCodeMessage(title);
@@ -71,43 +89,35 @@ export function formatNotificationMessage(notification: NotificationData): strin
         if (sender) {
             switch (title) {
                 case 'FRIEND_REQUEST_SENT':
-                    return `${sender.name} (${sender.email}) enviou uma solicitação de amizade`;
+                    return formatNotificationMessageTemplate('friend.request.sent.withSender', params);
                 case 'FRIEND_REQUEST_ACCEPTED':
-                    return `${sender.name} (${sender.email}) aceitou sua solicitação de amizade`;
+                    return formatNotificationMessageTemplate('friend.request.accepted.withSender', params);
                 case 'FRIEND_REQUEST_REJECTED':
-                    return `${sender.name} (${sender.email}) rejeitou sua solicitação de amizade`;
+                    return formatNotificationMessageTemplate('friend.request.rejected.withSender', params);
                 case 'FRIEND_REMOVED':
-                    return `${sender.name} (${sender.email}) removeu você da lista de amigos`;
+                    return formatNotificationMessageTemplate('friend.removed.withSender', params);
                 case 'INVITE_CREATED':
-                    const inviteUrl = meta?.inviteUrl || (meta?.inviteId ? `/invite/${meta.inviteId}` : '');
-                    const companyName = meta?.companyName || 'uma empresa';
-                    return `${sender.name} (${sender.email}) convidou você para participar ${companyName}${inviteUrl ? `. Link: ${inviteUrl}` : ''}`;
+                    if (params.inviteUrl) {
+                        return formatNotificationMessageTemplate('invite.created.withSenderAndUrl', params);
+                    }
+                    return formatNotificationMessageTemplate('invite.created.withSender', params);
                 case 'INVITE_ACCEPTED':
-                    return `${sender.name} (${sender.email}) aceitou seu convite para ${meta?.companyName || 'a empresa'}`;
+                    return formatNotificationMessageTemplate('invite.accepted.withSender', params);
                 case 'INVITE_REJECTED':
-                    const rejectedByName = meta?.rejectedByName || sender?.name || 'Alguém';
-                    const rejectedByEmail = meta?.rejectedByEmail || sender?.email || '';
-                    const inviteEmail = meta?.inviteEmail || '';
-                    const companyNameRejected = meta?.companyName || 'a empresa';
-                    return `Seu convite para ${inviteEmail} para ${companyNameRejected} foi rejeitado${rejectedByName ? `
-                     por ${rejectedByName}${rejectedByEmail ? ` (${rejectedByEmail})` : ''}` : ''}`;
+                    if (meta?.inviteEmail) {
+                        return formatNotificationMessageTemplate('invite.rejected.detailed', params);
+                    }
+                    return formatNotificationMessageTemplate('invite.rejected.withSender', params);
                 case 'MEMBER_ADDED':
-                    return `Você foi adicionado a ${meta?.companyName || 'uma empresa'} por ${sender.name} (${sender.email})`;
+                    return formatNotificationMessageTemplate('member.added.withSender', params);
                 case 'MEMBER_REMOVED':
-                    const removedBy = meta?.removedBy || sender;
-                    return removedBy
-                        ? `Você foi removido de ${meta?.companyName || 'uma empresa'} por ${removedBy.name} (${removedBy.email})`
-                        : `Você foi removido de ${meta?.companyName || 'uma empresa'}`;
+                    return formatNotificationMessageTemplate('member.removed.withSender', params);
                 case 'ROLE_CHANGED':
-                    const role = meta?.role || 'N/A';
-                    const previousRole = meta?.previousRole || 'N/A';
-                    return `Seu papel em ${meta?.companyName || 'uma empresa'} foi alterado de ${previousRole} para
-                     ${role} por ${sender.name} (${sender.email})`;
+                    return formatNotificationMessageTemplate('role.changed.withSender', params);
                 case 'COMPANY_CREATED':
-                    return `Empresa ${meta?.companyName || 'criada'} foi criada com sucesso`;
+                    return formatNotificationMessageTemplate('company.created', params);
                 case 'NOTIFICATION_REPLY':
-                    const originalTitle = meta?.originalTitle || title;
-                    return `Resposta de ${sender.name} (${sender.email}): ${body || originalTitle}`;
+                    return formatNotificationMessageTemplate('notification.reply.withSender', params);
                 default:
                     return baseMessage;
             }
@@ -116,82 +126,7 @@ export function formatNotificationMessage(notification: NotificationData): strin
         return baseMessage;
     }
 
-    switch (kind) {
-        case 'friend.request.sent':
-            return sender
-                ? `Nova solicitação de amizade enviada por ${sender.name} (${sender.email})`
-                : 'Nova solicitação de amizade enviada para você';
-
-        case 'friend.request.accepted':
-            return sender
-                ? `${sender.name} (${sender.email}) aceitou sua solicitação de amizade`
-                : 'Sua solicitação de amizade foi aceita';
-
-        case 'friend.request.rejected':
-            return sender
-                ? `${sender.name} (${sender.email}) rejeitou sua solicitação de amizade`
-                : 'Sua solicitação de amizade foi rejeitada';
-
-        case 'friend.removed':
-            return sender
-                ? `${sender.name} (${sender.email}) removeu você da lista de amigos`
-                : 'Você foi removido da lista de amigos';
-
-        case 'invite.created':
-            const inviteUrl = meta?.inviteUrl || (meta?.inviteId ? `/invite/${meta.inviteId}` : '');
-            const companyName = meta?.companyName || 'uma empresa';
-            return sender
-                ? `Convite enviado para você por ${sender.name} (${sender.email}) para ${companyName}. ${inviteUrl ? `Link: ${inviteUrl}` : ''}`
-                : `Você recebeu um convite para ${companyName}`;
-
-        case 'invite.accepted':
-            return sender
-                ? `${sender.name} (${sender.email}) aceitou seu convite para ${meta?.companyName || 'a empresa'}`
-                : 'Seu convite foi aceito';
-
-        case 'invite.rejected':
-            return sender
-                ? `${sender.name} (${sender.email}) rejeitou seu convite para ${meta?.companyName || 'a empresa'}`
-                : 'Seu convite foi rejeitado';
-
-        case 'member.added':
-            return sender
-                ? `Você foi adicionado a ${meta?.companyName || 'uma empresa'} por ${sender.name} (${sender.email})`
-                : `Você foi adicionado a ${meta?.companyName || 'uma empresa'}`;
-
-        case 'member.removed':
-            const removedBy = meta?.removedBy || sender;
-            return removedBy
-                ? `Você foi removido de ${meta?.companyName || 'uma empresa'} por ${removedBy.name} (${removedBy.email})`
-                : `Você foi removido de ${meta?.companyName || 'uma empresa'}`;
-
-        case 'role.changed':
-            const role = meta?.role || 'N/A';
-            const previousRole = meta?.previousRole || 'N/A';
-            return sender
-                ? `Seu papel em ${meta?.companyName || 'uma empresa'} foi alterado de ${previousRole} para ${role} por ${sender.name} (${sender.email})`
-                : `Seu papel foi alterado para ${role}`;
-
-        case 'company.created':
-            return `Empresa ${meta?.companyName || 'criada'} foi criada`;
-
-        case 'company.updated':
-            return `Empresa ${meta?.companyName || 'atualizada'} foi atualizada`;
-
-        case 'company.deleted':
-            return `Empresa ${meta?.companyName || 'deletada'} foi deletada`;
-
-        case 'notification.sent':
-            return body || title || 'Você recebeu uma nova mensagem';
-
-        case 'notification.reply':
-            return sender
-                ? `Resposta de ${sender.name} (${sender.email}): ${body || title}`
-                : `Resposta: ${body || title}`;
-
-        default:
-            return body || title || 'Você tem uma nova notificação';
-    }
+    return getNotificationKindMessage(kind, params);
 }
 
 export function getNotificationStyle(kind?: string): { color: string; icon: React.ReactNode } {

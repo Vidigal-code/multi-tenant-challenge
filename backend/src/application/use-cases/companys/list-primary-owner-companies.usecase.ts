@@ -63,7 +63,7 @@ export class ListPrimaryOwnerCompaniesUseCase {
                         logoUrl: company.logoUrl,
                         description: company.description,
                         isPublic: company.isPublic,
-                        createdAt: primaryOwner.createdAt instanceof Date ? primaryOwner.createdAt : new Date(primaryOwner.createdAt),
+                        createdAt: primaryOwner.createdAt,
                         memberCount,
                         primaryOwnerName: primaryOwnerUser?.name ?? 'N/A',
                         primaryOwnerEmail: primaryOwnerUser?.email?.toString() ?? 'N/A',

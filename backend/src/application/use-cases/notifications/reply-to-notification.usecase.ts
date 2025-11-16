@@ -70,7 +70,6 @@ export class ReplyToNotificationUseCase {
             },
         });
         
-        // Also emit notifications.created for realtimes popups
         await this.domainEvents.publish({
             name: "notifications.created",
             payload: {

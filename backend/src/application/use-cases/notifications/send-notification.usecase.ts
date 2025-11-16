@@ -14,7 +14,7 @@ export interface SendNotificationInput {
     recipientsEmails?: string[];
     title: string;
     body: string;
-    onlyOwnersAndAdmins?: boolean; // Se true, envia apenas para OWNERs e ADMINs
+    onlyOwnersAndAdmins?: boolean;
 }
 
 export interface SendNotificationResult {
@@ -33,7 +33,6 @@ export class SendNotificationUseCase {
     }
 
     async execute(input: SendNotificationInput): Promise<SendNotificationResult> {
-        // Se onlyOwnersAndAdmins for true, o sender pode não ser membro (Request to Join)
         if (!input.onlyOwnersAndAdmins) {
             const senderMembership = await this.membershipRepo.findByUserAndCompany(
                 input.senderUserId,
@@ -58,12 +57,10 @@ export class SendNotificationUseCase {
                 (email) => email.trim().toLowerCase()).filter((email) => email.length > 0) ?? [];
 
         if (normalizedContacts.length === 0) {
-            // Enviar para todos os membros da empresa (ou apenas OWNERs/ADMINs se onlyOwnersAndAdmins)
             const memberships = await this.membershipRepo.listByCompany(input.companyId);
             for (const membership of memberships) {
                 if (membership.userId === input.senderUserId) continue;
                 
-                // Se onlyOwnersAndAdmins for true, filtrar apenas OWNERs e ADMINs
                 if (input.onlyOwnersAndAdmins && ![Role.OWNER, Role.ADMIN].includes(membership.role)) {
                     continue;
                 }
@@ -83,7 +80,6 @@ export class SendNotificationUseCase {
                 count: recipients.size,
             });
         } else {
-            // Enviar para emails específicos
             for (const email of normalizedContacts) {
                 const user = await this.userRepo.findByEmail(email);
                 if (!user) {
@@ -106,7 +102,6 @@ export class SendNotificationUseCase {
 
                 const isInCompany = await this.membershipRepo.findByUserAndCompany(user.id, input.companyId);
                 
-                // Se onlyOwnersAndAdmins for true, verificar se é OWNER ou ADMIN
                 if (input.onlyOwnersAndAdmins) {
                     if (!isInCompany) {
                         validationResults.push({

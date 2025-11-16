@@ -9,6 +9,7 @@ import {ConfirmModal} from '../../components/modals/ConfirmModal';
 import {subscribe, whenReady, RT_EVENTS} from '../../lib/realtime';
 import {formatNotificationMessage, getNotificationStyle, NotificationData} from '../../lib/notification-messages';
 import {formatDate} from '../../lib/date-utils';
+import {translateChannel} from '../../lib/messages';
 import {
     useNotifications,
     useMarkNotificationRead,
@@ -137,7 +138,7 @@ export default function NotificationsPage() {
                                             <div><strong>Data e Hora:</strong> {notification.createdAt ? formatDate(notification.createdAt) : '-'}
                                             </div>
                                             {notification.meta?.channel && (
-                                                <div><strong>Canal:</strong> {notification.meta.channel}</div>
+                                                <div><strong>Canal:</strong> {translateChannel(notification.meta.channel)}</div>
                                             )}
                                             {notification.companyId && (
                                                 <div><strong>ID da Empresa:</strong> {notification.companyId}</div>
