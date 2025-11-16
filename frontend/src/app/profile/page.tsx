@@ -15,6 +15,7 @@ import {
     type MemberCompany,
 } from '../../services/api/auth.api';
 import {FaExclamationTriangle} from "react-icons/fa";
+import {MdBusiness, MdPerson, MdMail, MdPersonAdd, MdPersonRemove, MdRefresh} from "react-icons/md";
 import { formatDate, formatDateOnly } from '../../lib/date-utils';
 import Link from 'next/link';
 import { DEFAULT_COMPANY_LOGO } from '../../types';
@@ -80,7 +81,6 @@ export default function ProfilePage() {
                 memberCompaniesQuery.refetch();
             }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [primaryOwnerPage, memberCompaniesPage, showPrimaryOwnerModal, activeCompanyTab]);
 
     const currentName = profileQuery.data?.name ?? '';
@@ -316,7 +316,8 @@ export default function ProfilePage() {
                                     ) : primaryOwnerCompaniesQuery.error ? (
                                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
                                     <p className="text-sm text-red-800 dark:text-red-200">
-                                        Erro ao carregar empresas: {primaryOwnerCompaniesQuery.error instanceof Error ? primaryOwnerCompaniesQuery.error.message : 'Erro desconhecido'}
+                                        Erro ao carregar empresas: {primaryOwnerCompaniesQuery.error instanceof Error ? primaryOwnerCompaniesQuery.error.message :
+                                        'Erro desconhecido'}
                                     </p>
                                 </div>
                             ) : primaryOwnerCompaniesQuery.data && primaryOwnerCompaniesQuery.data.data?.length > 0 ? (
@@ -354,7 +355,8 @@ export default function ProfilePage() {
                                                             </div>
                                                             <Link
                                                                 href={`/company/${company.id}`}
-                                                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium whitespace-nowrap"
+                                                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300
+                                                                text-sm font-medium whitespace-nowrap"
                                                                 onClick={(e) => e.stopPropagation()}
                                                             >
                                                                 Acessar →
@@ -408,7 +410,8 @@ export default function ProfilePage() {
                                                     setPrimaryOwnerPage(newPage);
                                                 }}
                                                         disabled={!primaryOwnerCompaniesQuery.data ||
-                                                            primaryOwnerPage >= Math.ceil(primaryOwnerCompaniesQuery.data.total / pageSize) || primaryOwnerCompaniesQuery.isLoading}
+                                                            primaryOwnerPage >= Math.ceil(primaryOwnerCompaniesQuery.data.total / pageSize) ||
+                                                            primaryOwnerCompaniesQuery.isLoading}
                                                         className="px-3 py-1 border border-gray-300 dark:border-gray-700 rounded hover:bg-gray-50
                                                         dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                             >
@@ -442,7 +445,8 @@ export default function ProfilePage() {
                                     ) : memberCompaniesQuery.error ? (
                                         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3">
                                             <p className="text-sm text-red-800 dark:text-red-200">
-                                                Erro ao carregar empresas: {memberCompaniesQuery.error instanceof Error ? memberCompaniesQuery.error.message : 'Erro desconhecido'}
+                                                Erro ao carregar empresas: {memberCompaniesQuery.error instanceof Error ?
+                                                memberCompaniesQuery.error.message : 'Erro desconhecido'}
                                             </p>
                                         </div>
                                     ) : memberCompaniesQuery.data && memberCompaniesQuery.data.data?.length > 0 ? (
@@ -485,7 +489,8 @@ export default function ProfilePage() {
                                                                     </div>
                                                                     <Link
                                                                         href={`/company/${company.id}`}
-                                                                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium whitespace-nowrap"
+                                                                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm
+                                                                        font-medium whitespace-nowrap"
                                                                         onClick={(e) => e.stopPropagation()}
                                                                     >
                                                                         Acessar →
@@ -527,7 +532,8 @@ export default function ProfilePage() {
                                                                 }}
                                                                 disabled={memberCompaniesPage === 1 || memberCompaniesQuery.isLoading}
                                                                 className="px-3 py-1 border border-gray-300 dark:border-gray-700
-                                                                 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                                 rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50
+                                                                 disabled:cursor-not-allowed transition-colors"
                                                             >
                                                                 ← Anterior
                                         </button>
@@ -539,9 +545,11 @@ export default function ProfilePage() {
                                                                     const newPage = memberCompaniesPage + 1;
                                                                     setMemberCompaniesPage(newPage);
                                                                 }}
-                                                                disabled={!memberCompaniesQuery.data || memberCompaniesPage >= Math.ceil(memberCompaniesQuery.data.total / pageSize) || memberCompaniesQuery.isLoading}
+                                                                disabled={!memberCompaniesQuery.data || memberCompaniesPage >=
+                                                                    Math.ceil(memberCompaniesQuery.data.total / pageSize) || memberCompaniesQuery.isLoading}
                                                                 className="px-3 py-1 border border-gray-300 dark:border-gray-700
-                                                                rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                                rounded hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50
+                                                                disabled:cursor-not-allowed transition-colors"
                                                             >
                                                                 Próxima →
                                         </button>
@@ -634,14 +642,17 @@ export default function ProfilePage() {
                                     <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
                                         {primaryOwnerCompaniesQuery.data && primaryOwnerCompaniesQuery.data.total > 0 && (
                                             <li>
-                                                <strong>{primaryOwnerCompaniesQuery.data.total} empresa(s)</strong> onde você é owner principal serão excluídas permanentemente
+                                                <strong>{primaryOwnerCompaniesQuery.data.total} empresa(s)</strong>
+                                                onde você é owner principal serão excluídas permanentemente
                                             </li>
                                         )}
                                         <li>
-                                            <strong>Sua conta</strong> e todos os dados pessoais serão excluídos permanentemente
+                                            <strong>Sua conta</strong>
+                                            e todos os dados pessoais serão excluídos permanentemente
                                         </li>
                                         <li>
-                                            Você será <strong>removido automaticamente</strong> de todas as empresas onde é <strong>ADMIN</strong> ou <strong>MEMBER</strong>
+                                            Você será <strong>removido automaticamente</strong>
+                                            de todas as empresas onde é <strong>ADMIN</strong> ou <strong>MEMBER</strong>
                                         </li>
                                         <li>
                                             Todos os <strong>convites</strong> enviados e recebidos serão cancelados
@@ -702,165 +713,195 @@ export default function ProfilePage() {
 
             {activeTab === 'privacy' && (
                 <div className="space-y-4">
-                    <h2 className="text-lg font-semibold">Preferências de Notificações</h2>
-                    <p className="text-sm text-gray-600">
+                    <h2 className="text-lg font-semibold dark:text-white">Preferências de Notificações</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                         Controle quais notificações você recebe do sistema.
                     </p>
 
-                    <div className="space-y-4 border rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <label className="font-medium">Convites de Empresa</label>
-                                <p className="text-sm text-gray-500">Receber notificações quando você for convidado a entrar em uma empresa</p>
+                    <div className="space-y-3 border border-gray-200 dark:border-gray-800 rounded-lg p-4 bg-white dark:bg-gray-900">
+                        <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <div className="flex-shrink-0 mt-1">
+                                <MdBusiness className="text-xl text-blue-600 dark:text-blue-400" />
                             </div>
-                            <input
-                                type="checkbox"
-                                checked={notificationPreferences.companyInvitations !== false}
-                                onChange={(e) => {
-                                    const newPrefs = { ...notificationPreferences, companyInvitations: e.target.checked };
-                                    setNotificationPreferences(newPrefs);
-                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                        onSuccess: () => {
-                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                        },
-                                        onError: (err: any) => {
-                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                            show({ type: 'error', message: m });
-                                        },
-                                    });
-                                }}
-                                className="w-5 h-5"
-                            />
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        <label className="font-medium text-gray-900 dark:text-white block mb-1">
+                                            Convites de Empresa
+                                        </label>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            Receber notificações quando você for convidado a entrar em uma empresa
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={notificationPreferences.companyInvitations !== false}
+                                        onChange={(e) => {
+                                            const newPrefs = { ...notificationPreferences, companyInvitations: e.target.checked };
+                                            setNotificationPreferences(newPrefs);
+                                            updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                                onSuccess: () => {
+                                                    show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                                },
+                                                onError: (err: any) => {
+                                                    const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                                    show({ type: 'error', message: m });
+                                                },
+                                            });
+                                        }}
+                                        className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <label className="font-medium">Solicitações de Amizade</label>
-                                <p className="text-sm text-gray-500">Receber notificações quando alguém enviar uma solicitação de amizade</p>
+                        <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <div className="flex-shrink-0 mt-1">
+                                <MdPerson className="text-xl text-green-600 dark:text-green-400" />
                             </div>
-                            <input
-                                type="checkbox"
-                                checked={notificationPreferences.friendRequests !== false}
-                                onChange={(e) => {
-                                    const newPrefs = { ...notificationPreferences, friendRequests: e.target.checked };
-                                    setNotificationPreferences(newPrefs);
-                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                        onSuccess: () => {
-                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                        },
-                                        onError: (err: any) => {
-                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                            show({ type: 'error', message: m });
-                                        },
-                                    });
-                                }}
-                                className="w-5 h-5"
-                            />
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        <label className="font-medium text-gray-900 dark:text-white block mb-1">
+                                            Solicitações de Amizade
+                                        </label>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            Receber notificações quando alguém enviar uma solicitação de amizade
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={notificationPreferences.friendRequests !== false}
+                                        onChange={(e) => {
+                                            const newPrefs = { ...notificationPreferences, friendRequests: e.target.checked };
+                                            setNotificationPreferences(newPrefs);
+                                            updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                                onSuccess: () => {
+                                                    show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                                },
+                                                onError: (err: any) => {
+                                                    const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                                    show({ type: 'error', message: m });
+                                                },
+                                            });
+                                        }}
+                                        className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <label className="font-medium">Mensagens da Empresa</label>
-                                <p className="text-sm text-gray-500">Receber notificações para mensagens enviadas dentro de suas empresas</p>
+                        <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <div className="flex-shrink-0 mt-1">
+                                <MdMail className="text-xl text-purple-600 dark:text-purple-400" />
                             </div>
-                            <input
-                                type="checkbox"
-                                checked={notificationPreferences.companyMessages !== false}
-                                onChange={(e) => {
-                                    const newPrefs = { ...notificationPreferences, companyMessages: e.target.checked };
-                                    setNotificationPreferences(newPrefs);
-                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                        onSuccess: () => {
-                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                        },
-                                        onError: (err: any) => {
-                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                            show({ type: 'error', message: m });
-                                        },
-                                    });
-                                }}
-                                className="w-5 h-5"
-                            />
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        <label className="font-medium text-gray-900 dark:text-white block mb-1">
+                                            Mensagens da Empresa
+                                        </label>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            Receber notificações para mensagens enviadas dentro de suas empresas
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={notificationPreferences.companyMessages !== false}
+                                        onChange={(e) => {
+                                            const newPrefs = { ...notificationPreferences, companyMessages: e.target.checked };
+                                            setNotificationPreferences(newPrefs);
+                                            updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                                onSuccess: () => {
+                                                    show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                                },
+                                                onError: (err: any) => {
+                                                    const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                                    show({ type: 'error', message: m });
+                                                },
+                                            });
+                                        }}
+                                        className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 dark:bg-gray-700 dark:border-gray-600"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <label className="font-medium">Mudanças de Membros</label>
-                                <p className="text-sm text-gray-500">Receber notificações quando membros forem adicionados ou removidos das empresas</p>
+                        <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <div className="flex-shrink-0 mt-1">
+                                <MdPersonAdd className="text-xl text-orange-600 dark:text-orange-400" />
                             </div>
-                            <input
-                                type="checkbox"
-                                checked={notificationPreferences.membershipChanges !== false}
-                                onChange={(e) => {
-                                    const newPrefs = { ...notificationPreferences, membershipChanges: e.target.checked };
-                                    setNotificationPreferences(newPrefs);
-                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                        onSuccess: () => {
-                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                        },
-                                        onError: (err: any) => {
-                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                            show({ type: 'error', message: m });
-                                        },
-                                    });
-                                }}
-                                className="w-5 h-5"
-                            />
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        <label className="font-medium text-gray-900 dark:text-white block mb-1">
+                                            Mudanças de Membros
+                                        </label>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            Receber notificações quando membros forem adicionados ou removidos das empresas
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={notificationPreferences.membershipChanges !== false}
+                                        onChange={(e) => {
+                                            const newPrefs = { ...notificationPreferences, membershipChanges: e.target.checked };
+                                            setNotificationPreferences(newPrefs);
+                                            updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                                onSuccess: () => {
+                                                    show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                                },
+                                                onError: (err: any) => {
+                                                    const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                                    show({ type: 'error', message: m });
+                                                },
+                                            });
+                                        }}
+                                        className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 dark:bg-gray-700 dark:border-gray-600"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <label className="font-medium">Mudanças de Cargo</label>
-                                <p className="text-sm text-gray-500">Receber notificações quando seu cargo em uma empresa mudar</p>
+                        <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                            <div className="flex-shrink-0 mt-1">
+                                <MdRefresh className="text-xl text-indigo-600 dark:text-indigo-400" />
                             </div>
-                            <input
-                                type="checkbox"
-                                checked={notificationPreferences.roleChanges !== false}
-                                onChange={(e) => {
-                                    const newPrefs = { ...notificationPreferences, roleChanges: e.target.checked };
-                                    setNotificationPreferences(newPrefs);
-                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                        onSuccess: () => {
-                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                        },
-                                        onError: (err: any) => {
-                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                            show({ type: 'error', message: m });
-                                        },
-                                    });
-                                }}
-                                className="w-5 h-5"
-                            />
-                        </div>
-
-                        <div className="flex items-center justify-between border-t pt-4 mt-4">
-                            <div>
-                                <label className="font-medium">Popups em Tempo Real</label>
-                                <p className="text-sm text-gray-500">Exibir popups quando novas notificações chegarem em tempo real</p>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        <label className="font-medium text-gray-900 dark:text-white block mb-1">
+                                            Mudanças de Cargo
+                                        </label>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            Receber notificações quando seu cargo em uma empresa mudar
+                                        </p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={notificationPreferences.roleChanges !== false}
+                                        onChange={(e) => {
+                                            const newPrefs = { ...notificationPreferences, roleChanges: e.target.checked };
+                                            setNotificationPreferences(newPrefs);
+                                            updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
+                                                onSuccess: () => {
+                                                    show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
+                                                },
+                                                onError: (err: any) => {
+                                                    const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
+                                                    show({ type: 'error', message: m });
+                                                },
+                                            });
+                                        }}
+                                        className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600"
+                                    />
+                                </div>
                             </div>
-                            <input
-                                type="checkbox"
-                                checked={notificationPreferences.realtimePopups !== false}
-                                onChange={(e) => {
-                                    const newPrefs = { ...notificationPreferences, realtimePopups: e.target.checked };
-                                    setNotificationPreferences(newPrefs);
-                                    updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
-                                        onSuccess: () => {
-                                            show({ type: 'success', message: 'Preferências de notificação atualizadas com sucesso' });
-                                        },
-                                        onError: (err: any) => {
-                                            const m = getErrorMessage(err, 'Falha ao atualizar preferências de notificação');
-                                            show({ type: 'error', message: m });
-                                        },
-                                    });
-                                }}
-                                className="w-5 h-5"
-                            />
                         </div>
                     </div>
 
                     {updateProfileMutation.isPending && (
-                        <p className="text-sm text-gray-500">Salvando preferências...</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Salvando preferências...</p>
                     )}
                 </div>
             )}

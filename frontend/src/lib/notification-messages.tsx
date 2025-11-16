@@ -86,44 +86,63 @@ export function formatNotificationMessage(notification: NotificationData): strin
     if (isNotificationCode(title)) {
         const baseMessage = getNotificationCodeMessage(title);
 
-        if (sender) {
-            switch (title) {
-                case 'FRIEND_REQUEST_SENT':
-                    return formatNotificationMessageTemplate('friend.request.sent.withSender', params);
-                case 'FRIEND_REQUEST_ACCEPTED':
-                    return formatNotificationMessageTemplate('friend.request.accepted.withSender', params);
-                case 'FRIEND_REQUEST_REJECTED':
-                    return formatNotificationMessageTemplate('friend.request.rejected.withSender', params);
-                case 'FRIEND_REMOVED':
-                    return formatNotificationMessageTemplate('friend.removed.withSender', params);
-                case 'INVITE_CREATED':
-                    if (params.inviteUrl) {
-                        return formatNotificationMessageTemplate('invite.created.withSenderAndUrl', params);
-                    }
-                    return formatNotificationMessageTemplate('invite.created.withSender', params);
-                case 'INVITE_ACCEPTED':
-                    return formatNotificationMessageTemplate('invite.accepted.withSender', params);
-                case 'INVITE_REJECTED':
-                    if (meta?.inviteEmail) {
-                        return formatNotificationMessageTemplate('invite.rejected.detailed', params);
-                    }
+        switch (title) {
+            case 'FRIEND_REQUEST_SENT':
+                return sender 
+                    ? formatNotificationMessageTemplate('friend.request.sent.withSender', params)
+                    : formatNotificationMessageTemplate('friend.request.sent.withoutSender', params);
+            case 'FRIEND_REQUEST_ACCEPTED':
+                return sender
+                    ? formatNotificationMessageTemplate('friend.request.accepted.withSender', params)
+                    : formatNotificationMessageTemplate('friend.request.accepted.withoutSender', params);
+            case 'FRIEND_REQUEST_REJECTED':
+                return sender
+                    ? formatNotificationMessageTemplate('friend.request.rejected.withSender', params)
+                    : formatNotificationMessageTemplate('friend.request.rejected.withoutSender', params);
+            case 'FRIEND_REMOVED':
+                return sender
+                    ? formatNotificationMessageTemplate('friend.removed.withSender', params)
+                    : formatNotificationMessageTemplate('friend.removed.withoutSender', params);
+            case 'INVITE_CREATED':
+                if (sender && params.inviteUrl) {
+                    return formatNotificationMessageTemplate('invite.created.withSenderAndUrl', params);
+                }
+                return sender
+                    ? formatNotificationMessageTemplate('invite.created.withSender', params)
+                    : formatNotificationMessageTemplate('invite.created.withoutSender', params);
+            case 'INVITE_ACCEPTED':
+                return sender
+                    ? formatNotificationMessageTemplate('invite.accepted.withSender', params)
+                    : formatNotificationMessageTemplate('invite.accepted.withoutSender', params);
+            case 'INVITE_REJECTED':
+                if (meta?.inviteEmail && (meta?.rejectedByName || meta?.rejectedByEmail) && meta?.companyName) {
+                    return formatNotificationMessageTemplate('invite.rejected.detailed', params);
+                }
+                if (sender) {
                     return formatNotificationMessageTemplate('invite.rejected.withSender', params);
-                case 'MEMBER_ADDED':
-                    return formatNotificationMessageTemplate('member.added.withSender', params);
-                case 'MEMBER_REMOVED':
-                    return formatNotificationMessageTemplate('member.removed.withSender', params);
-                case 'ROLE_CHANGED':
-                    return formatNotificationMessageTemplate('role.changed.withSender', params);
-                case 'COMPANY_CREATED':
-                    return formatNotificationMessageTemplate('company.created', params);
-                case 'NOTIFICATION_REPLY':
-                    return formatNotificationMessageTemplate('notification.reply.withSender', params);
-                default:
-                    return baseMessage;
-            }
+                }
+                return formatNotificationMessageTemplate('invite.rejected.withoutSender', params);
+            case 'MEMBER_ADDED':
+                return sender
+                    ? formatNotificationMessageTemplate('member.added.withSender', params)
+                    : formatNotificationMessageTemplate('member.added.withoutSender', params);
+            case 'MEMBER_REMOVED':
+                return sender
+                    ? formatNotificationMessageTemplate('member.removed.withSender', params)
+                    : formatNotificationMessageTemplate('member.removed.withoutSender', params);
+            case 'ROLE_CHANGED':
+                return sender
+                    ? formatNotificationMessageTemplate('role.changed.withSender', params)
+                    : formatNotificationMessageTemplate('role.changed.withoutSender', params);
+            case 'COMPANY_CREATED':
+                return formatNotificationMessageTemplate('company.created', params);
+            case 'NOTIFICATION_REPLY':
+                return sender
+                    ? formatNotificationMessageTemplate('notification.reply.withSender', params)
+                    : formatNotificationMessageTemplate('notification.reply.withoutSender', params);
+            default:
+                return baseMessage;
         }
-
-        return baseMessage;
     }
 
     return getNotificationKindMessage(kind, params);

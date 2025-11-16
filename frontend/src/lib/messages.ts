@@ -275,7 +275,7 @@ const notificationMessageTemplates: Record<string, string> = {
   'invite.accepted.withoutSender': 'Seu convite foi aceito',
   'invite.rejected.withSender': '{senderName} ({senderEmail}) rejeitou seu convite para {companyName}',
   'invite.rejected.withoutSender': 'Seu convite foi rejeitado',
-  'invite.rejected.detailed': 'Seu convite para {inviteEmail} para {companyName} foi rejeitado por {rejectedByName} ({rejectedByEmail})',
+  'invite.rejected.detailed': 'Seu convite para {inviteEmail} para participar de {companyName} foi rejeitado por {rejectedByName} ({rejectedByEmail})',
 
   // Member notifications
   'member.added.withSender': 'Você foi adicionado a {companyName} por {senderName} ({senderEmail})',
