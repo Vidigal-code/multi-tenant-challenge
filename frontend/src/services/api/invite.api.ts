@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { http } from '../../lib/http';
 import { queryKeys } from '../../lib/queryKeys';
-import { extractData, extractPaginatedData } from '../../lib/api-response';
+import { extractPaginatedData } from '../../lib/api-response';
 
 export interface Invite {
   id: string;
