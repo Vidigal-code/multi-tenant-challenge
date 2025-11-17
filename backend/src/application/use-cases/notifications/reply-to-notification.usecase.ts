@@ -81,7 +81,7 @@ export class ReplyToNotificationUseCase {
             companyId: originalNotification.companyId,
             senderUserId: input.userId,
             recipientUserId: originalNotification.senderUserId,
-            title: "NOTIFICATION_REPLY",
+            title: originalNotification.title,
             body: input.replyBody.trim(),
             meta: {
                 kind: "notifications.reply",

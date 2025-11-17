@@ -36,6 +36,10 @@ export default function FriendsPage() {
   const [removeConfirm, setRemoveConfirm] = useState<string | null>(null);
   const [tabIndex, setTabIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [friendsPage, setFriendsPage] = useState(1);
+  const [requestsPage, setRequestsPage] = useState(1);
+  const [messagesPage, setMessagesPage] = useState(1);
+  const itemsPerPage = 3;
   const { show } = useToast();
   const queryClient = useQueryClient();
 
@@ -89,6 +93,18 @@ export default function FriendsPage() {
       });
     }
   }, [activeTab, allTabs, maxVisibleTabs]);
+
+  useEffect(() => {
+    setFriendsPage(1);
+  }, [activeTab]);
+
+  useEffect(() => {
+    setRequestsPage(1);
+  }, [activeTab]);
+
+  useEffect(() => {
+    setMessagesPage(1);
+  }, [activeTab]);
 
   const startTabIndex = useMemo(() => {
     return Math.max(0, Math.min(tabIndex, Math.max(0, allTabs.length - maxVisibleTabs)));
@@ -413,8 +429,15 @@ export default function FriendsPage() {
             sm:py-16 border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900">
               <p className="text-sm sm:text-base">Você ainda não tem amigos</p>
             </div>
-          ) : (
-            friends.map((friendship) => {
+          ) : (() => {
+            const startIndex = (friendsPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedFriends = friends.slice(startIndex, endIndex);
+            const totalPages = Math.max(1, Math.ceil(friends.length / itemsPerPage));
+            
+            return (
+              <>
+                {paginatedFriends.map((friendship) => {
               if (!friendship.requester || !friendship.addressee) {
                 return null;
               }
@@ -451,8 +474,29 @@ export default function FriendsPage() {
                   </div>
                 </div>
               );
-            }).filter(Boolean)
-          )}
+            }).filter(Boolean)}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <div className="flex items-center gap-2 flex-wrap justify-center w-full">
+                    <button
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      onClick={() => setFriendsPage(p => Math.max(1, p - 1))}
+                      disabled={friendsPage === 1}
+                    >
+                      Avançar
+                    </button>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Página {friendsPage} de {totalPages}</span>
+                    <button
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      onClick={() => setFriendsPage(p => p + 1)}
+                      disabled={friendsPage >= totalPages}
+                    >
+                      Próximo
+                    </button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </div>
       ) : activeTab === 'messages' ? (
         <div className="space-y-4">
@@ -482,40 +526,70 @@ export default function FriendsPage() {
           </div>
           
           {messageMode === 'selective' && (
-            <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200
-             dark:border-gray-800 rounded-lg p-3 bg-white dark:bg-gray-950">
-              {friends.length === 0 ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">Nenhum amigo disponível</p>
-              ) : (
-                friends.map((friendship) => {
-                  const friend = friendship.requester.id === currentUserId ? friendship.addressee : friendship.requester;
-                  if (!friend) return null;
-                  const isSelected = selectedFriends.some(f => f.id === friend.id);
-                  return (
-                    <label key={friendship.id} className="flex items-center gap-3 p-3
-                    hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer rounded-lg transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedFriends([...selectedFriends, friend]);
-                          } else {
-                            setSelectedFriends(selectedFriends.filter(f => f.id !== friend.id));
-                          }
-                        }}
-                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900
-                        dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">{friend.name || 'Unknown'}</div>
-                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{friend.email || ''}</div>
-                      </div>
-                    </label>
-                  );
-                })
-              )}
-            </div>
+            <>
+              <div className="space-y-2 border border-gray-200
+               dark:border-gray-800 rounded-lg p-3 bg-white dark:bg-gray-950">
+                {friends.length === 0 ? (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-4">Nenhum amigo disponível</p>
+                ) : (() => {
+                  const startIndex = (messagesPage - 1) * itemsPerPage;
+                  const endIndex = startIndex + itemsPerPage;
+                  const paginatedFriends = friends.slice(startIndex, endIndex);
+                  
+                  return paginatedFriends.map((friendship) => {
+                    const friend = friendship.requester.id === currentUserId ? friendship.addressee : friendship.requester;
+                    if (!friend) return null;
+                    const isSelected = selectedFriends.some(f => f.id === friend.id);
+                    return (
+                      <label key={friendship.id} className="flex items-center gap-3 p-3
+                      hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer rounded-lg transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedFriends([...selectedFriends, friend]);
+                            } else {
+                              setSelectedFriends(selectedFriends.filter(f => f.id !== friend.id));
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900
+                          dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">{friend.name || 'Unknown'}</div>
+                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{friend.email || ''}</div>
+                        </div>
+                      </label>
+                    );
+                  });
+                })()}
+              </div>
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil(friends.length / itemsPerPage));
+                return (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center gap-2 flex-wrap justify-center w-full">
+                      <button
+                        className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        onClick={() => setMessagesPage(p => Math.max(1, p - 1))}
+                        disabled={messagesPage === 1}
+                      >
+                        Avançar
+                      </button>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Página {messagesPage} de {totalPages}</span>
+                      <button
+                        className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        onClick={() => setMessagesPage(p => p + 1)}
+                        disabled={messagesPage >= totalPages}
+                      >
+                        Próximo
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
           )}
           
           {messageMode === 'global' && (
@@ -551,8 +625,15 @@ export default function FriendsPage() {
              border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900">
               <p className="text-sm sm:text-base">Nenhuma solicitação pendente</p>
             </div>
-          ) : (
-            requests.map((request) => {
+          ) : (() => {
+            const startIndex = (requestsPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedRequests = requests.slice(startIndex, endIndex);
+            const totalPages = Math.max(1, Math.ceil(requests.length / itemsPerPage));
+            
+            return (
+              <>
+                {paginatedRequests.map((request) => {
               if (!request.requester || !request.requester.name) {
                 return null;
               }
@@ -583,8 +664,29 @@ export default function FriendsPage() {
                   </div>
                 </div>
               );
-            }).filter(Boolean)
-          )}
+            }).filter(Boolean)}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <div className="flex items-center gap-2 flex-wrap justify-center w-full">
+                    <button
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      onClick={() => setRequestsPage(p => Math.max(1, p - 1))}
+                      disabled={requestsPage === 1}
+                    >
+                      Avançar
+                    </button>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Página {requestsPage} de {totalPages}</span>
+                    <button
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      onClick={() => setRequestsPage(p => p + 1)}
+                      disabled={requestsPage >= totalPages}
+                    >
+                      Próximo
+                    </button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
       <ConfirmModal

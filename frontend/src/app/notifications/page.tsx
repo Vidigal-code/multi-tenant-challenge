@@ -460,11 +460,14 @@ export default function NotificationsPage() {
     const [selected, setSelected] = useState<string[]>([]);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteIds, setDeleteIds] = useState<string[]>([]);
-    const itemsPerPage = 10;
+    const itemsPerPage = 2;
     const {show} = useToast();
     const queryClient = useQueryClient();
 
-    const {data: notifications = [], isLoading} = useNotifications();
+    const notificationsQuery = useNotifications(currentPage, itemsPerPage);
+    const notifications = notificationsQuery.data?.items ?? [];
+    const isLoading = notificationsQuery.isLoading;
+    const totalNotifications = notificationsQuery.data?.total ?? 0;
     const profileQuery = useProfile();
     const currentUserId = profileQuery.data?.id || null;
 
@@ -632,10 +635,8 @@ export default function NotificationsPage() {
         return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }, [notifications, activeTab, allCategories]);
 
-    const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedNotifications = filteredNotifications.slice(startIndex, endIndex);
+    const totalPages = Math.max(1, Math.ceil(totalNotifications / itemsPerPage));
+    const paginatedNotifications = filteredNotifications;
 
     useEffect(() => {
         setCurrentPage(1);
@@ -643,7 +644,7 @@ export default function NotificationsPage() {
 
     const categoryCounts = useMemo(() => {
         const counts: Record<NotificationTab, number> = {
-            all: notifications.length,
+            all: totalNotifications,
             friends: 0,
             'company-messages': 0,
             invites: 0,
@@ -658,7 +659,7 @@ export default function NotificationsPage() {
         });
         
         return counts;
-    }, [notifications, baseCategories]);
+    }, [notifications, baseCategories, totalNotifications]);
 
     const visibleTabs = useMemo(() => {
         const tabs = allCategories.filter(cat => cat.id === 'all' || categoryCounts[cat.id] > 0);
@@ -1003,7 +1004,15 @@ export default function NotificationsPage() {
                                                 <span className={getNotificationStyle(notification.meta?.kind).color}>
                                                     {getNotificationStyle(notification.meta?.kind).icon}
                                                 </span>
-                                                <span className="break-words">{removeEventCodeFromTitle(formatNotificationMessage(notificationData))}</span>
+                                                <span className="break-words">
+                                                    {notification.meta?.kind === 'notifications.reply' 
+                                                        ? (() => {
+                                                            const originalTitle = notification.meta?.originalTitle || notification.title;
+                                                            return getTranslatedTitle(originalTitle);
+                                                        })()
+                                                        : removeEventCodeFromTitle(formatNotificationMessage(notificationData))
+                                                    }
+                                                </span>
                                                 {!notification.read && (
                                                     <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2 py-1 rounded whitespace-nowrap">
                                                         Nova
@@ -1335,27 +1344,25 @@ export default function NotificationsPage() {
                         })}
                     </div>
 
-                    {totalPages > 1 && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                            <div className="flex items-center gap-2 flex-wrap justify-center">
-                                <button
-                                    className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium" 
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-                                    disabled={currentPage === 1}
-                                >
-                                    Anterior
-                                </button>
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Página {currentPage}</span>
-                                <button
-                                    className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium" 
-                                    onClick={() => setCurrentPage(p => p + 1)} 
-                                    disabled={currentPage >= totalPages}
-                                >
-                                    Próxima
-                                </button>
-                            </div>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                        <div className="flex items-center gap-2 flex-wrap justify-center w-full">
+                            <button
+                                className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium" 
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                                disabled={currentPage === 1}
+                            >
+                                Voltar
+                            </button>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">Página {currentPage} de {totalPages}</span>
+                            <button
+                                className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium" 
+                                onClick={() => setCurrentPage(p => p + 1)} 
+                                disabled={currentPage >= totalPages}
+                            >
+                                Próximo
+                            </button>
                         </div>
-                    )}
+                    </div>
                 </>
             )}
 

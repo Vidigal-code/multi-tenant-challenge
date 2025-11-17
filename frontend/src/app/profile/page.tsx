@@ -18,6 +18,7 @@ import { useNotificationPreferences } from '../../hooks/useNotificationPreferenc
 import {FaExclamationTriangle} from "react-icons/fa";
 import {MdBusiness, MdPerson, MdMail, MdPersonAdd, MdPersonRemove, MdRefresh, MdNotifications, MdNotificationsActive, MdBadge} from "react-icons/md";
 import { formatDate, formatDateOnly } from '../../lib/date-utils';
+import { translateMemberCompaniesMessage, translateRole } from '../../lib/messages';
 import Link from 'next/link';
 import { DEFAULT_COMPANY_LOGO } from '../../types';
 
@@ -300,7 +301,7 @@ export default function ProfilePage() {
                                                 : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                                         }`}
                                     >
-                                        Owner Principal
+                                        Proprietário
                                         {primaryOwnerCompaniesQuery.data && primaryOwnerCompaniesQuery.data.total > 0 && (
                                             <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">
                                                 {primaryOwnerCompaniesQuery.data.total}
@@ -581,7 +582,7 @@ export default function ProfilePage() {
                                         <div className="text-center py-8">
                                             <div className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 rounded-lg p-6">
                                                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                                                    Você não participa de nenhuma empresa como ADMIN ou MEMBER.
+                                                    {translateMemberCompaniesMessage()}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-500">
                                                     Você não será removido de nenhuma empresa ao excluir sua conta.
@@ -671,7 +672,7 @@ export default function ProfilePage() {
                                         </li>
                                         <li>
                                             Você será <strong>removido automaticamente</strong>
-                                            de todas as empresas onde é <strong>ADMIN</strong> ou <strong>MEMBER</strong>
+                                            de todas as empresas onde é <strong>{translateRole('ADMIN')}</strong> ou <strong>{translateRole('MEMBER')}</strong>
                                         </li>
                                         <li>
                                             Todos os <strong>convites</strong> enviados e recebidos serão cancelados

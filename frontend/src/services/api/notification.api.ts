@@ -72,14 +72,25 @@ export interface Notification {
   };
 }
 
-export function useNotifications(page?: number, pageSize?: number) {
-  return useQuery<Notification[]>({
+export interface NotificationsResponse {
+  items: Notification[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export function useNotifications(page: number = 1, pageSize: number = 10) {
+  return useQuery<NotificationsResponse>({
     queryKey: queryKeys.notifications(page, pageSize),
     queryFn: async () => {
-      const params = page && pageSize ? { page, pageSize } : {};
-      const response = await http.get('/notifications', { params });
+      const response = await http.get('/notifications', { params: { page, pageSize } });
       const notificationsData = extractNotificationsData(response.data);
-      return notificationsData.items as Notification[];
+      return {
+        items: notificationsData.items as Notification[],
+        total: notificationsData.total || 0,
+        page: notificationsData.page || page,
+        pageSize: notificationsData.pageSize || pageSize,
+      };
     },
   });
 }

@@ -350,6 +350,10 @@ export function translateChannel(channel: string | undefined | null): string {
   return channelTranslations[normalizedChannel] || channel;
 }
 
+export function translateMemberCompaniesMessage(): string {
+  return 'Você não participa de nenhuma empresa como Administrador ou Membro.';
+}
+
 export interface NotificationMessageParams {
   senderName?: string;
   senderEmail?: string;
