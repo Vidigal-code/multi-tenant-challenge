@@ -20,6 +20,11 @@
     "worker:members": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/members.events.consumer.ts",
     "worker:generic": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/generic.events.consumer.ts",
     "worker:realtime": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/realtime-notifications.consumer.ts",
+    "worker:queries": "ts-node -r tsconfig-paths/register src/interfaces/consumers/queries/queries.consumer.bootstrap.ts",
+    "worker:delete-account": "ts-node -r tsconfig-paths/register src/interfaces/consumers/batch-operations/delete-account.consumer.bootstrap.ts",
+    "worker:reject-all-invites": "ts-node -r tsconfig-paths/register src/interfaces/consumers/batch-operations/reject-all-invites.consumer.bootstrap.ts",
+    "worker:delete-all-invites": "ts-node -r tsconfig-paths/register src/interfaces/consumers/batch-operations/delete-all-invites.consumer.bootstrap.ts",
+    "worker:clear-all-notifications": "ts-node -r tsconfig-paths/register src/interfaces/consumers/batch-operations/clear-all-notifications.consumer.bootstrap.ts",
     "clean:queues": "powershell -ExecutionPolicy Bypass -File ./scripts/clean-queues.ps1",
     "clear:dedup": "powershell -ExecutionPolicy Bypass -File ./scripts/clear-redis-dedup.ps1"
   },

@@ -9,6 +9,7 @@ import { RabbitMQModule } from "./messaging/modules/rabbitmq.module";
 import { emailValidationProvider } from "./cache/redis-email-validation.service";
 import { notificationRepositoryProvider } from "@infrastructure/prisma/notifications/notification.prisma.repository";
 import { friendshipRepositoryProvider } from "@infrastructure/prisma/friendships/friendship.prisma.repository";
+import { RedisQueryCacheService } from "./cache/redis-query-cache.service";
 
 const repositoryProviders = [
   userRepositoryProvider,
@@ -31,12 +32,14 @@ const repositoryProviders = [
     },
     ...repositoryProviders,
     emailValidationProvider,
+    RedisQueryCacheService,
   ],
   exports: [
     PrismaService,
     RabbitMQModule,
     ...repositoryProviders,
     emailValidationProvider,
+    RedisQueryCacheService,
   ],
 })
 export class InfrastructureModule {}

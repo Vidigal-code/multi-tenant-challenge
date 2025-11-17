@@ -52,6 +52,10 @@ import { ConfigService } from "@nestjs/config";
 import { Role } from "@domain/enums/role.enum";
 import { LoggerService } from "@infrastructure/logging/logger.service";
 import { EventPayloadBuilderService } from "@application/services/event-payload-builder.service";
+import { RedisQueryCacheService } from "@infrastructure/cache/redis-query-cache.service";
+import { QueryProducer } from "@infrastructure/messaging/producers/query.producer";
+import { BatchOperationsProducer } from "@infrastructure/messaging/producers/batch-operations.producer";
+import { randomUUID } from "crypto";
 
 @ApiTags("invites")
 @ApiCookieAuth()
@@ -71,6 +75,9 @@ export class InvitesController {
     private readonly configService: ConfigService,
     @Inject("EventPayloadBuilderService")
     private readonly eventBuilder: EventPayloadBuilderService,
+    private readonly cache: RedisQueryCacheService,
+    private readonly queryProducer: QueryProducer,
+    private readonly batchOperationsProducer: BatchOperationsProducer,
   ) {
     this.logger = new LoggerService(InvitesController.name, configService);
   }
@@ -95,6 +102,21 @@ export class InvitesController {
     const email = user.email;
     const p = Math.max(1, Number(page) || 1);
     const ps = Math.min(50, Math.max(1, Number(pageSize) || 10));
+    const params = { email, page: p, pageSize: ps };
+
+    const cached = await this.cache.get("/invites", params);
+    if (cached) {
+      return cached;
+    }
+
+    const requestId = randomUUID();
+    await this.queryProducer.queueQuery("/invites", params, user.sub, requestId);
+
+    const workerResult = await this.cache.waitForCache("/invites", params, 2000);
+    if (workerResult) {
+      return workerResult;
+    }
+
     const { data, total } = await this.invites.listByEmail(email, p, ps);
     const pendingInvites = data.filter(
       (i) => i.status === InviteStatus.PENDING,
@@ -129,12 +151,14 @@ export class InvitesController {
         };
       }),
     );
-    return {
+    const result = {
       data: invitesWithCompany,
       total: pendingInvites.length,
       page: p,
       pageSize: ps,
     };
+    await this.cache.set("/invites", params, result);
+    return result;
   }
 
   @Get("created")
@@ -156,6 +180,21 @@ export class InvitesController {
   ) {
     const p = Math.max(1, Number(page) || 1);
     const ps = Math.min(50, Math.max(1, Number(pageSize) || 10));
+    const params = { userId: user.sub, page: p, pageSize: ps };
+
+    const cached = await this.cache.get("/invites/created", params);
+    if (cached) {
+      return cached;
+    }
+
+    const requestId = randomUUID();
+    await this.queryProducer.queueQuery("/invites/created", params, user.sub, requestId);
+
+    const workerResult = await this.cache.waitForCache("/invites/created", params, 2000);
+    if (workerResult) {
+      return workerResult;
+    }
+
     const { data, total } = await this.invites.listByInviter(user.sub, p, ps);
     const invitesWithCompany = await Promise.all(
       data.map(async (i) => {
@@ -192,12 +231,14 @@ export class InvitesController {
         };
       }),
     );
-    return {
+    const result = {
       data: invitesWithCompany,
       total,
       page: p,
       pageSize: ps,
     };
+    await this.cache.set("/invites/created", params, result);
+    return result;
   }
 
   @Get(":inviteCode")
@@ -528,6 +569,10 @@ export class InvitesController {
   ) {
     const { inviteIds } = body;
 
+    if (inviteIds.length === 0) {
+      return { success: true, deletedCount: 0 };
+    }
+
     for (const inviteId of inviteIds) {
       const invite = await this.invites.findById(inviteId);
       if (!invite) continue;
@@ -540,10 +585,54 @@ export class InvitesController {
       }
     }
 
+    if (inviteIds.length > 1) {
+      const requestId = randomUUID();
+      await this.batchOperationsProducer.queueDeleteAllInvites(
+        user.sub,
+        requestId,
+        inviteIds,
+      );
+      await this.cache.invalidate("query:/invites:*");
+      await this.cache.invalidate("query:/invites/created:*");
+      return { success: true, deletedCount: inviteIds.length, queued: true, requestId };
+    }
+
     for (const inviteId of inviteIds) {
       await this.invites.delete(inviteId);
     }
 
+    await this.cache.invalidate("query:/invites:*");
+    await this.cache.invalidate("query:/invites/created:*");
     return { success: true, deletedCount: inviteIds.length };
+  }
+
+  @Post("reject-all")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Reject all invites" })
+  @ApiBody({
+    schema: {
+      properties: { inviteTokens: { type: "array", items: { type: "string" } } },
+    },
+  })
+  @ApiResponse({ status: 200, description: "Invites rejected" })
+  @ApiResponse({ status: 403, description: "Forbidden", type: ErrorResponse })
+  async rejectAllInvites(
+    @CurrentUser() user: any,
+    @Body() body: { inviteTokens: string[] },
+  ) {
+    const { inviteTokens } = body;
+
+    if (inviteTokens.length === 0) {
+      return { success: true, rejectedCount: 0 };
+    }
+
+    const requestId = randomUUID();
+    await this.batchOperationsProducer.queueRejectAllInvites(
+      user.sub,
+      requestId,
+      inviteTokens,
+    );
+    await this.cache.invalidate("query:/invites:*");
+    return { success: true, rejectedCount: inviteTokens.length, queued: true, requestId };
   }
 }

@@ -107,3 +107,17 @@ export function useDeleteInvites() {
   });
 }
 
+export function useRejectAllInvites() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (inviteTokens: string[]) => {
+      await http.post('/invites/reject-all', { inviteTokens });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['invites-created'] });
+      await queryClient.invalidateQueries({ queryKey: ['invites-received'] });
+    },
+  });
+}
+

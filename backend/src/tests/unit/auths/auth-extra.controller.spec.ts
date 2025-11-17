@@ -8,6 +8,7 @@ import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { UserRepository } from "@domain/repositories/users/user.repository";
 import { HashingService } from "@application/ports/hashing.service";
+import { BatchOperationsProducer } from "@infrastructure/messaging/producers/batch-operations.producer";
 
 function resStub() {
   const cookies: Record<string, any> = {};
@@ -48,6 +49,9 @@ describe("AuthController extra endpoints", () => {
     execute: jest.fn(),
   } as any as ListPrimaryOwnerCompaniesUseCase;
   const listMemberCompanies = { execute: jest.fn() } as any as any;
+  const batchOperationsProducer = {
+    queueDeleteAccount: jest.fn().mockResolvedValue(undefined),
+  } as any as BatchOperationsProducer;
 
   const controller = new AuthController(
     signup,
@@ -60,6 +64,7 @@ describe("AuthController extra endpoints", () => {
     cfg,
     userRepo,
     hashing,
+    batchOperationsProducer,
   );
   const currentUser = {
     sub: "u1",
@@ -156,12 +161,10 @@ describe("AuthController extra endpoints", () => {
 
   it("DELETE /invites/account calls use case and clears cookie", async () => {
     const res = resStub();
-    const out = await (controller as any).deleteAccount(currentUser, res);
-    expect(deleteAccount.execute).toHaveBeenCalledWith({
-      userId: "u1",
-      deleteCompanyIds: undefined,
-    });
-    expect(out).toEqual({ success: true });
+    (batchOperationsProducer.queueDeleteAccount as jest.Mock).mockResolvedValue(undefined);
+    const out = await (controller as any).deleteAccount(currentUser, res, undefined);
+    expect(batchOperationsProducer.queueDeleteAccount).toHaveBeenCalled();
+    expect(out).toMatchObject({ success: true, queued: true });
     expect(res._cookies["mt_session"].value).toBe("");
   });
 });

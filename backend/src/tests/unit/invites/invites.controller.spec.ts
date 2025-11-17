@@ -1,6 +1,9 @@
 import { InvitesController } from "@interfaces/http/invites/invites.controller";
 import { InviteRepository } from "@domain/repositories/invites/invite.repository";
 import { CompanyRepository } from "@domain/repositories/companys/company.repository";
+import { RedisQueryCacheService } from "@infrastructure/cache/redis-query-cache.service";
+import { QueryProducer } from "@infrastructure/messaging/producers/query.producer";
+import { BatchOperationsProducer } from "@infrastructure/messaging/producers/batch-operations.producer";
 
 describe("InvitesController", () => {
   const inviteRepo: jest.Mocked<InviteRepository> = {
@@ -23,11 +26,47 @@ describe("InvitesController", () => {
   } as any;
 
   const rabbitMQService = { publish: jest.fn() } as any;
+  const configService = { get: jest.fn() } as any;
+  const eventBuilder = { build: jest.fn() } as any;
+  const notificationsRepo = {
+    create: jest.fn(),
+    listByUser: jest.fn(),
+    markRead: jest.fn(),
+    findById: jest.fn(),
+    delete: jest.fn(),
+  } as any;
+  const usersRepo = {
+    findById: jest.fn(),
+    findByEmail: jest.fn(),
+  } as any;
+  const membershipsRepo = {
+    listByUser: jest.fn(),
+  } as any;
+  const cache = {
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn(),
+    invalidate: jest.fn(),
+  } as any as RedisQueryCacheService;
+  const queryProducer = {
+    queueQuery: jest.fn(),
+  } as any as QueryProducer;
+  const batchOperationsProducer = {
+    queueDeleteAllInvites: jest.fn(),
+    queueRejectAllInvites: jest.fn(),
+  } as any as BatchOperationsProducer;
 
   const controller = new (InvitesController as any)(
     inviteRepo,
     companyRepo,
+    notificationsRepo,
+    usersRepo,
+    membershipsRepo,
     rabbitMQService,
+    configService,
+    eventBuilder,
+    cache,
+    queryProducer,
+    batchOperationsProducer,
   );
   const user = { email: "me@example.com" };
 

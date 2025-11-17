@@ -30,6 +30,9 @@ import {
 } from "@application/dto/friendships/friendship.dto";
 import { ErrorResponse } from "@application/dto/errors/error.response.dto";
 import { SuccessCode } from "@application/success/success-code";
+import { RedisQueryCacheService } from "@infrastructure/cache/redis-query-cache.service";
+import { QueryProducer } from "@infrastructure/messaging/producers/query.producer";
+import { randomUUID } from "crypto";
 
 @ApiTags("friendships")
 @ApiCookieAuth()
@@ -43,6 +46,8 @@ export class FriendshipController {
     private readonly deleteFriendship: DeleteFriendshipUseCase,
     private readonly listFriendships: ListFriendshipsUseCase,
     private readonly searchUsers: SearchUsersUseCase,
+    private readonly cache: RedisQueryCacheService,
+    private readonly queryProducer: QueryProducer,
   ) {}
 
   @Post("request")
@@ -180,11 +185,30 @@ export class FriendshipController {
   @ApiOperation({ summary: "List users's friendships" })
   @ApiResponse({ status: 200, description: "Friendships listed" })
   async list(@CurrentUser() user: any, @Query() query: ListFriendshipsDto) {
-    const result = await this.listFriendships.execute({
-      userId: user.sub,
-      status: query.status as any,
+    const params = {
+      status: query.status,
       page: query.page || 1,
       pageSize: query.pageSize || 10,
+    };
+
+    const cached = await this.cache.get("/friendships", params);
+    if (cached) {
+      return cached;
+    }
+
+    const requestId = randomUUID();
+    await this.queryProducer.queueQuery("/friendships", params, user.sub, requestId);
+
+    const workerResult = await this.cache.waitForCache("/friendships", params, 2000);
+    if (workerResult) {
+      return workerResult;
+    }
+
+    const result = await this.listFriendships.execute({
+      userId: user.sub,
+      status: params.status as any,
+      page: params.page,
+      pageSize: params.pageSize,
     });
     const friendships = result.data.map((f) => {
       const json = f.toJSON();
@@ -208,21 +232,40 @@ export class FriendshipController {
       }
       return json;
     });
-    return {
+    const response = {
       data: friendships,
       total: result.total,
       page: result.page,
       pageSize: result.pageSize,
     };
+    await this.cache.set("/friendships", params, response);
+    return response;
   }
 
   @Get("search")
   @ApiOperation({ summary: "Search users by name or email" })
   @ApiResponse({ status: 200, description: "Users found" })
   async search(@CurrentUser() user: any, @Query("q") query: string) {
-    return this.searchUsers.execute({
+    const params = { q: query, currentUserId: user.sub };
+
+    const cached = await this.cache.get("/users/search", params);
+    if (cached) {
+      return cached;
+    }
+
+    const requestId = randomUUID();
+    await this.queryProducer.queueQuery("/users/search", params, user.sub, requestId);
+
+    const workerResult = await this.cache.waitForCache("/users/search", params, 2000);
+    if (workerResult) {
+      return workerResult;
+    }
+
+    const result = await this.searchUsers.execute({
       query,
       currentUserId: user.sub,
     });
+    await this.cache.set("/users/search", params, result);
+    return result;
   }
 }

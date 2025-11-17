@@ -31,6 +31,10 @@ import { SuccessCode } from "@application/success/success-code";
 import { ErrorCode } from "@application/errors/error-code";
 import { ConfigService } from "@nestjs/config";
 import { LoggerService } from "@infrastructure/logging/logger.service";
+import { RedisQueryCacheService } from "@infrastructure/cache/redis-query-cache.service";
+import { QueryProducer } from "@infrastructure/messaging/producers/query.producer";
+import { BatchOperationsProducer } from "@infrastructure/messaging/producers/batch-operations.producer";
+import { randomUUID } from "crypto";
 
 @ApiTags("notifications")
 @ApiCookieAuth()
@@ -48,6 +52,9 @@ export class NotificationsController {
     private readonly deleteNotificationsUseCase: DeleteNotificationsUseCase,
     private readonly replyToNotification: ReplyToNotificationUseCase,
     private readonly configService: ConfigService,
+    private readonly cache: RedisQueryCacheService,
+    private readonly queryProducer: QueryProducer,
+    private readonly batchOperationsProducer: BatchOperationsProducer,
   ) {
     this.logger = new LoggerService(
       NotificationsController.name,
@@ -161,17 +168,36 @@ export class NotificationsController {
     @Query("page") page = "1",
     @Query("pageSize") pageSize = "20",
   ) {
+    const p = parseInt(page, 10) || 1;
+    const ps = parseInt(pageSize, 10) || 20;
+    const params = { userId: user.sub, page: p, pageSize: ps };
+
+    const cached = await this.cache.get("/notifications", params);
+    if (cached) {
+      return cached;
+    }
+
+    const requestId = randomUUID();
+    await this.queryProducer.queueQuery("/notifications", params, user.sub, requestId);
+
+    const workerResult = await this.cache.waitForCache("/notifications", params, 2000);
+    if (workerResult) {
+      return workerResult;
+    }
+
     const paginated = await this.listNotifications.execute({
       userId: user.sub,
-      page: parseInt(page, 10) || 1,
-      pageSize: parseInt(pageSize, 10) || 20,
+      page: p,
+      pageSize: ps,
     });
-    return {
+    const result = {
       items: paginated.data.map((notification) => notification.toJSON()),
       total: paginated.total,
       page: paginated.page,
       pageSize: paginated.pageSize,
     };
+    await this.cache.set("/notifications", params, result);
+    return result;
   }
 
   @Patch(":id/read")
@@ -226,10 +252,43 @@ export class NotificationsController {
     @Body() body: { notificationIds: string[] },
   ) {
     const { notificationIds } = body;
-    return this.deleteNotificationsUseCase.execute({
+
+    if (notificationIds.length === 0) {
+      return { success: true, deletedCount: 0 };
+    }
+
+    if (notificationIds.length > 1) {
+      const requestId = randomUUID();
+      await this.batchOperationsProducer.queueClearAllNotifications(
+        user.sub,
+        requestId,
+        notificationIds,
+      );
+      await this.cache.invalidate("query:/notifications:*");
+      return { success: true, deletedCount: notificationIds.length, queued: true, requestId };
+    }
+
+    const result = await this.deleteNotificationsUseCase.execute({
       notificationIds,
       userId: user.sub,
     });
+    await this.cache.invalidate("query:/notifications:*");
+    return result;
+  }
+
+  @Delete("clear-all")
+  @ApiOperation({ summary: "Clear all notifications" })
+  @ApiResponse({ status: 200, description: "All notifications cleared" })
+  @ApiResponse({ status: 403, description: "Forbidden", type: ErrorResponse })
+  async clearAllNotifications(@CurrentUser() user: any) {
+    const requestId = randomUUID();
+    await this.batchOperationsProducer.queueClearAllNotifications(
+      user.sub,
+      requestId,
+      [],
+    );
+    await this.cache.invalidate("query:/notifications:*");
+    return { success: true, queued: true, requestId };
   }
 
   @Post(":id/reply")

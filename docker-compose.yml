@@ -135,6 +135,103 @@ services:
     networks:
       - multitenant-network
 
+  worker-queries:
+    build: ./backend
+    env_file: 
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - api
+      - redis
+    command: sh -c "npm run worker:queries"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+    deploy:
+      replicas: 2
+
+  worker-delete-account:
+    build: ./backend
+    env_file: 
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - api
+      - redis
+    command: sh -c "npm run worker:delete-account"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+
+  worker-reject-all-invites:
+    build: ./backend
+    env_file: 
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - api
+      - redis
+    command: sh -c "npm run worker:reject-all-invites"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+
+  worker-delete-all-invites:
+    build: ./backend
+    env_file: 
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - api
+      - redis
+    command: sh -c "npm run worker:delete-all-invites"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+
+  worker-clear-all-notifications:
+    build: ./backend
+    env_file: 
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - api
+      - redis
+    command: sh -c "npm run worker:clear-all-notifications"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+
   web:
     build:
       context: ./frontend

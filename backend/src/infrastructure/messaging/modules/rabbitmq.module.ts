@@ -5,6 +5,8 @@ import { InviteProducer } from "../producers/invite.producer";
 import { RabbitMQDomainEventsService } from "../services/domain-events.service";
 import { EventsProducer } from "../producers/events.producer";
 import { DeliveryConfirmationService } from "../services/delivery-confirmation.service";
+import { QueryProducer } from "../producers/query.producer";
+import { BatchOperationsProducer } from "../producers/batch-operations.producer";
 
 @Module({
   imports: [ConfigModule],
@@ -31,6 +33,26 @@ import { DeliveryConfirmationService } from "../services/delivery-confirmation.s
       },
       inject: [RabbitMQService, ConfigService],
     },
+    {
+      provide: QueryProducer,
+      useFactory: (
+        rabbitmqService: RabbitMQService,
+        configService: ConfigService,
+      ) => {
+        return new QueryProducer(rabbitmqService, configService);
+      },
+      inject: [RabbitMQService, ConfigService],
+    },
+    {
+      provide: BatchOperationsProducer,
+      useFactory: (
+        rabbitmqService: RabbitMQService,
+        configService: ConfigService,
+      ) => {
+        return new BatchOperationsProducer(rabbitmqService, configService);
+      },
+      inject: [RabbitMQService, ConfigService],
+    },
     RabbitMQDomainEventsService,
     {
       provide: "DOMAIN_EVENTS_SERVICE",
@@ -42,6 +64,8 @@ import { DeliveryConfirmationService } from "../services/delivery-confirmation.s
     DeliveryConfirmationService,
     InviteProducer,
     EventsProducer,
+    QueryProducer,
+    BatchOperationsProducer,
     RabbitMQDomainEventsService,
     "DOMAIN_EVENTS_SERVICE",
   ],

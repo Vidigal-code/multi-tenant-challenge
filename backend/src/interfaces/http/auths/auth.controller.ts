@@ -39,6 +39,8 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { ApplicationError } from "@application/errors/application-error";
 import { LoggerService } from "@infrastructure/logging/logger.service";
+import { BatchOperationsProducer } from "@infrastructure/messaging/producers/batch-operations.producer";
+import { randomUUID } from "crypto";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -57,6 +59,7 @@ export class AuthController {
     private readonly configService: ConfigService,
     @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
     @Inject(HASHING_SERVICE) private readonly hashing: HashingService,
+    private readonly batchOperationsProducer: BatchOperationsProducer,
   ) {
     this.cookieName =
       this.configService.get<string>("app.jwt.cookieName") ?? "session";
@@ -387,17 +390,21 @@ export class AuthController {
   async deleteAccount(
     @CurrentUser() user: any,
     @Res({ passthrough: true }) res: Response,
+    @Body() body?: { deleteCompanyIds?: string[] },
   ) {
-    await this.deleteAccountUseCase.execute({
-      userId: user.sub,
-    });
+    const requestId = randomUUID();
+    await this.batchOperationsProducer.queueDeleteAccount(
+      user.sub,
+      requestId,
+      body?.deleteCompanyIds,
+    );
     res.cookie(this.cookieName, "", {
       httpOnly: true,
       sameSite: "lax",
       secure: this.configService.get("app.nodeEnv") === "production",
       expires: new Date(0),
     });
-    return { success: true };
+    return { success: true, queued: true, requestId };
   }
 
   @Post("logout")
