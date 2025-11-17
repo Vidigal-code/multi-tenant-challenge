@@ -56,6 +56,7 @@ export const MemberList = React.memo(function MemberList({
 
     const showDetails = currentRole === 'OWNER' || currentRole === 'ADMIN';
     const isPrimaryOwner = (userId: string) => primaryOwnerUserId === userId;
+    const canClickMember = true;
 
     const totalMembers = members.length;
     const totalPages = Math.max(1, Math.ceil(totalMembers / pageSize));
@@ -81,13 +82,14 @@ export const MemberList = React.memo(function MemberList({
                         <button
                             key={m.id}
                             type="button"
-                            onClick={() => showDetails && onMemberClick(m)}
-                            disabled={!showDetails || isLoading}
+                            onClick={() => canClickMember && !isLoading && onMemberClick(m)}
+                            disabled={isLoading}
                             className={`w-full text-left border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 p-3 shadow-sm transition-colors ${
-                                showDetails && !isLoading
-                                    ? 'hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer'
+                                canClickMember && !isLoading
+                                    ? 'hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer hover:border-gray-300 dark:hover:border-gray-700'
                                     : 'cursor-default'
                             } disabled:opacity-60`}
+                            title={canClickMember && !isLoading ? 'Clique para ver informações do membro' : undefined}
                         >
                             <div className="flex items-center justify-between gap-2 mb-1">
                                 <div className="flex items-center gap-2 min-w-0">
@@ -183,10 +185,11 @@ export const MemberList = React.memo(function MemberList({
                     {pageMembers.map((m) => (
                         <tr
                             key={m.id}
-                            onClick={() => showDetails && onMemberClick(m)}
+                            onClick={() => canClickMember && onMemberClick(m)}
                             className={`border-t border-gray-200 dark:border-gray-800 transition-colors ${
-                                showDetails ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-950' : ''
+                                canClickMember ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-950 hover:border-gray-300 dark:hover:border-gray-700' : ''
                             }`}
+                            title={canClickMember ? 'Clique para ver informações do membro' : undefined}
                         >
                             <td className="p-3 sm:p-4">
                                 <div className="flex items-center gap-2">

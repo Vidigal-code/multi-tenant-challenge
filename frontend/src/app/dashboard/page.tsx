@@ -53,10 +53,24 @@ export default function DashboardPage() {
         }
     }, [primaryOwnerQuery.isError, primaryOwnerQuery.error, memberCompaniesQuery.isError, memberCompaniesQuery.error, show]);
 
-    const allTabs = useMemo(() => [
-        { id: 'owner', label: `Owner Principal (${primaryOwnerQuery.data?.total ?? 0})` },
-        { id: 'member', label: `Participa (${memberCompaniesQuery.data?.total ?? 0})` },
-    ], [primaryOwnerQuery.data?.total, memberCompaniesQuery.data?.total]);
+
+
+    const allTabs = useMemo(() => {
+        const ownerTotal = primaryOwnerQuery.data?.total ?? '';
+        const memberTotal = memberCompaniesQuery.data?.total ?? 0;
+        
+        return [
+            { id: 'owner', label: `Proprietário (${ownerTotal})` },
+            {
+                id: 'member',
+                label: memberTotal > 0
+                    ? `Participa (${memberTotal})`
+                    : 'Participa'
+            },
+        ];
+    }, [primaryOwnerQuery.data?.total]);
+
+
 
     useEffect(() => {
         const checkMobile = () => {

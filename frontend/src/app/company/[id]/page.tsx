@@ -35,8 +35,9 @@ import {
 } from '../../../services/api/company.api';
 import { useProfile } from '../../../services/api/auth.api';
 import { useCreateNotification } from '../../../services/api/notification.api';
+import { useFriendships, useSendFriendNotification } from '../../../services/api/friendship.api';
 import { MdNotifications, MdSupervisorAccount } from 'react-icons/md';
-import {FiEdit, FiStar, FiTrash2} from "react-icons/fi";
+import {FiEdit, FiStar, FiTrash2, FiSend} from "react-icons/fi";
 import {BiUser} from "react-icons/bi";
 
 function truncate(text: string, max: number) {
@@ -79,6 +80,9 @@ export default function CompanyPage() {
     const [removeMemberConfirm, setRemoveMemberConfirm] = useState<Member | null>(null);
     const [showDeleteCompanyModal, setShowDeleteCompanyModal] = useState(false);
     const [membersPage, setMembersPage] = useState(1);
+    const [showMemberMessageModal, setShowMemberMessageModal] = useState(false);
+    const [memberMessageTitle, setMemberMessageTitle] = useState('');
+    const [memberMessageBody, setMemberMessageBody] = useState('');
     const MEMBERS_PAGE_SIZE = 10;
     const { show } = useToast();
     const qc = useQueryClient();
@@ -107,6 +111,8 @@ export default function CompanyPage() {
     const leaveMutation = useLeaveCompany(id);
     const transferOwnershipMutation = useTransferOwnership(id);
     const sendNotificationMutation = useCreateNotification();
+    const sendFriendMessageMutation = useSendFriendNotification();
+    const { data: friends = [] } = useFriendships('ACCEPTED');
 
     const canEdit = useMemo(() => roleQuery.data?.role === 'OWNER' || roleQuery.data?.role === 'ADMIN', [roleQuery.data]);
     const canManage = canEdit;
@@ -987,6 +993,14 @@ export default function CompanyPage() {
                     const isPrimaryOwner = primaryOwnerQuery.data?.primaryOwnerUserId === selectedMember.userId;
                     const canDeleteMember = memberCanDelete() && !isPrimaryOwner;
                     const canEditMember = memberCanEdit() && !isPrimaryOwner;
+                    
+                    const isCurrentUser = selectedMember.userId === profileQuery.data?.id;
+                    const currentUserRole = roleQuery.data?.role;
+                    const isAdmin = currentUserRole === 'ADMIN' || currentUserRole === 'OWNER';
+                    const isFriend = friends.some(f => 
+                        (f.requester?.id === selectedMember.userId || f.addressee?.id === selectedMember.userId)
+                    );
+                    const canSendMessage = !isCurrentUser && (isAdmin || (currentUserRole === 'MEMBER' && isFriend));
 
                     return (
                         <div className="space-y-4">
@@ -1090,6 +1104,21 @@ export default function CompanyPage() {
                                     )}
                                 </div>
                             )}
+                            {canSendMessage && (
+                                <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                                    <button
+                                        onClick={() => {
+                                            setMemberMessageTitle('');
+                                            setMemberMessageBody('');
+                                            setShowMemberMessageModal(true);
+                                        }}
+                                        className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                                    >
+                                        <FiSend className="text-base" />
+                                        Enviar Mensagem
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     );
                 })()}
@@ -1140,8 +1169,90 @@ export default function CompanyPage() {
                 ) : actionType === 'changeRole' && actionMember && newRole ? (
                     `Tem certeza que deseja alterar o papel de ${actionMember.name || 'este membro'} 
                     para ${newRole === 'OWNER' ? 'PROPRIETÁRIO' : newRole === 'ADMIN' ? 'ADMINISTRADOR' : 'MEMBRO'}?`
-                ) : null}
+                    ) : null}
             </ConfirmModal>
+            <Modal
+                open={showMemberMessageModal}
+                title={`Enviar Mensagem para ${selectedMember?.name || 'Membro'}`}
+                onClose={() => {
+                    setShowMemberMessageModal(false);
+                    setMemberMessageTitle('');
+                    setMemberMessageBody('');
+                }}
+            >
+                <form
+                    className="space-y-4"
+                    onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!selectedMember?.email) {
+                            show({ type: 'error', message: 'Email do membro não disponível' });
+                            return;
+                        }
+                        try {
+                            await sendFriendMessageMutation.mutateAsync({
+                                friendEmail: selectedMember.email,
+                                title: memberMessageTitle.trim(),
+                                body: memberMessageBody.trim(),
+                            });
+                            show({ type: 'success', message: 'Mensagem enviada com sucesso' });
+                            setShowMemberMessageModal(false);
+                            setMemberMessageTitle('');
+                            setMemberMessageBody('');
+                        } catch (err: any) {
+                            const m = getErrorMessage(err, 'Falha ao enviar mensagem');
+                            show({ type: 'error', message: m });
+                        }
+                    }}
+                >
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Assunto
+                        </label>
+                        <input
+                            type="text"
+                            value={memberMessageTitle}
+                            onChange={(e) => setMemberMessageTitle(e.target.value)}
+                            placeholder="Assunto da mensagem"
+                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Mensagem
+                        </label>
+                        <textarea
+                            value={memberMessageBody}
+                            onChange={(e) => setMemberMessageBody(e.target.value)}
+                            placeholder="Digite sua mensagem"
+                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent resize-none transition-colors"
+                            rows={4}
+                            required
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowMemberMessageModal(false);
+                                setMemberMessageTitle('');
+                                setMemberMessageBody('');
+                            }}
+                            className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={sendFriendMessageMutation.isPending || !memberMessageTitle.trim() || !memberMessageBody.trim()}
+                            className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors flex items-center gap-2"
+                        >
+                            <FiSend className="text-base" />
+                            {sendFriendMessageMutation.isPending ? 'Enviando...' : 'Enviar Mensagem'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 }
