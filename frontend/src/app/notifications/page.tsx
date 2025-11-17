@@ -1000,29 +1000,35 @@ export default function NotificationsPage() {
                                             className="mt-1 flex-shrink-0 w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
                                         />
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2 flex-wrap mb-2">
-                                                <span className={getNotificationStyle(notification.meta?.kind).color}>
-                                                    {getNotificationStyle(notification.meta?.kind).icon}
-                                                </span>
-                                                <span className="break-words">
-                                                    {notification.meta?.kind === 'notifications.reply' 
-                                                        ? (() => {
-                                                            const originalTitle = notification.meta?.originalTitle || notification.title;
-                                                            return getTranslatedTitle(originalTitle);
-                                                        })()
-                                                        : removeEventCodeFromTitle(formatNotificationMessage(notificationData))
-                                                    }
-                                                </span>
-                                                {!notification.read && (
-                                                    <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2 py-1 rounded whitespace-nowrap">
-                                                        Nova
-                                                    </span>
-                                                )}
-                                                {notification.meta?.kind === 'notifications.reply' && (
-                                                    <span className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs px-2 py-1 rounded whitespace-nowrap">
-                                                        Resposta
-                                                    </span>
-                                                )}
+                                            <h3 className="text-sm sm:text-base md:text-lg font-semibold mb-2">
+                                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2">
+                                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                        <span className={`${getNotificationStyle(notification.meta?.kind).color} flex-shrink-0`}>
+                                                            {getNotificationStyle(notification.meta?.kind).icon}
+                                                        </span>
+                                                        <span className="break-words min-w-0 flex-1">
+                                                            {notification.meta?.kind === 'notifications.reply' 
+                                                                ? (() => {
+                                                                    const originalTitle = notification.meta?.originalTitle || notification.title;
+                                                                    return getTranslatedTitle(originalTitle);
+                                                                })()
+                                                                : removeEventCodeFromTitle(formatNotificationMessage(notificationData))
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                                                        {!notification.read && (
+                                                            <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs px-2 py-1 rounded whitespace-nowrap">
+                                                                Nova
+                                                            </span>
+                                                        )}
+                                                        {notification.meta?.kind === 'notifications.reply' && (
+                                                            <span className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs px-2 py-1 rounded whitespace-nowrap">
+                                                                Resposta
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </h3>
                                             <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 space-y-1">
                                                 <div><strong>De:</strong> {notification.meta?.sender?.name || notification.senderName || 'Usuário Desconhecido'} ({notification.meta?.sender?.email || notification.senderUserId || notification.senderId || 'N/A'})</div>

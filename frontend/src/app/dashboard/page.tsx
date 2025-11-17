@@ -5,10 +5,12 @@ import Skeleton from '../../components/skeleton/Skeleton';
 import {useRouter} from 'next/navigation';
 import {getErrorMessage} from '../../lib/error';
 import {useToast} from '../../hooks/useToast';
-import { useSelectCompany } from '../../services/api/company.api';
-import { usePrimaryOwnerCompanies, useMemberCompanies } from '../../services/api/auth.api';
+import { useSelectCompany, useDeleteCompany, useLeaveCompany, useUpdateCompany, useCompany } from '../../services/api/company.api';
+import { usePrimaryOwnerCompanies, useMemberCompanies, useProfile } from '../../services/api/auth.api';
 import { translateMemberCompaniesMessage } from '../../lib/messages';
 import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { ConfirmModal } from '../../components/modals/ConfirmModal';
+import { Modal } from '../../components/modals/Modal';
 
 export default function DashboardPage() {
     const [activeTab, setActiveTab] = useState<'owner' | 'member'>('owner');
@@ -16,13 +18,29 @@ export default function DashboardPage() {
     const [memberPage, setMemberPage] = useState(1);
     const [tabIndex, setTabIndex] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteCompanyId, setDeleteCompanyId] = useState<string | null>(null);
+    const [showLeaveModal, setShowLeaveModal] = useState(false);
+    const [leaveCompanyId, setLeaveCompanyId] = useState<string | null>(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editCompanyId, setEditCompanyId] = useState<string | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editLogo, setEditLogo] = useState('');
+    const [editDescription, setEditDescription] = useState('');
+    const [editIsPublic, setEditIsPublic] = useState(false);
+    const [saving, setSaving] = useState(false);
     const pageSize = 10;
     const router = useRouter();
     const {show} = useToast();
 
+    const profileQuery = useProfile();
     const primaryOwnerQuery = usePrimaryOwnerCompanies(ownerPage, pageSize, activeTab === 'owner');
     const memberCompaniesQuery = useMemberCompanies(memberPage, pageSize, activeTab === 'member');
     const selectMutation = useSelectCompany();
+    const deleteCompanyMutation = useDeleteCompany();
+    const leaveCompanyMutation = useLeaveCompany(leaveCompanyId || undefined);
+    const updateCompanyMutation = useUpdateCompany(editCompanyId || undefined);
+    const editCompanyQuery = useCompany(editCompanyId || undefined);
 
     useEffect(() => {
         if (primaryOwnerQuery.isError) {
@@ -104,6 +122,53 @@ export default function DashboardPage() {
         });
     };
 
+    const handleEdit = (id: string) => {
+        setEditCompanyId(id);
+        setShowEditModal(true);
+    };
+
+    const handleDelete = (id: string) => {
+        setDeleteCompanyId(id);
+        setShowDeleteModal(true);
+    };
+
+    const handleLeave = (id: string) => {
+        setLeaveCompanyId(id);
+        setShowLeaveModal(true);
+    };
+
+    const confirmDelete = () => {
+        if (!deleteCompanyId) return;
+        deleteCompanyMutation.mutate(deleteCompanyId, {
+            onSuccess: () => {
+                setShowDeleteModal(false);
+                setDeleteCompanyId(null);
+                show({ type: 'success', message: 'Empresa excluída' });
+                primaryOwnerQuery.refetch();
+            },
+            onError: (err: any) => {
+                const m = getErrorMessage(err, 'Falha ao excluir empresa');
+                show({ type: 'error', message: m });
+            },
+        });
+    };
+
+    const confirmLeave = () => {
+        if (!leaveCompanyId || !profileQuery.data?.id) return;
+        leaveCompanyMutation.mutate(profileQuery.data.id, {
+            onSuccess: () => {
+                setShowLeaveModal(false);
+                setLeaveCompanyId(null);
+                show({ type: 'success', message: 'Você saiu da empresa' });
+                memberCompaniesQuery.refetch();
+            },
+            onError: (err: any) => {
+                const m = getErrorMessage(err, 'Não foi possível sair da empresa');
+                show({ type: 'error', message: m });
+            },
+        });
+    };
+
     const isLoading = activeTab === 'owner' ? primaryOwnerQuery.isLoading : memberCompaniesQuery.isLoading;
     const currentData = activeTab === 'owner' ? primaryOwnerQuery.data : memberCompaniesQuery.data;
     const currentPage = activeTab === 'owner' ? ownerPage : memberPage;
@@ -116,8 +181,16 @@ export default function DashboardPage() {
             id: c.id,
             name: c.name,
             logoUrl: c.logoUrl,
+            userRole: (c as any).userRole as 'OWNER' | 'ADMIN' | 'MEMBER' | undefined,
         }));
     }, [currentData]);
+
+    const canEditCompanies = useMemo(() => {
+        if (activeTab === 'owner') {
+            return true;
+        }
+        return false;
+    }, [activeTab]);
 
     useEffect(() => {
         if (activeTab === 'owner') {
@@ -126,6 +199,15 @@ export default function DashboardPage() {
             setMemberPage(1);
         }
     }, [activeTab]);
+
+    useEffect(() => {
+        if (editCompanyQuery.data && showEditModal) {
+            setEditName(editCompanyQuery.data.name || '');
+            setEditLogo(editCompanyQuery.data.logoUrl || '');
+            setEditDescription(editCompanyQuery.data.description || '');
+            setEditIsPublic(editCompanyQuery.data.is_public || false);
+        }
+    }, [editCompanyQuery.data, showEditModal]);
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
@@ -192,7 +274,16 @@ export default function DashboardPage() {
                 </div>
             ) : (
                 <>
-                    <CompanyList companies={companies} onSelect={handleSelect} />
+                    <CompanyList 
+                        companies={companies} 
+                        onSelect={handleSelect}
+                        onDelete={activeTab === 'owner' ? handleDelete : undefined}
+                        onLeave={activeTab === 'member' ? handleLeave : undefined}
+                        onEdit={handleEdit}
+                        isOwner={activeTab === 'owner'}
+                        isMember={activeTab === 'member'}
+                        canEdit={canEditCompanies}
+                    />
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                         <div className="flex items-center gap-2 flex-wrap justify-center">
                             <button 
@@ -227,6 +318,121 @@ export default function DashboardPage() {
                     </div>
                 </>
             )}
+            <ConfirmModal
+                open={showDeleteModal}
+                title="Excluir empresa?"
+                onCancel={() => {
+                    setShowDeleteModal(false);
+                    setDeleteCompanyId(null);
+                }}
+                onConfirm={confirmDelete}
+            >
+                Tem certeza que deseja excluir esta empresa? Esta ação não pode ser desfeita e removerá todos os dados relacionados a ela.
+            </ConfirmModal>
+            <ConfirmModal
+                open={showLeaveModal}
+                title="Sair da empresa?"
+                onCancel={() => {
+                    setShowLeaveModal(false);
+                    setLeaveCompanyId(null);
+                }}
+                onConfirm={confirmLeave}
+            >
+                Você realmente deseja sair da empresa? Todos os administradores serão notificados.
+            </ConfirmModal>
+            <Modal open={showEditModal} title="Editar Empresa" onClose={() => {
+                setShowEditModal(false);
+                setEditCompanyId(null);
+                setEditName('');
+                setEditLogo('');
+                setEditDescription('');
+                setEditIsPublic(false);
+            }}>
+                {editCompanyQuery.isLoading ? (
+                    <div className="p-4 text-center text-gray-600 dark:text-gray-400">Carregando...</div>
+                ) : (
+                    <form className="space-y-4"
+                        onSubmit={async e => {
+                            e.preventDefault();
+                            if (!editCompanyId) return;
+                            setSaving(true);
+                            updateCompanyMutation.mutate({
+                                name: editName || undefined,
+                                logoUrl: editLogo || undefined,
+                                description: editDescription.trim().slice(0, 400) || undefined,
+                                is_public: editIsPublic,
+                            }, {
+                                onSuccess: () => {
+                                    show({ type: 'success', message: 'Empresa atualizada' });
+                                    setShowEditModal(false);
+                                    setEditCompanyId(null);
+                                    primaryOwnerQuery.refetch();
+                                    memberCompaniesQuery.refetch();
+                                },
+                                onError: (err: any) => {
+                                    const m = getErrorMessage(err, 'Falha ao atualizar empresa');
+                                    show({ type: 'error', message: m });
+                                },
+                                onSettled: () => {
+                                    setSaving(false);
+                                },
+                            });
+                        }}>
+                        <div>
+                            <input value={editName}
+                                onChange={e => setEditName(e.target.value)}
+                                placeholder="Nome da empresa" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
+                                    rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500
+                                     dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900
+                                      dark:focus:ring-white focus:border-transparent transition-colors" />
+                        </div>
+                        <div>
+                            <input value={editLogo}
+                                onChange={e => setEditLogo(e.target.value)}
+                                placeholder="URL do logo" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
+                                   rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500
+                                   dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900
+                                   dark:focus:ring-white focus:border-transparent transition-colors" />
+                        </div>
+                        <div>
+                            <textarea value={editDescription}
+                                onChange={e => setEditDescription(e.target.value)}
+                                placeholder="Descrição (máximo 400 caracteres)"
+                                maxLength={400}
+                                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
+                                   rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white
+                                   placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none
+                                   focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent
+                                   resize-none transition-colors" rows={4} />
+                        </div>
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                            <input type="checkbox"
+                                checked={editIsPublic}
+                                onChange={e => setEditIsPublic(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white
+                                    focus:ring-2 focus:ring-gray-900 dark:focus:ring-white" />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">Empresa pública (visível para todos os usuários)</span>
+                        </label>
+                        <div className="flex justify-end gap-3">
+                            <button type="button"
+                                onClick={() => {
+                                    setShowEditModal(false);
+                                    setEditCompanyId(null);
+                                    setEditName('');
+                                    setEditLogo('');
+                                    setEditDescription('');
+                                    setEditIsPublic(false);
+                                }} className="px-4 py-2 border border-gray-200
+                                    dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white
+                                    hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm">Cancelar</button>
+                            <button disabled={saving} type="submit" className="px-4 py-2 bg-gray-900 dark:bg-white
+                             text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200
+                             disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors">
+                                {saving ? 'Salvando...' : 'Salvar'}</button>
+                        </div>
+                    </form>
+                )}
+            </Modal>
         </div>
     );
 }
