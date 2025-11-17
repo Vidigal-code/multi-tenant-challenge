@@ -6,6 +6,7 @@ describe('MemberList', () => {
     currentRole: 'OWNER' as const,
     onDelete: jest.fn(),
     onChangeRole: jest.fn(),
+    onMemberClick: jest.fn(),
   };
 
   it('shows empty message', () => {
