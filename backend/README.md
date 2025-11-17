@@ -216,6 +216,11 @@ Gerencia observabilidade:
 - Métricas Prometheus
 - Logging estruturado
 - Request tracking
+- **Worker Status Monitoring**: Endpoints protegidos por JWS ES256 para monitorar status de workers
+  - `GET /workers/status` - Status de todos os workers
+  - `GET /workers/:workerType/status` - Status de worker específico
+  - `GET /workers/:workerType/overloaded` - Verifica se worker está sobrecarregado
+  - `GET /workers/:workerType/count` - Contagem de workers ativos
 
 ## 🎯 Use Cases (29)
 
@@ -294,6 +299,18 @@ RATE_LIMIT_MAX=100
 
 # CORS
 CORS_ORIGIN="http://localhost:3000"
+
+# Worker Configuration
+WORKER_CAPACITY_SHARING_FACTOR=256
+WORKER_OVERLOAD_THRESHOLD=1000
+
+# Worker JWT (JWS with ES256)
+WORKER_JWT_ALGORITHM=ES256
+WORKER_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+WORKER_JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+WORKER_JWT_SECRET=""  # Optional, fallback for HS256
+WORKER_JWT_EXPIRES_IN=7d
+WORKER_JWT_COOKIE_NAME=session
 ```
 
 ## 📜 Scripts
@@ -454,6 +471,13 @@ docker run -p 4000:4000 --env-file .env backend:latest
 - `GET /realtime/events` - Listar eventos disponíveis
 - WebSocket: `/` - Conexão WebSocket
 
+### Workers (Protegido por JWS ES256)
+- `GET /workers/status` - Status de todos os workers
+- `GET /workers/:workerType/status` - Status de worker específico (realtime, invites, members, generic)
+- `GET /workers/:workerType/overloaded` - Verifica se worker está sobrecarregado
+- `GET /workers/:workerType/count` - Contagem de workers ativos
+  - Query params: `method` (pending, load, combined)
+
 ## 🔐 Segurança
 
 - **JWT** em cookies httpOnly
@@ -463,6 +487,10 @@ docker run -p 4000:4000 --env-file .env backend:latest
 - **Validação** de inputs com class-validator
 - **RBAC** (Role-Based Access Control)
 - **Tenant Guard** para isolamento multi-tenant
+- **Worker Endpoints**: Protegidos por **JWS (JSON Web Signature) com ES256**
+  - Algoritmo ES256 (ECDSA P-256 + SHA-256) para segurança assimétrica
+  - Configuração separada via variáveis `WORKER_JWT_*`
+  - Suporte a chaves públicas/privadas em formato PEM
 
 ## 🏗️ Arquitetura de Consumidores
 

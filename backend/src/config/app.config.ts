@@ -8,6 +8,9 @@ export const appConfig = registerAs("app", () => ({
         secret: process.env.JWT_SECRET ?? "secret",
         expiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
         cookieName: process.env.COOKIE_NAME ?? "session",
+        algorithm: process.env.JWT_ALGORITHM ?? "HS256",
+        privateKey: process.env.JWT_PRIVATE_KEY,
+        publicKey: process.env.JWT_PUBLIC_KEY,
     },
     rateLimit: {
         windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? "60000", 10),
@@ -41,5 +44,16 @@ export const appConfig = registerAs("app", () => ({
         enabled: (process.env.BACKEND_LOGGING ?? "true").toLowerCase() !== "false",
         rabbitmq: (process.env.RABBITMQ_LOGGING ?? "false").toLowerCase() === "true",
         websocket: (process.env.WEBSOCKET_LOGGING ?? "false").toLowerCase() === "true",
+    },
+    worker: {
+        capacitySharingFactor: parseInt(process.env.WORKER_CAPACITY_SHARING_FACTOR ?? "256", 10),
+        jwt: {
+            algorithm: process.env.WORKER_JWT_ALGORITHM ?? "ES256",
+            secret: process.env.WORKER_JWT_SECRET,
+            privateKey: process.env.WORKER_JWT_PRIVATE_KEY,
+            publicKey: process.env.WORKER_JWT_PUBLIC_KEY,
+            expiresIn: process.env.WORKER_JWT_EXPIRES_IN ?? "7d",
+            cookieName: process.env.WORKER_JWT_COOKIE_NAME ?? "session",
+        },
     },
 }));
