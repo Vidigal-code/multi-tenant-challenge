@@ -69,7 +69,7 @@ describe("InvitesController", () => {
     queryProducer,
     batchOperationsProducer,
   );
-  const user = { email: "me@example.com" };
+  const user = { email: "me@example.com", sub: "user-id-123" };
 
   it("lists invites with pagination defaults", async () => {
     inviteRepo.listByEmail.mockResolvedValue({ data: [], total: 0 });
