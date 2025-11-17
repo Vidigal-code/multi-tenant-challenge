@@ -13,7 +13,6 @@ module.exports = [
         ecmaFeatures: {
           jsx: true,
         },
-        project: './tsconfig.json',
       },
       globals: {
         // Browser globals
@@ -42,6 +41,10 @@ module.exports = [
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+      // Disable no-useless-escape for regex patterns (common in cookie parsing)
+      'no-useless-escape': 'off',
+      // Allow empty catch blocks (sometimes needed for error handling)
+      'no-empty': 'off',
     },
   },
   {
@@ -55,6 +58,7 @@ module.exports = [
       'next.config.js',
       'next.config.ts',
       'jest.config.ts',
+      'jest.setup.ts',
       'tailwind.config.ts',
       'postcss.config.js',
     ],
