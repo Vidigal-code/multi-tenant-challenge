@@ -11,6 +11,7 @@
     "test:watch": "jest --watch",
     "seed": "ts-node prisma/seed.ts",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:reset": "npx prisma migrate reset --force",
     "prisma:generate": "prisma generate",
     "worker:invites": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/invites.events.consumer.ts",
     "worker:members": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/members.events.consumer.ts",
