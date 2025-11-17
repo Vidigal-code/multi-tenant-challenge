@@ -34,7 +34,7 @@ describe('InviteForm', () => {
    */
   it('should render email input field', () => {
     render(<InviteForm companyId="c1" onInvited={() => {}} />);
-    expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Email ou ID do usuário')).toBeInTheDocument();
   });
 
   /**
@@ -50,7 +50,7 @@ describe('InviteForm', () => {
     const mockOnInvited = jest.fn();
     render(<InviteForm companyId="c1" onInvited={mockOnInvited} />);
 
-    const emailInput = screen.getByPlaceholderText('Email');
+    const emailInput = screen.getByPlaceholderText('Email ou ID do usuário');
     const submitButton = screen.getByRole('button', { name: /invite|convidar/i });
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });

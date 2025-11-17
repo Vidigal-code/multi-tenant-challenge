@@ -11,11 +11,11 @@ describe('MemberList', () => {
 
   it('shows empty message', () => {
     render(<MemberList members={[]} {...baseProps} />);
-    expect(screen.getByText('No members yet.')).toBeInTheDocument();
+    expect(screen.getByText('Ainda não há membros.')).toBeInTheDocument();
   });
 
   it('renders rows', () => {
     render(<MemberList members={[{ id: '1', userId: 'u1', role: 'OWNER' }]} {...baseProps} />);
-    expect(screen.getByText('OWNER')).toBeInTheDocument();
+    expect(screen.getByText('PROPRIETÁRIO')).toBeInTheDocument();
   });
 });
