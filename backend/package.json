@@ -6,7 +6,7 @@
     "build": "nest build",
     "prebuild": "prisma generate",
     "start": "node dist/main.js",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint .",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:tdd": "jest --testPathPatterns=tests/unit --testPathIgnorePatterns=tests/integration",
