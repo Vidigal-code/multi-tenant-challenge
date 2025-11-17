@@ -1,16 +1,19 @@
 const js = require('@eslint/js');
+const tsparser = require('@typescript-eslint/parser');
 
 module.exports = [
   js.configs.recommended,
   {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
-      ecmaVersion: 2020,
-      sourceType: 'module',
+      parser: tsparser,
       parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: 'module',
         ecmaFeatures: {
           jsx: true,
         },
+        project: './tsconfig.json',
       },
       globals: {
         // Browser globals
@@ -50,7 +53,10 @@ module.exports = [
       '*.js',
       'eslint.config.js',
       'next.config.js',
+      'next.config.ts',
       'jest.config.ts',
+      'tailwind.config.ts',
+      'postcss.config.js',
     ],
   },
 ];
