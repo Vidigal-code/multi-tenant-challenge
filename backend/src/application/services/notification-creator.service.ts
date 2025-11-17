@@ -270,6 +270,14 @@ export class NotificationCreatorService {
         const receiver = payload?.receiver || await this.userRepo.findById(receiverId);
         if (!sender) return;
 
+        const friendshipId = payload?.friendshipId || payload?.additionalData?.friendshipId;
+        
+        if (!friendshipId) {
+            this.logger.error(`FriendshipId not found in payload for friend request. Payload keys: ${Object.keys(payload).join(', ')}`);
+        } else {
+            this.logger.default(`FriendshipId found: ${friendshipId}`);
+        }
+
         const titleText = this.messageFormatter.formatTitle({
             eventCode: 'FRIEND_REQUEST_SENT',
             senderName: sender.name,
@@ -286,6 +294,24 @@ export class NotificationCreatorService {
             friendEmail: receiver?.email?.toString() || receiver?.email,
         });
 
+        const meta: any = {
+            kind: "friend.request.sent",
+            channel: "friend",
+            sender: {
+                id: sender.id || senderId,
+                name: sender.name,
+                email: sender.email?.toString() || sender.email,
+            },
+            eventId: payload?.eventId || 'FRIEND_REQUEST_SENT',
+            timestamp: payload?.timestamp || new Date().toISOString(),
+        };
+        
+        if (friendshipId) {
+            meta.friendshipId = friendshipId;
+        }
+        
+        this.logger.default(`Creating notification with meta: ${JSON.stringify(meta)}`);
+
         const notification = await this.notificationRepo.create({
             companyId: null,
             senderUserId: senderId,
@@ -293,17 +319,7 @@ export class NotificationCreatorService {
             recipientsEmails: [],
             title: titleText,
             body: bodyText,
-            meta: {
-                kind: "friend.request.sent",
-                channel: "friend",
-                sender: {
-                    id: sender.id || senderId,
-                    name: sender.name,
-                    email: sender.email?.toString() || sender.email,
-                },
-                eventId: payload?.eventId || 'FRIEND_REQUEST_SENT',
-                timestamp: payload?.timestamp || new Date().toISOString(),
-            },
+            meta: meta,
         });
         
         await this.emitNotificationCreated(notification, null, receiverId, senderId);

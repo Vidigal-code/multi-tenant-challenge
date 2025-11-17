@@ -59,7 +59,9 @@ export abstract class BaseResilientConsumer<T = any> {
     protected readonly logger: LoggerService;
     private redis: Redis;
 
-    constructor(protected readonly rabbit: RabbitMQService, private readonly opts: ResilientConsumerOptions, private readonly configService?: ConfigService) {
+    constructor(protected readonly rabbit: RabbitMQService,
+                private readonly opts: ResilientConsumerOptions,
+                private readonly configService?: ConfigService) {
         this.logger = new LoggerService(this.constructor.name, configService);
         this.redis = new Redis(opts.redisUrl);
     }
@@ -94,7 +96,6 @@ export abstract class BaseResilientConsumer<T = any> {
                     channel.ack(msg);
                     return;
                 }
-                // Log when processing with dedup key for debugging
                 this.logger.rabbitmq(`Dedup: processing new message, key: ${key}`);
             }
             try {

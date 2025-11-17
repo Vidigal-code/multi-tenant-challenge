@@ -85,9 +85,12 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
         return null;
     }
 
-    protected async processWithDelivery(payload: any, messageId: string): Promise<{ confirmed: boolean; saved?: boolean; error?: string }> {
+    protected async processWithDelivery(payload: any, messageId: string):
+        Promise<{ confirmed: boolean; saved?: boolean; error?: string }> {
         try {
-            this.logger.rabbitmq(`Processing realtime notification with delivery confirmation: messageId=${messageId}, eventId=${payload?.eventId || 'unknown'}`);
+
+            this.logger.rabbitmq(`Processing realtime notification with delivery confirmation: 
+            messageId=${messageId}, eventId=${payload?.eventId || 'unknown'}`);
             
             const eventId = payload?.eventId;
             if (!eventId) {
@@ -115,6 +118,12 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
             if (!eventName) {
                 this.logger.rabbitmq(`Unknown eventId: ${eventId}, skipping`);
                 return { confirmed: true, saved: false, error: `Unknown eventId: ${eventId}` };
+            }
+            
+            if (eventId === 'FRIEND_REQUEST_SENT') {
+                this.logger.rabbitmq(`FRIEND_REQUEST_SENT payload keys: ${Object.keys(payload).join(', ')}`);
+                this.logger.rabbitmq(`FRIEND_REQUEST_SENT friendshipId: ${payload?.friendshipId || 'NOT FOUND'}`);
+                this.logger.rabbitmq(`FRIEND_REQUEST_SENT additionalData: ${JSON.stringify(payload?.additionalData || {})}`);
             }
 
             const companyId = payload?.companyId;
@@ -186,6 +195,7 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
                     invitedEmail: payload?.invitedEmail || payload?.receiverEmail || payload?.receiver?.email || payload?.email,
                     inviteUrl: payload?.inviteUrl,
                     role: payload?.role,
+                    friendshipId: payload?.friendshipId,
                 };
                 this.logger.rabbitmq(`Creating notification without user IDs: eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`);
                 await this.notificationCreator.createNotificationForEvent(eventName, notificationPayload);
@@ -217,6 +227,7 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
                         invitedEmail: payload?.invitedEmail || payload?.receiverEmail || payload?.receiver?.email || payload?.email,
                         inviteUrl: payload?.inviteUrl,
                         role: payload?.role,
+                        friendshipId: payload?.friendshipId,
                     };
                     this.logger.rabbitmq(`Creating notification without WebSocket for user ${userId}: eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`);
                     await this.notificationCreator.createNotificationForEvent(eventName, notificationPayload);
@@ -283,6 +294,7 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
                                     invitedEmail: payload?.invitedEmail || payload?.receiverEmail || payload?.receiver?.email || payload?.email || storedPayload?.invitedEmail || storedPayload?.receiverEmail,
                                     inviteUrl: payload?.inviteUrl || storedPayload?.inviteUrl,
                                     role: payload?.role || storedPayload?.role,
+                                    friendshipId: payload?.friendshipId || storedPayload?.friendshipId,
                                 };
                                 this.logger.rabbitmq(`Creating notification for user ${userId}: eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`);
                                 this.logger.rabbitmq(`Notification payload keys: ${Object.keys(notificationPayload).join(', ')}`);
@@ -308,6 +320,7 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
                                     invitedEmail: payload?.invitedEmail || payload?.receiverEmail || payload?.receiver?.email || payload?.email || additionalData?.invitedEmail,
                                     inviteUrl: payload?.inviteUrl || additionalData?.inviteUrl,
                                     role: payload?.role || additionalData?.role,
+                                    friendshipId: payload?.friendshipId || additionalData?.friendshipId,
                                 };
                                 this.logger.rabbitmq(`Creating notification from original payload for user ${userId}: eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`);
                                 this.logger.rabbitmq(`Notification payload keys: ${Object.keys(notificationPayload).join(', ')}`);
@@ -345,6 +358,7 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
                             invitedEmail: payload?.invitedEmail || payload?.receiverEmail || payload?.receiver?.email || payload?.email,
                             inviteUrl: payload?.inviteUrl,
                             role: payload?.role,
+                            friendshipId: payload?.friendshipId,
                         };
                         this.logger.rabbitmq(`Creating notification after timeout for user ${userId}: eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`);
                         await this.notificationCreator.createNotificationForEvent(eventName, notificationPayload);

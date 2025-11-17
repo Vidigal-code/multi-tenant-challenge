@@ -49,6 +49,7 @@ export interface NotificationMeta {
     companyId?: string;
     inviteId?: string;
     inviteUrl?: string;
+    friendshipId?: string;
     role?: string;
     previousRole?: string;
     removedBy?: {

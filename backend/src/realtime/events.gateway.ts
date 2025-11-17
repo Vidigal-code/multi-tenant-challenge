@@ -101,27 +101,32 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     ) {
         this.logger = new LoggerService(EventsGateway.name, config);
         const registry = new Registry();
+
         this.metricConnections = new Gauge({
             name: 'ws_connections_active',
             help: 'Active websocket connections',
             registers: [registry],
         });
+
         this.metricEmits = new Counter({
             name: 'ws_events_emitted_total',
             help: 'Total websocket events emitted',
             labelNames: ['event'],
             registers: [registry],
         });
+
         this.metricRateLimited = new Counter({
             name: 'ws_events_rate_limited_total',
             help: 'Total websocket events blocked by rate limiting',
             labelNames: ['event'],
             registers: [registry],
         });
+
         this.rateWindowMs = parseInt(process.env.WS_RATE_LIMIT_WINDOW_MS || '1000', 10);
         this.rateMax = parseInt(process.env.WS_RATE_LIMIT_MAX || '50', 10);
         this.inboundWindowMs = parseInt(process.env.WS_INBOUND_RATE_LIMIT_WINDOW_MS || '1000', 10);
         this.inboundRateMax = parseInt(process.env.WS_INBOUND_RATE_LIMIT_MAX || '30', 10);
+
         Object.values(RT_EVENT).forEach(ev => {
             const envKey = `WS_RATE_LIMIT_MAX_${ev.toUpperCase().replace(/\./g, '_')}`;
             const v = process.env[envKey];
@@ -130,6 +135,7 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
                 if (!Number.isNaN(num) && num > 0) this.perEventMax[ev] = num;
             }
         });
+
         this.metricRateUsage = new Summary({
             name: 'ws_events_rate_usage_ratio',
             help: 'Ratio (current/window max) sampled each emit for distribution (p95).',
@@ -137,7 +143,9 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
             labelNames: ['event'],
             registers: [registry],
         });
+
         const url = process.env.REDIS_URL;
+
         if (url) {
             try {
                 this.redisClient = new Redis(url, {lazyConnect: true});
@@ -188,7 +196,8 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
         if (shouldUseRedisAdapter) {
             try {
                 const url = process.env.REDIS_URL || 'redis://localhost:6379';
-                this.logger.websocket(`Initializing Redis adapter for WebSocket: ${url.replace(/:[^:@]+@/, ':****@')}`);
+                this.logger.websocket(`Initializing Redis adapter for WebSocket: 
+                ${url.replace(/:[^:@]+@/, ':****@')}`);
                 const pub = new Redis(url, {
                     maxRetriesPerRequest: 3,
                     retryStrategy: (times) => {
@@ -207,7 +216,8 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
                 }
             }
         } else {
-            this.logger.websocket('Redis adapter disabled - WebSocket will not scale horizontally. Set USE_WS_REDIS_ADAPTER=true for production.');
+            this.logger.websocket('Redis adapter disabled - WebSocket will not scale horizontally.' +
+                ' Set USE_WS_REDIS_ADAPTER=true for production.');
         }
         server.on('connection', (socket: any) => {
             socket.onAny(async (event: string, ...args: any[]) => {
@@ -216,8 +226,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
                     this.logger.websocket(`Rate limit inbound: event=${event}, user=${socket.data?.userId}`);
                     return;
                 }
-                this.logger.websocket(`Evento recebido: ${event}, usuário=${socket.data?.userId}, args=${JSON.stringify(args).substring(0, 100)}`);
-                this.logger.websocket(`Event received: ${event}, user=${socket.data?.userId}, args=${JSON.stringify(args).substring(0, 100)}`);
+                this.logger.websocket(`Evento recebido: ${event}, usuário=${socket.data?.userId}, 
+                args=${JSON.stringify(args).substring(0, 100)}`);
+                this.logger.websocket(`Event received: ${event}, user=${socket.data?.userId}, 
+                args=${JSON.stringify(args).substring(0, 100)}`);
             });
 
             socket.on(RT_EVENT.NOTIFICATION_DELIVERED, async (payload: { messageId: string }) => {
@@ -237,7 +249,8 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
                     if (confirmed) {
                         this.logger.websocket(`Delivery confirmed: messageId=${payload.messageId}, user=${userId}`);
                     } else {
-                        this.logger.websocket(`Delivery confirmation failed (expired or already confirmed): messageId=${payload.messageId}, user=${userId}`);
+                        this.logger.websocket(`Delivery confirmation failed (expired or already confirmed): 
+                        messageId=${payload.messageId}, user=${userId}`);
                     }
                 } catch (error: any) {
                     this.logger.error(`Error processing delivery confirmation: ${error?.message || String(error)}`);
@@ -258,7 +271,8 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
                     }
 
                     await this.deliveryConfirmation.removePendingDelivery(payload.messageId);
-                    this.logger.websocket(`Delivery failed: messageId=${payload.messageId}, user=${userId}, error=${payload.error || 'unknown'}`);
+                    this.logger.websocket(`Delivery failed: messageId=${payload.messageId},
+                     user=${userId}, error=${payload.error || 'unknown'}`);
                 } catch (error: any) {
                     this.logger.error(`Error processing delivery failure: ${error?.message || String(error)}`);
                 }
@@ -321,7 +335,8 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
             this.logger.websocket(`Rate limit: emit to company blocked, company=${companyId}, event=${event}`);
             return;
         }
-        this.logger.websocket(`Emitting to company: company=${companyId}, event=${event}, payload=${JSON.stringify(payload).substring(0, 100)}`);
+        this.logger.websocket(`Emitting to company: company=${companyId}, event=${event}, 
+        payload=${JSON.stringify(payload).substring(0, 100)}`);
         this.server.to(`company:${companyId}`).emit(event, payload);
         this.metricEmits.inc({event});
     }
@@ -335,7 +350,8 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
             this.logger.websocket(`Rate limit: emit to user blocked, user=${userId}, event=${event}`);
             return;
         }
-        this.logger.websocket(`Emitting to user: user=${userId}, event=${event}, payload=${JSON.stringify(payload).substring(0, 100)}`);
+        this.logger.websocket(`Emitting to user: user=${userId}, event=${event}, 
+        payload=${JSON.stringify(payload).substring(0, 100)}`);
         this.server.to(`user:${userId}`).emit(event, payload);
         this.metricEmits.inc({event});
     }
