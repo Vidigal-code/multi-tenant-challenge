@@ -256,7 +256,7 @@ services:
     # Uso: docker compose exec rabbitmq sh -c "rabbitmqctl purge_queue events.invites && rabbitmqctl purge_queue events.members && rabbitmqctl purge_queue events.generic && rabbitmqctl purge_queue notifications.realtimes"
     # Este serviço é apenas um placeholder - use docker compose exec rabbitmq diretamente
     image: rabbitmq:3-management
-    command: echo "Use: docker compose exec rabbitmq rabbitmqctl purge_queue <queue-name>"
+    command: ["sh", "-c", "echo 'Use: docker compose exec rabbitmq rabbitmqctl purge_queue <queue-name>'"]
     profiles: ["tools"]
 
   clear-dedup:
