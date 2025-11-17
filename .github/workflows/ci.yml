@@ -53,17 +53,42 @@ jobs:
         working-directory: backend
         run: |
           if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
-            pnpm install --frozen-lockfile
+            # Tenta pnpm primeiro, se falhar usa npm
+            pnpm install --frozen-lockfile || {
+              echo "pnpm falhou, tentando npm..."
+              if [ -f package-lock.json ]; then
+                npm ci
+              else
+                npm install
+              fi
+            }
           elif [ -f package-lock.json ]; then
             npm ci
           else
             npm install
           fi
 
+      - name: Backend - Detect Package Manager
+        working-directory: backend
+        id: backend-pm
+        run: |
+          if [ -d node_modules ] && [ -f pnpm-lock.yaml ]; then
+            # Verifica se foi instalado com pnpm (verifica estrutura node_modules)
+            if [ -d node_modules/.pnpm ]; then
+              echo "pm=pnpm" >> $GITHUB_OUTPUT
+            else
+              echo "pm=npm" >> $GITHUB_OUTPUT
+            fi
+          elif [ -f package-lock.json ]; then
+            echo "pm=npm" >> $GITHUB_OUTPUT
+          else
+            echo "pm=npm" >> $GITHUB_OUTPUT
+          fi
+
       - name: Backend - Lint
         working-directory: backend
         run: |
-          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+          if [ "${{ steps.backend-pm.outputs.pm }}" == "pnpm" ]; then
             pnpm run lint --if-present
           else
             npm run lint --if-present
@@ -72,7 +97,7 @@ jobs:
       - name: Backend - Test (Unit Only)
         working-directory: backend
         run: |
-          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+          if [ "${{ steps.backend-pm.outputs.pm }}" == "pnpm" ]; then
             pnpm test:unit --if-present
           else
             npm run test:unit --if-present
@@ -81,7 +106,7 @@ jobs:
       - name: Backend - Build
         working-directory: backend
         run: |
-          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+          if [ "${{ steps.backend-pm.outputs.pm }}" == "pnpm" ]; then
             pnpm run build --if-present
           else
             npm run build --if-present
@@ -91,17 +116,42 @@ jobs:
         working-directory: frontend
         run: |
           if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
-            pnpm install --frozen-lockfile
+            # Tenta pnpm primeiro, se falhar usa npm
+            pnpm install --frozen-lockfile || {
+              echo "pnpm falhou, tentando npm..."
+              if [ -f package-lock.json ]; then
+                npm ci
+              else
+                npm install
+              fi
+            }
           elif [ -f package-lock.json ]; then
             npm ci
           else
             npm install
           fi
 
+      - name: Frontend - Detect Package Manager
+        working-directory: frontend
+        id: frontend-pm
+        run: |
+          if [ -d node_modules ] && [ -f pnpm-lock.yaml ]; then
+            # Verifica se foi instalado com pnpm (verifica estrutura node_modules)
+            if [ -d node_modules/.pnpm ]; then
+              echo "pm=pnpm" >> $GITHUB_OUTPUT
+            else
+              echo "pm=npm" >> $GITHUB_OUTPUT
+            fi
+          elif [ -f package-lock.json ]; then
+            echo "pm=npm" >> $GITHUB_OUTPUT
+          else
+            echo "pm=npm" >> $GITHUB_OUTPUT
+          fi
+
       - name: Frontend - Lint
         working-directory: frontend
         run: |
-          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+          if [ "${{ steps.frontend-pm.outputs.pm }}" == "pnpm" ]; then
             pnpm run lint --if-present
           else
             npm run lint --if-present
@@ -110,7 +160,7 @@ jobs:
       - name: Frontend - Test (Unit Only)
         working-directory: frontend
         run: |
-          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+          if [ "${{ steps.frontend-pm.outputs.pm }}" == "pnpm" ]; then
             pnpm test:unit --if-present
           else
             npm run test:unit --if-present
@@ -119,7 +169,7 @@ jobs:
       - name: Frontend - Build
         working-directory: frontend
         run: |
-          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+          if [ "${{ steps.frontend-pm.outputs.pm }}" == "pnpm" ]; then
             pnpm run build --if-present
           else
             npm run build --if-present
