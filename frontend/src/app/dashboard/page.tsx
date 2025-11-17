@@ -58,7 +58,7 @@ export default function DashboardPage() {
     const allTabs = useMemo(() => {
         const ownerTotal = primaryOwnerQuery.data?.total ?? '';
         const memberTotal = memberCompaniesQuery.data?.total ?? 0;
-        
+
         return [
             { id: 'owner', label: `Proprietário (${ownerTotal})` },
             {
@@ -68,7 +68,7 @@ export default function DashboardPage() {
                     : 'Participa'
             },
         ];
-    }, [primaryOwnerQuery.data?.total]);
+    }, [primaryOwnerQuery.data?.total, memberCompaniesQuery.data?.total]);
 
 
 
