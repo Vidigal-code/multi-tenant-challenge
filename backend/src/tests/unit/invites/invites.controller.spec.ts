@@ -46,6 +46,7 @@ describe("InvitesController", () => {
     get: jest.fn().mockResolvedValue(null),
     set: jest.fn(),
     invalidate: jest.fn(),
+    waitForCache: jest.fn().mockResolvedValue(null),
   } as any as RedisQueryCacheService;
   const queryProducer = {
     queueQuery: jest.fn(),
