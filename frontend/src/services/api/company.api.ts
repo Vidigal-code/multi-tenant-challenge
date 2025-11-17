@@ -10,6 +10,9 @@ export interface Company {
   description?: string | null;
   is_public: boolean;
   createdAt?: string;
+  memberCount?: number;
+  primaryOwnerName?: string;
+  primaryOwnerEmail?: string;
 }
 
 export interface Member {
@@ -92,14 +95,14 @@ export function useCompanyRole(id: string | undefined) {
   });
 }
 
-export function useCompanyMembers(id: string | undefined) {
+export function useCompanyMembers(id: string | undefined, enabled: boolean = true) {
   return useQuery<CompanyMembersResponse>({
     queryKey: queryKeys.companyMembers(id!),
     queryFn: async () => {
       const response = await http.get(`/companys/${id}/members`);
       return extractMembersData(response.data);
     },
-    enabled: Boolean(id),
+    enabled: Boolean(id) && enabled,
   });
 }
 

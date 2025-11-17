@@ -85,13 +85,19 @@ export default function CompanyPage() {
 
     const profileQuery = useProfile();
     const companyQuery = useCompany(id);
-    const publicCompanyInfoQuery = useCompanyPublicInfo(
-        id,
-        companyQuery.isError && ((companyQuery.error as any)?.response?.status === 403 || (companyQuery.error as any)?.response?.status === 401)
-    );
     const roleQuery = useCompanyRole(id);
-    const membersQuery = useCompanyMembers(id);
-    const primaryOwnerQuery = useCompanyPrimaryOwner(id, !!roleQuery.data?.role);
+    const isMember = !!roleQuery.data?.role;
+    const shouldFetchPublicInfo = !isMember && ((companyQuery.isError && ((companyQuery.error as any)?.response?.status === 403 || (companyQuery.error as any)?.response?.status === 401)) || companyQuery.data?.is_public);
+    const publicCompanyInfoQuery = useCompanyPublicInfo(id, shouldFetchPublicInfo);
+    const company = useMemo(() => {
+        return companyQuery.data || (publicCompanyInfoQuery.data ? {
+            ...publicCompanyInfoQuery.data,
+            is_public: true,
+        } : null);
+    }, [companyQuery.data, publicCompanyInfoQuery.data]);
+    const isPublicCompany = company?.is_public ?? false;
+    const membersQuery = useCompanyMembers(id, isMember);
+    const primaryOwnerQuery = useCompanyPrimaryOwner(id, isMember);
 
     const selectMutation = useSelectCompany();
     const updateCompanyMutation = useUpdateCompany(id);
@@ -101,8 +107,6 @@ export default function CompanyPage() {
     const leaveMutation = useLeaveCompany(id);
     const transferOwnershipMutation = useTransferOwnership(id);
     const sendNotificationMutation = useCreateNotification();
-
-    const isMember = !!roleQuery.data?.role;
 
     const canEdit = useMemo(() => roleQuery.data?.role === 'OWNER' || roleQuery.data?.role === 'ADMIN', [roleQuery.data]);
     const canManage = canEdit;
@@ -173,12 +177,6 @@ export default function CompanyPage() {
         };
     }, [id, qc]);
 
-    // Use public info if company query failed with 403/401, otherwise use company data
-    const company = companyQuery.data || (publicCompanyInfoQuery.data ? {
-        ...publicCompanyInfoQuery.data,
-        is_public: true,
-    } : null);
-
     if (!id || id === 'undefined') {
         return (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full min-w-0">
@@ -240,40 +238,104 @@ export default function CompanyPage() {
                             )}
                         </div>
                         
-                        <div className="w-full border-t border-gray-200 dark:border-gray-800 pt-6 space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm sm:text-base">
-                                <div className="text-left sm:text-center">
+                        <div className="w-full border-t border-gray-200 dark:border-gray-800 pt-6">
+                            <div className="flex flex-col items-center gap-4 text-center space-y-4">
+                                <div className="w-full">
                                     <div className="font-semibold text-gray-900 dark:text-white mb-1">ID da Empresa</div>
                                     <div className="text-gray-600 dark:text-gray-400 break-all font-mono text-xs sm:text-sm">{company.id}</div>
                                 </div>
-                                {company.createdAt && (
-                                    <div className="text-left sm:text-center">
+                                
+                                {company.createdAt ? (
+                                    <div className="w-full">
                                         <div className="font-semibold text-gray-900 dark:text-white mb-1">Data de Criação</div>
                                         <div className="text-gray-600 dark:text-gray-400">{formatDate(company.createdAt)}</div>
                                     </div>
+                                ) : (
+                                    <div className="w-full">
+                                        <div className="font-semibold text-gray-900 dark:text-white mb-1">Data de Criação</div>
+                                        <div className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Não disponível</div>
+                                    </div>
                                 )}
+                                
+                                {(() => {
+                                    const memberCount = isMember 
+                                        ? (membersQuery.data?.total ?? publicCompanyInfoQuery.data?.memberCount)
+                                        : publicCompanyInfoQuery.data?.memberCount;
+                                    const isLoading = isMember 
+                                        ? (publicCompanyInfoQuery.isLoading || membersQuery.isLoading)
+                                        : publicCompanyInfoQuery.isLoading;
+                                    
+                                    if (isLoading) {
+                                        return (
+                                            <div className="w-full">
+                                                <div className="font-semibold text-gray-900 dark:text-white mb-1">Quantidade de Membros</div>
+                                                <div className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Carregando...</div>
+                                            </div>
+                                        );
+                                    } else if (memberCount !== undefined && memberCount !== null) {
+                                        return (
+                                            <div className="w-full">
+                                                <div className="font-semibold text-gray-900 dark:text-white mb-1">Quantidade de Membros</div>
+                                                <div className="text-gray-600 dark:text-gray-400">{memberCount}</div>
+                                            </div>
+                                        );
+                                    } else {
+                                        return (
+                                            <div className="w-full">
+                                                <div className="font-semibold text-gray-900 dark:text-white mb-1">Quantidade de Membros</div>
+                                                <div className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Não disponível</div>
+                                            </div>
+                                        );
+                                    }
+                                })()}
+                                
+                                {(() => {
+                                    const ownerName = isMember
+                                        ? (primaryOwnerQuery.data?.primaryOwnerName ?? publicCompanyInfoQuery.data?.primaryOwnerName)
+                                        : publicCompanyInfoQuery.data?.primaryOwnerName;
+                                    const ownerEmail = isMember
+                                        ? (primaryOwnerQuery.data?.primaryOwnerEmail ?? publicCompanyInfoQuery.data?.primaryOwnerEmail)
+                                        : publicCompanyInfoQuery.data?.primaryOwnerEmail;
+                                    const isLoading = isMember
+                                        ? (publicCompanyInfoQuery.isLoading || primaryOwnerQuery.isLoading)
+                                        : publicCompanyInfoQuery.isLoading;
+                                    
+                                    if (isLoading) {
+                                        return (
+                                            <div className="w-full">
+                                                <div className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center justify-center gap-2">
+                                                    <FiStar className="text-yellow-500" />
+                                                    <span>Proprietário Principal</span>
+                                                </div>
+                                                <div className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Carregando...</div>
+                                            </div>
+                                        );
+                                    } else if (ownerName && ownerName !== 'N/A') {
+                                        return (
+                                            <div className="w-full">
+                                                <div className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center justify-center gap-2">
+                                                    <FiStar className="text-yellow-500" />
+                                                    <span>Proprietário Principal</span>
+                                                </div>
+                                                <div className="text-gray-600 dark:text-gray-400 break-words font-medium">{ownerName}</div>
+                                                {ownerEmail && ownerEmail !== 'N/A' && (
+                                                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 break-all mt-1">{ownerEmail}</div>
+                                                )}
+                                            </div>
+                                        );
+                                    } else {
+                                        return (
+                                            <div className="w-full">
+                                                <div className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center justify-center gap-2">
+                                                    <FiStar className="text-yellow-500" />
+                                                    <span>Proprietário Principal</span>
+                                                </div>
+                                                <div className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">Não disponível</div>
+                                            </div>
+                                        );
+                                    }
+                                })()}
                             </div>
-                            
-                            {primaryOwnerQuery.data && (
-                                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-800">
-                                    <div className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2">
-                                        <FiStar className="text-yellow-500" />
-                                        <span>Proprietário Principal</span>
-                                    </div>
-                                    <div className="text-gray-700 dark:text-gray-300 space-y-1">
-                                        {primaryOwnerQuery.data.primaryOwnerName && primaryOwnerQuery.data.primaryOwnerName !== 'N/A' && (
-                                            <div className="font-medium">{primaryOwnerQuery.data.primaryOwnerName}</div>
-                                        )}
-                                        {primaryOwnerQuery.data.primaryOwnerEmail && primaryOwnerQuery.data.primaryOwnerEmail !== 'N/A' && (
-                                            <div className="text-sm break-all">{primaryOwnerQuery.data.primaryOwnerEmail}</div>
-                                        )}
-                                        {(!primaryOwnerQuery.data.primaryOwnerName || primaryOwnerQuery.data.primaryOwnerName === 'N/A') && 
-                                         (!primaryOwnerQuery.data.primaryOwnerEmail || primaryOwnerQuery.data.primaryOwnerEmail === 'N/A') && (
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">Não disponível</div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
                         </div>
                         
                         <div className="w-full pt-4">
@@ -418,6 +480,29 @@ export default function CompanyPage() {
                         )}
                     </div>
                 </div>
+                
+                {isMember && primaryOwnerQuery.data && (
+                    <div className="w-full border-t border-gray-200 dark:border-gray-800 pt-4 mt-4">
+                        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-800">
+                            <div className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2 text-sm sm:text-base">
+                                <FiStar className="text-yellow-500" />
+                                <span>Proprietário Principal</span>
+                            </div>
+                            <div className="text-gray-700 dark:text-gray-300 space-y-1 text-center">
+                                {primaryOwnerQuery.data.primaryOwnerName && primaryOwnerQuery.data.primaryOwnerName !== 'N/A' && (
+                                    <div className="font-medium text-sm sm:text-base">{primaryOwnerQuery.data.primaryOwnerName}</div>
+                                )}
+                                {primaryOwnerQuery.data.primaryOwnerEmail && primaryOwnerQuery.data.primaryOwnerEmail !== 'N/A' && (
+                                    <div className="text-xs sm:text-sm break-all">{primaryOwnerQuery.data.primaryOwnerEmail}</div>
+                                )}
+                                {(!primaryOwnerQuery.data.primaryOwnerName || primaryOwnerQuery.data.primaryOwnerName === 'N/A') && 
+                                 (!primaryOwnerQuery.data.primaryOwnerEmail || primaryOwnerQuery.data.primaryOwnerEmail === 'N/A') && (
+                                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Não disponível</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
             {message && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-center">{message}</div>}
             {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border
