@@ -111,9 +111,9 @@ jobs:
         working-directory: backend
         run: |
           if [ "${{ steps.backend-pm.outputs.pm }}" == "pnpm" ]; then
-            pnpm run lint --if-present
+            pnpm run lint
           else
-            npm run lint --if-present
+            npm run lint
           fi
 
       - name: Backend - Test (Unit Only)
@@ -196,9 +196,9 @@ jobs:
         working-directory: frontend
         run: |
           if [ "${{ steps.frontend-pm.outputs.pm }}" == "pnpm" ]; then
-            pnpm run lint --if-present
+            pnpm run lint
           else
-            npm run lint --if-present
+            npm run lint
           fi
 
       - name: Frontend - Test (Unit Only)
