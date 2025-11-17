@@ -102,6 +102,44 @@ services:
     networks:
       - multitenant-network
 
+  worker-generic:
+    build: ./backend
+    env_file: 
+      - ./backend/.env.example-docker
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:generic"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+
+  worker-realtime:
+    build: ./backend
+    env_file: 
+      - ./backend/.env.example-docker
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:realtime"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+
   web:
     build:
       context: ./frontend
@@ -137,6 +175,102 @@ services:
       - ./frontend:/app
     command: sh -c "npm ci && npm test"
     profiles: ["test"]
+
+  # Serviços utilitários para comandos do package.json
+  prisma-migrate:
+    build: ./backend
+    env_file: 
+      - ./backend/.env.example-docker
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "npm run prisma:migrate"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+    profiles: ["tools"]
+
+  prisma-reset:
+    build: ./backend
+    env_file: 
+      - ./backend/.env.example-docker
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "npm run prisma:reset"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+    profiles: ["tools"]
+
+  prisma-generate:
+    build: ./backend
+    env_file: 
+      - ./backend/.env.example-docker
+      - ./backend/.env
+    command: sh -c "npm run prisma:generate"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+    profiles: ["tools"]
+
+  seed:
+    build: ./backend
+    env_file: 
+      - ./backend/.env.example-docker
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+    command: sh -c "npm run seed"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - multitenant-network
+    profiles: ["tools"]
+
+  # Nota: clean:queues e clear:dedup são scripts PowerShell que devem ser executados localmente
+  # Para limpar filas RabbitMQ: docker compose exec rabbitmq rabbitmqctl purge_queue <queue-name>
+  # Para limpar Redis: docker compose exec redis redis-cli FLUSHDB
+  # Ou use os comandos diretos abaixo:
+
+  clean-queues:
+    # Executa comandos rabbitmqctl diretamente no container rabbitmq
+    # Uso: docker compose exec rabbitmq sh -c "rabbitmqctl purge_queue events.invites && rabbitmqctl purge_queue events.members && rabbitmqctl purge_queue events.generic && rabbitmqctl purge_queue notifications.realtimes"
+    # Este serviço é apenas um placeholder - use docker compose exec rabbitmq diretamente
+    image: rabbitmq:3-management
+    command: echo "Use: docker compose exec rabbitmq rabbitmqctl purge_queue <queue-name>"
+    profiles: ["tools"]
+
+  clear-dedup:
+    # Limpa chaves de deduplicação do Redis
+    # Uso: docker compose exec redis redis-cli FLUSHDB
+    # Ou para limpar apenas chaves evt:* e msg:*: docker compose exec redis redis-cli --scan --pattern "evt:*" | xargs docker compose exec redis redis-cli DEL
+    image: redis:7-alpine
+    command: redis-cli -h redis --scan --pattern "evt:*" | xargs -I {} redis-cli -h redis DEL {} || redis-cli -h redis FLUSHDB
+    depends_on:
+      redis:
+        condition: service_started
+    networks:
+      - multitenant-network
+    profiles: ["tools"]
 
 volumes:
   db_data:
