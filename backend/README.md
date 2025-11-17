@@ -464,6 +464,51 @@ docker run -p 4000:4000 --env-file .env backend:latest
 - **RBAC** (Role-Based Access Control)
 - **Tenant Guard** para isolamento multi-tenant
 
+## 🏗️ Arquitetura de Consumidores
+
+O projeto utiliza uma arquitetura de consumidores RabbitMQ resiliente e escalável:
+
+### Classes Base
+
+- **`BaseResilientConsumer`**: Classe base abstrata para todos os consumidores
+  - Retry automático com backoff exponencial
+  - Dead Letter Queue (DLQ) para mensagens falhadas
+  - Desduplicação usando Redis
+  - Controle de prefetch para processamento paralelo
+  - **Refatorado seguindo SOLID**: Métodos separados por responsabilidade única
+  - **Documentação completa**: Todos os métodos documentados em inglês e português
+
+- **`BaseDeliveryAwareConsumer`**: Estende `BaseResilientConsumer` para consumidores que aguardam confirmação de entrega
+  - Confirmação de entrega via WebSocket
+  - Rastreamento de entregas pendentes no Redis
+  - Tratamento de timeout
+  - **Documentação completa**: Todos os métodos protegidos documentados
+
+### Consumidores Específicos
+
+Todos os consumidores seguem princípios SOLID e estão completamente documentados:
+
+- **`RealtimeNotificationsConsumer`**: Processa notificações em tempo real com confirmação de entrega
+- **`MembersEventsConsumer`**: Encaminha eventos de membros para fila realtime
+- **`InvitesEventsConsumer`**: Encaminha eventos de convites para fila realtime
+- **`GenericEventsConsumer`**: Encaminha eventos genéricos (amizades, notificações) para fila realtime
+- **`InviteConsumer`**: Consumer legacy para fila de convites (monitoramento)
+
+### Padrão de Documentação
+
+Todos os métodos seguem o padrão JSDoc:
+```typescript
+/**
+ * EN -
+ * English description of the method
+ * 
+ * PT -
+ * Descrição em português do método
+ * 
+ * @param param - Parameter description
+ */
+```
+
 ## ⚠️ Tratamento de Erros
 
 O projeto utiliza um sistema padronizado de códigos de erro através do enum `ErrorCode`:
@@ -484,6 +529,40 @@ O filtro de exceções (`all-exceptions.filter.ts`) converte automaticamente par
 - **Logging** estruturado com Pino
 - **Métricas** Prometheus em `/metrics`
 - **Request tracking** com interceptors
+
+## 🎯 Princípios SOLID Aplicados
+
+O projeto segue rigorosamente os princípios SOLID, especialmente nos consumidores RabbitMQ:
+
+- **Single Responsibility**: Cada método tem uma única responsabilidade clara
+- **Open/Closed**: Classes base extensíveis sem modificação
+- **Liskov Substitution**: Subclasses podem substituir classes base
+- **Interface Segregation**: Interfaces específicas e focadas
+- **Dependency Inversion**: Dependências injetadas via construtor
+
+### Exemplo de Refatoração
+
+**Antes:**
+```typescript
+async start() {
+    // 100+ linhas de código misturando responsabilidades
+}
+```
+
+**Depois:**
+```typescript
+async start(): Promise<void> {
+    await this.initializeQueues(channel);
+    await this.setupPrefetch();
+    await this.beginConsumption(channel);
+}
+
+private async initializeQueues(channel: any): Promise<void> { /* ... */ }
+private async setupPrefetch(): Promise<void> { /* ... */ }
+private async beginConsumption(channel: any): Promise<void> { /* ... */ }
+```
+
+Cada método é pequeno, testável e documentado em inglês e português.
 
 ## 🚀 Deploy
 

@@ -158,7 +158,274 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     }
 
     /**
-     * Initialize WebSocket server with Redis adapter for horizontal scaling
+     * EN -
+     * Determines whether Redis adapter should be used based on environment configuration.
+     * Redis adapter is required for production environments and can be enabled via USE_WS_REDIS_ADAPTER.
+     * 
+     * PT -
+     * Determina se o adaptador Redis deve ser usado com base na configuração do ambiente.
+     * O adaptador Redis é obrigatório para ambientes de produção e pode ser habilitado via USE_WS_REDIS_ADAPTER.
+     * 
+     * @returns True if Redis adapter should be used, false otherwise
+     */
+    private shouldUseRedisAdapter(): boolean {
+        return process.env.NODE_ENV === 'production' || 
+            (process.env.USE_WS_REDIS_ADAPTER || 'false').toLowerCase() === 'true';
+    }
+
+    /**
+     * EN -
+     * Creates a retry strategy for Redis connections with exponential backoff.
+     * Implements progressive delay: 50ms, 100ms, 150ms... up to maximum of 2000ms.
+     * 
+     * PT -
+     * Cria uma estratégia de retry para conexões Redis com backoff exponencial.
+     * Implementa delay progressivo: 50ms, 100ms, 150ms... até máximo de 2000ms.
+     * 
+     * @param times - Number of retry attempts made so far
+     * @returns Delay in milliseconds before next retry attempt
+     */
+    private createRedisRetryStrategy(): (times: number) => number {
+        return (times: number): number => {
+            const delay = Math.min(times * 50, 2000);
+            return delay;
+        };
+    }
+
+    /**
+     * EN -
+     * Sanitizes Redis URL by masking password in connection string for logging purposes.
+     * Replaces password portion with asterisks to prevent credential exposure in logs.
+     * 
+     * PT -
+     * Sanitiza URL do Redis mascarando senha na string de conexão para fins de log.
+     * Substitui a porção da senha com asteriscos para prevenir exposição de credenciais nos logs.
+     * 
+     * @param url - Redis connection URL
+     * @returns Sanitized URL with masked password
+     */
+    private sanitizeRedisUrl(url: string): string {
+        return url.replace(/:[^:@]+@/, ':****@');
+    }
+
+    /**
+     * EN -
+     * Initializes Redis adapter for WebSocket server to enable horizontal scaling.
+     * Creates Redis pub/sub clients and configures Socket.IO adapter for multi-instance communication.
+     * Throws error in production if initialization fails, as Redis adapter is required.
+     * 
+     * PT -
+     * Inicializa adaptador Redis para servidor WebSocket para permitir escalonamento horizontal.
+     * Cria clientes Redis pub/sub e configura adaptador Socket.IO para comunicação multi-instância.
+     * Lança erro em produção se inicialização falhar, pois adaptador Redis é obrigatório.
+     * 
+     * @param server - Socket.IO server instance
+     */
+    private initializeRedisAdapter(server: Server): void {
+        try {
+            const url = process.env.REDIS_URL || 'redis://localhost:6379';
+            const sanitizedUrl = this.sanitizeRedisUrl(url);
+            
+            this.logger.websocket(`Initializing Redis adapter for WebSocket: ${sanitizedUrl}`);
+            
+            const pub = new Redis(url, {
+                maxRetriesPerRequest: 3,
+                retryStrategy: this.createRedisRetryStrategy(),
+            });
+            
+            const sub = pub.duplicate();
+            server.adapter(createAdapter(pub as any, sub as any));
+            
+            this.logger.websocket('Redis adapter enabled for WebSocket horizontal scaling');
+        } catch (err: any) {
+            const errorMessage = err?.message || String(err);
+            this.logger.websocket(`Failed to init Redis adapter: ${errorMessage}`);
+            this.logger.error(`Failed to init Redis adapter: ${errorMessage}`);
+            
+            if (process.env.NODE_ENV === 'production') {
+                throw new Error('Redis adapter is required for production WebSocket scaling');
+            }
+        }
+    }
+
+    /**
+     * EN -
+     * Validates that a socket is authenticated by checking for userId in socket data.
+     * Logs warning if socket is not authenticated.
+     * 
+     * PT -
+     * Valida que um socket está autenticado verificando userId nos dados do socket.
+     * Registra aviso se socket não estiver autenticado.
+     * 
+     * @param socket - Socket.IO socket instance
+     * @param socketId - Socket identifier for logging
+     * @returns True if socket is authenticated, false otherwise
+     */
+    private validateSocketAuthentication(socket: any, socketId: string): boolean {
+        const userId = socket.data?.userId;
+        if (!userId) {
+            this.logger.websocket(`Unauthenticated socket: ${socketId}`);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * EN -
+     * Validates delivery payload contains required messageId field.
+     * Logs warning if messageId is missing.
+     * 
+     * PT -
+     * Valida que payload de entrega contém campo messageId obrigatório.
+     * Registra aviso se messageId estiver ausente.
+     * 
+     * @param payload - Delivery payload object
+     * @param userId - User identifier for logging
+     * @returns True if payload is valid, false otherwise
+     */
+    private validateDeliveryPayload(payload: any, userId: string | undefined): boolean {
+        if (!payload?.messageId) {
+            this.logger.websocket(`Invalid delivery payload: missing messageId, user=${userId}`);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * EN -
+     * Handles notification delivery confirmation event from client.
+     * Validates payload and socket authentication, then confirms delivery with delivery confirmation service.
+     * Logs success or failure status of delivery confirmation.
+     * 
+     * PT -
+     * Trata evento de confirmação de entrega de notificação do cliente.
+     * Valida payload e autenticação do socket, então confirma entrega com serviço de confirmação de entrega.
+     * Registra status de sucesso ou falha da confirmação de entrega.
+     * 
+     * @param socket - Socket.IO socket instance
+     * @param payload - Delivery confirmation payload containing messageId
+     */
+    private async handleNotificationDelivered(socket: any, payload: { messageId: string }): Promise<void> {
+        try {
+            const userId = socket.data?.userId;
+            
+            if (!this.validateDeliveryPayload(payload, userId)) {
+                return;
+            }
+            
+            if (!this.validateSocketAuthentication(socket, socket.id)) {
+                this.logger.websocket(`Delivery confirmation from unauthenticated socket: ${socket.id}`);
+                return;
+            }
+            
+            const confirmed = await this.deliveryConfirmation.confirmDelivery(payload.messageId);
+            
+            if (confirmed) {
+                this.logger.websocket(`Delivery confirmed: messageId=${payload.messageId}, user=${userId}`);
+            } else {
+                this.logger.websocket(`Delivery confirmation failed (expired or already confirmed): 
+                messageId=${payload.messageId}, user=${userId}`);
+            }
+        } catch (error: any) {
+            const errorMessage = error?.message || String(error);
+            this.logger.error(`Error processing delivery confirmation: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * EN -
+     * Handles notification delivery failure event from client.
+     * Validates payload and socket authentication, then removes pending delivery from confirmation service.
+     * Logs delivery failure with error details if available.
+     * 
+     * PT -
+     * Trata evento de falha na entrega de notificação do cliente.
+     * Valida payload e autenticação do socket, então remove entrega pendente do serviço de confirmação.
+     * Registra falha na entrega com detalhes do erro se disponível.
+     * 
+     * @param socket - Socket.IO socket instance
+     * @param payload - Delivery failure payload containing messageId and optional error message
+     */
+    private async handleNotificationDeliveryFailed(socket: any, payload: { messageId: string; error?: string }): Promise<void> {
+        try {
+            const userId = socket.data?.userId;
+            
+            if (!this.validateDeliveryPayload(payload, userId)) {
+                return;
+            }
+            
+            if (!this.validateSocketAuthentication(socket, socket.id)) {
+                this.logger.websocket(`Delivery failure from unauthenticated socket: ${socket.id}`);
+                return;
+            }
+            
+            await this.deliveryConfirmation.removePendingDelivery(payload.messageId);
+            
+            const errorMessage = payload.error || 'unknown';
+            this.logger.websocket(`Delivery failed: messageId=${payload.messageId}, user=${userId}, error=${errorMessage}`);
+        } catch (error: any) {
+            const errorMessage = error?.message || String(error);
+            this.logger.error(`Error processing delivery failure: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * EN -
+     * Registers inbound event handlers for socket connections.
+     * Sets up rate-limited event logging and delivery confirmation handlers.
+     * Handles all incoming events with rate limiting and logs event details.
+     * 
+     * PT -
+     * Registra handlers de eventos inbound para conexões de socket.
+     * Configura logging de eventos com limitação de taxa e handlers de confirmação de entrega.
+     * Trata todos os eventos recebidos com limitação de taxa e registra detalhes dos eventos.
+     * 
+     * @param socket - Socket.IO socket instance
+     */
+    private registerInboundEventHandlers(socket: any): void {
+        socket.onAny(async (event: string, ...args: any[]) => {
+            if (!(await this.allowInbound(socket, event))) {
+                const userId = socket.data?.userId;
+                this.logger.websocket(`Rate limit inbound: evento=${event}, usuário=${userId}`);
+                this.logger.websocket(`Rate limit inbound: event=${event}, user=${userId}`);
+                return;
+            }
+            
+            const userId = socket.data?.userId;
+            const argsPreview = JSON.stringify(args).substring(0, 100);
+            this.logger.websocket(`Evento recebido: ${event}, usuário=${userId}, args=${argsPreview}`);
+            this.logger.websocket(`Event received: ${event}, user=${userId}, args=${argsPreview}`);
+        });
+
+        socket.on(RT_EVENT.NOTIFICATION_DELIVERED, async (payload: { messageId: string }) => {
+            await this.handleNotificationDelivered(socket, payload);
+        });
+
+        socket.on(RT_EVENT.NOTIFICATION_DELIVERY_FAILED, async (payload: { messageId: string; error?: string }) => {
+            await this.handleNotificationDeliveryFailed(socket, payload);
+        });
+    }
+
+    /**
+     * EN -
+     * Registers connection event handler for new socket connections.
+     * Sets up inbound event handlers when a new client connects to the WebSocket server.
+     * 
+     * PT -
+     * Registra handler de evento de conexão para novas conexões de socket.
+     * Configura handlers de eventos inbound quando um novo cliente conecta ao servidor WebSocket.
+     * 
+     * @param server - Socket.IO server instance
+     */
+    private registerConnectionHandlers(server: Server): void {
+        server.on('connection', (socket: any) => {
+            this.registerInboundEventHandlers(socket);
+        });
+    }
+
+    /**
+     * EN -
+     * Initialize WebSocket server with Redis adapter for horizontal scaling.
      * 
      * This enables multiple WebSocket server instances to communicate via Redis Pub/Sub,
      * allowing horizontal scaling across multiple nodes.
@@ -173,7 +440,7 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
      * - Configure Redis with appropriate memory and persistence settings
      * - Monitor Redis Pub/Sub performance
      * 
-     * Inicializar servidor WebSocket com adaptador Redis para escalonamento horizontal
+     * Inicializar servidor WebSocket com adaptador Redis para escalonamento horizontal.
      * 
      * Isto permite que múltiplas instâncias de servidor WebSocket se comuniquem via Redis Pub/Sub,
      * permitindo escalonamento horizontal entre múltiplos nós.
@@ -187,97 +454,17 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
      * - Use Redis Cluster para alta disponibilidade
      * - Configure Redis com configurações apropriadas de memória e persistência
      * - Monitore performance do Redis Pub/Sub
+     * 
+     * @param server - Socket.IO server instance
      */
-    afterInit(server: Server) {
-        const shouldUseRedisAdapter = 
-            process.env.NODE_ENV === 'production' || 
-            (process.env.USE_WS_REDIS_ADAPTER || 'false').toLowerCase() === 'true';
-        
-        if (shouldUseRedisAdapter) {
-            try {
-                const url = process.env.REDIS_URL || 'redis://localhost:6379';
-                this.logger.websocket(`Initializing Redis adapter for WebSocket: 
-                ${url.replace(/:[^:@]+@/, ':****@')}`);
-                const pub = new Redis(url, {
-                    maxRetriesPerRequest: 3,
-                    retryStrategy: (times) => {
-                        const delay = Math.min(times * 50, 2000);
-                        return delay;
-                    },
-                });
-                const sub = pub.duplicate();
-                server.adapter(createAdapter(pub as any, sub as any));
-                this.logger.websocket('Redis adapter enabled for WebSocket horizontal scaling');
-            } catch (err: any) {
-                this.logger.websocket(`Failed to init Redis adapter: ${err.message}`);
-                this.logger.error(`Failed to init Redis adapter: ${err.message}`);
-                if (process.env.NODE_ENV === 'production') {
-                    throw new Error('Redis adapter is required for production WebSocket scaling');
-                }
-            }
+    afterInit(server: Server): void {
+        if (this.shouldUseRedisAdapter()) {
+            this.initializeRedisAdapter(server);
         } else {
-            this.logger.websocket('Redis adapter disabled - WebSocket will not scale horizontally.' +
-                ' Set USE_WS_REDIS_ADAPTER=true for production.');
+            this.logger.websocket('Redis adapter disabled - WebSocket will not scale horizontally. Set USE_WS_REDIS_ADAPTER=true for production.');
         }
-        server.on('connection', (socket: any) => {
-            socket.onAny(async (event: string, ...args: any[]) => {
-                if (!(await this.allowInbound(socket, event))) {
-                    this.logger.websocket(`Rate limit inbound: evento=${event}, usuário=${socket.data?.userId}`);
-                    this.logger.websocket(`Rate limit inbound: event=${event}, user=${socket.data?.userId}`);
-                    return;
-                }
-                this.logger.websocket(`Evento recebido: ${event}, usuário=${socket.data?.userId}, 
-                args=${JSON.stringify(args).substring(0, 100)}`);
-                this.logger.websocket(`Event received: ${event}, user=${socket.data?.userId}, 
-                args=${JSON.stringify(args).substring(0, 100)}`);
-            });
-
-            socket.on(RT_EVENT.NOTIFICATION_DELIVERED, async (payload: { messageId: string }) => {
-                try {
-                    if (!payload?.messageId) {
-                        this.logger.websocket(`Invalid delivery confirmation: missing messageId, user=${socket.data?.userId}`);
-                        return;
-                    }
-
-                    const userId = socket.data?.userId;
-                    if (!userId) {
-                        this.logger.websocket(`Delivery confirmation from unauthenticated socket: ${socket.id}`);
-                        return;
-                    }
-
-                    const confirmed = await this.deliveryConfirmation.confirmDelivery(payload.messageId);
-                    if (confirmed) {
-                        this.logger.websocket(`Delivery confirmed: messageId=${payload.messageId}, user=${userId}`);
-                    } else {
-                        this.logger.websocket(`Delivery confirmation failed (expired or already confirmed): 
-                        messageId=${payload.messageId}, user=${userId}`);
-                    }
-                } catch (error: any) {
-                    this.logger.error(`Error processing delivery confirmation: ${error?.message || String(error)}`);
-                }
-            });
-
-            socket.on(RT_EVENT.NOTIFICATION_DELIVERY_FAILED, async (payload: { messageId: string; error?: string }) => {
-                try {
-                    if (!payload?.messageId) {
-                        this.logger.websocket(`Invalid delivery failure: missing messageId, user=${socket.data?.userId}`);
-                        return;
-                    }
-
-                    const userId = socket.data?.userId;
-                    if (!userId) {
-                        this.logger.websocket(`Delivery failure from unauthenticated socket: ${socket.id}`);
-                        return;
-                    }
-
-                    await this.deliveryConfirmation.removePendingDelivery(payload.messageId);
-                    this.logger.websocket(`Delivery failed: messageId=${payload.messageId},
-                     user=${userId}, error=${payload.error || 'unknown'}`);
-                } catch (error: any) {
-                    this.logger.error(`Error processing delivery failure: ${error?.message || String(error)}`);
-                }
-            });
-        });
+        
+        this.registerConnectionHandlers(server);
     }
 
     async handleConnection(socket: any) {

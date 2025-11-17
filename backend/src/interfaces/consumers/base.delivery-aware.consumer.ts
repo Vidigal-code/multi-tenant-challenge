@@ -77,29 +77,33 @@ export abstract class BaseDeliveryAwareConsumer<T = any> extends BaseResilientCo
     }
 
     /**
-     * Process message with delivery confirmation
-     *
-     * EN: Override this method instead of `process()`. This method handles:
-     * 1. Generating message ID
-     * 2. Storing pending delivery in Redis
-     * 3. Emitting WebSocket notification
-     * 4. Waiting for confirmation
+     * EN -
+     * Abstract method that must be implemented by subclasses to process messages with delivery confirmation.
+     * Override this method instead of `process()` to implement delivery-aware message processing.
+     * 
+     * This method handles the complete delivery confirmation flow:
+     * 1. Generating message ID (if not provided)
+     * 2. Storing pending delivery in Redis with TTL
+     * 3. Emitting WebSocket notification to users
+     * 4. Waiting for delivery confirmation from frontend
      * 5. Saving to database if confirmed
-     * 6. Handling timeout/failure
-     *
-     * PT: Sobrescreva este método ao invés de `process()`. Este método trata:
-     * 1. Geração de ID da mensagem
-     * 2. Armazenamento de entrega pendente no Redis
-     * 3. Emissão de notificação WebSocket
-     * 4. Aguardar confirmação
-     * 5. Salvar no banco se confirmado
-     * 6. Tratar timeout/falha
-     *
+     * 6. Handling timeout/failure scenarios
+     * 
+     * PT -
+     * Método abstrato que deve ser implementado pelas subclasses para processar mensagens com confirmação de entrega.
+     * Sobrescreva este método ao invés de `process()` para implementar processamento de mensagens com consciência de entrega.
+     * 
+     * Este método trata o fluxo completo de confirmação de entrega:
+     * 1. Geração de ID da mensagem (se não fornecido)
+     * 2. Armazenamento de entrega pendente no Redis com TTL
+     * 3. Emissão de notificação WebSocket para usuários
+     * 4. Aguardar confirmação de entrega do frontend
+     * 5. Salvar no banco de dados se confirmado
+     * 6. Tratar cenários de timeout/falha
+     * 
      * @param payload - Message payload from RabbitMQ
-     * @param payload - Payload da mensagem do RabbitMQ
-     * @param messageId - Unique message ID (generated if not provided)
-     * @param messageId - ID único da mensagem (gerado se não fornecido)
-     * @returns Promise<void>
+     * @param messageId - Unique message ID for tracking delivery confirmation
+     * @returns Promise with confirmation status, save status, and optional error message
      */
     protected abstract processWithDelivery(
         payload: T,
@@ -107,15 +111,17 @@ export abstract class BaseDeliveryAwareConsumer<T = any> extends BaseResilientCo
     ): Promise<{ confirmed: boolean; saved?: boolean; error?: string }>;
 
     /**
-     * Override base process method to handle delivery confirmation
-     *
-     * EN: This method is called by BaseResilientConsumer. It orchestrates the delivery confirmation flow.
-     *
-     * PT: Este método é chamado por BaseResilientConsumer. Ele orquestra o fluxo de confirmação de entrega.
-     *
+     * EN -
+     * Overrides base process method to handle delivery confirmation flow.
+     * Orchestrates message processing with delivery confirmation: generates message ID, calls processWithDelivery,
+     * handles confirmation results, and manages cleanup of pending deliveries.
+     * 
+     * PT -
+     * Sobrescreve método process base para tratar fluxo de confirmação de entrega.
+     * Orquestra processamento de mensagens com confirmação de entrega: gera ID da mensagem, chama processWithDelivery,
+     * trata resultados de confirmação e gerencia limpeza de entregas pendentes.
+     * 
      * @param payload - Message payload from RabbitMQ
-     * @param payload - Payload da mensagem do RabbitMQ
-     * @returns Promise<void>
      */
     protected async process(payload: T): Promise<void> {
         const messageId = this.generateMessageId(payload);
@@ -142,19 +148,20 @@ export abstract class BaseDeliveryAwareConsumer<T = any> extends BaseResilientCo
     }
 
     /**
-     * Wait for delivery confirmation with timeout
-     *
-     * EN: Polls Redis for delivery confirmation. Returns true if confirmed within timeout, false otherwise.
-     *
-     * PT: Consulta Redis por confirmação de entrega. Retorna true se confirmado dentro do timeout, false caso contrário.
-     *
-     * @param messageId - Unique message ID
-     * @param messageId - ID único da mensagem
-     * @param timeoutMs - Timeout in milliseconds (default: confirmationTimeout)
-     * @param timeoutMs - Timeout em milissegundos (padrão: confirmationTimeout)
-     * @param pollIntervalMs - Polling interval in milliseconds (default: 1000ms = 1 second)
-     * @param pollIntervalMs - Intervalo de polling em milissegundos (padrão: 1000ms = 1 segundo)
-     * @returns Promise<boolean> - True if confirmed, false if timeout
+     * EN -
+     * Waits for delivery confirmation by polling Redis with specified timeout and interval.
+     * Continuously checks if message is no longer pending and confirms delivery.
+     * Returns true if confirmation received within timeout, false if timeout occurs.
+     * 
+     * PT -
+     * Aguarda confirmação de entrega consultando Redis com timeout e intervalo especificados.
+     * Verifica continuamente se mensagem não está mais pendente e confirma entrega.
+     * Retorna true se confirmação recebida dentro do timeout, false se timeout ocorrer.
+     * 
+     * @param messageId - Unique message ID to check confirmation for
+     * @param timeoutMs - Maximum time to wait for confirmation in milliseconds
+     * @param pollIntervalMs - Interval between polling checks in milliseconds
+     * @returns Promise resolving to true if confirmed, false if timeout
      */
     protected async waitForConfirmation(
         messageId: string,
@@ -182,15 +189,18 @@ export abstract class BaseDeliveryAwareConsumer<T = any> extends BaseResilientCo
     }
 
     /**
-     * Generate unique message ID for delivery tracking
-     *
-     * EN: Generates a unique identifier for the message. Can be overridden to use custom ID generation.
-     *
-     * PT: Gera um identificador único para a mensagem. Pode ser sobrescrito para usar geração de ID customizada.
-     *
-     * @param payload - Message payload
-     * @param payload - Payload da mensagem
-     * @returns string - Unique message ID
+     * EN -
+     * Generates a unique message ID for delivery tracking using timestamp and random bytes.
+     * Creates a unique identifier combining current timestamp and random hexadecimal string.
+     * Can be overridden by subclasses to implement custom ID generation strategies.
+     * 
+     * PT -
+     * Gera um ID único de mensagem para rastreamento de entrega usando timestamp e bytes aleatórios.
+     * Cria um identificador único combinando timestamp atual e string hexadecimal aleatória.
+     * Pode ser sobrescrito por subclasses para implementar estratégias de geração de ID customizadas.
+     * 
+     * @param payload - Message payload to generate ID for
+     * @returns Unique message ID string in format: msg_{timestamp}_{randomHex}
      */
     protected generateMessageId(payload: T): string {
         const payloadStr = JSON.stringify(payload);
@@ -200,30 +210,34 @@ export abstract class BaseDeliveryAwareConsumer<T = any> extends BaseResilientCo
     }
 
     /**
-     * Check if message is still pending confirmation
-     *
-     * EN: Checks if a message is still waiting for confirmation.
-     *
-     * PT: Verifica se uma mensagem ainda está aguardando confirmação.
-     *
-     * @param messageId - Unique message ID
-     * @param messageId - ID único da mensagem
-     * @returns Promise<boolean>
+     * EN -
+     * Checks if a message is still pending delivery confirmation in Redis.
+     * Delegates to delivery confirmation service to check pending status.
+     * 
+     * PT -
+     * Verifica se uma mensagem ainda está pendente de confirmação de entrega no Redis.
+     * Delega para serviço de confirmação de entrega para verificar status pendente.
+     * 
+     * @param messageId - Unique message ID to check
+     * @returns Promise resolving to true if pending, false otherwise
      */
     protected async isPending(messageId: string): Promise<boolean> {
         return this.deliveryConfirmation.isPending(messageId);
     }
 
     /**
-     * Get pending delivery data
-     *
-     * EN: Retrieves pending delivery data for inspection.
-     *
-     * PT: Recupera dados de entrega pendente para inspeção.
-     *
-     * @param messageId - Unique message ID
-     * @param messageId - ID único da mensagem
-     * @returns Promise<any | null>
+     * EN -
+     * Retrieves pending delivery data from Redis for inspection and debugging.
+     * Returns payload, metadata, and creation timestamp if delivery is still pending.
+     * Returns null if delivery is not pending or has expired.
+     * 
+     * PT -
+     * Recupera dados de entrega pendente do Redis para inspeção e depuração.
+     * Retorna payload, metadata e timestamp de criação se entrega ainda estiver pendente.
+     * Retorna null se entrega não estiver pendente ou tiver expirado.
+     * 
+     * @param messageId - Unique message ID to retrieve data for
+     * @returns Promise resolving to delivery data object or null if not found
      */
     protected async getPendingDelivery(messageId: string): Promise<{ payload: any; metadata: any; createdAt: number } | null> {
         return this.deliveryConfirmation.getPendingDelivery(messageId);

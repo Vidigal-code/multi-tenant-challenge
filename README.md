@@ -14,6 +14,8 @@
 - ✅ Sair da empresa e exclusão permanente de conta
 - ✅ Sistema de amizades com validação de notificações
 - ✅ Busca de usuários e gerenciamento de amizades
+- ✅ Links diretos para solicitações de amizade nas notificações (`friendshipId` no meta)
+- ✅ Refatorações SOLID aplicadas em todos os consumidores RabbitMQ
 - ✅ Preferências de notificação configuráveis por usuário (Company Invitations, Friend Requests, Company Messages, Membership Changes, Role Changes, Popups em Tempo Real)
 - ✅ Popups de notificações em tempo real (configurável) - aparecem em qualquer rota quando habilitado
 - ✅ Sistema de convites simplificado (apenas Created/Received) - rejeitados ficam ocultos para receptores mas visíveis para remetentes
@@ -507,16 +509,24 @@ Testes cobrem convites, seleção de tenant, invariantes de OWNER e falhas de au
 - Rate limiting distribuído com Redis.
 - JWT leve e cookie SameSite=Lax.
 - Estrutura modular apta a sharding por tenant e múltiplos workers.
-- Consumers resilientes e idempotentes (prefetch, retry, DLQ, deduplicação Redis):
-	- `interfaces/consumers/invites.events.consumer.ts` (INVITE_* → realtime)
-	- `interfaces/consumers/members.events.consumer.ts` (USER_* → realtime)
+- **Consumers resilientes e idempotentes** (prefetch, retry, DLQ, deduplicação Redis) seguindo princípios SOLID:
+	- `BaseResilientConsumer`: Classe base abstrata com retry automático, DLQ, deduplicação Redis e tratamento de erros
+	- `BaseDeliveryAwareConsumer`: Estende `BaseResilientConsumer` com confirmação de entrega via WebSocket
+	- `interfaces/consumers/events/invites.events.consumer.ts` (INVITE_* → realtime)
+	- `interfaces/consumers/events/members.events.consumer.ts` (USER_* → realtime)
+	- `interfaces/consumers/events/generic.events.consumer.ts` (eventos genéricos → realtime)
+	- `interfaces/consumers/events/realtime-notifications.consumer.ts` (processamento com confirmação de entrega)
+	- `interfaces/consumers/invite.consumer.ts` (legacy invite queue)
+- **Refatorações SOLID aplicadas**: Todos os consumidores seguem Single Responsibility Principle com métodos bem documentados em inglês e português
 - Filas:
 	- `events.invites`: INVITE_CREATED / INVITE_ACCEPTED / INVITE_REJECTED
-	- `events.members`: USER_REMOVED / USER_STATUS_UPDATED
-	- `notifications.realtime`: payload bruto entregue ao gateway (SSE/WS)
-	- DLQs: `dlq.events.invites` e `dlq.events.members`
-- Padrão de mensagens: `{ eventId: string, ...meta }` sem texto humano (frontend traduz via `src/lib/error.ts#getEventMessage`).
- - Relação de convite inclui `inviterId` (campo opcional) e relação inversa `User.invitesSent` para auditoria futura e métricas (quem convidou quem).
+	- `events.members`: USER_REMOVED / USER_STATUS_UPDATED / USER_JOINED
+	- `events`: Eventos genéricos (notificações, amizades)
+	- `notifications.realtimes`: Fila unificada para processamento em tempo real
+	- DLQs: `dlq.events.invites`, `dlq.events.members`, `dlq.events`, `dlq.notifications.realtimes`
+- Padrão de mensagens: `{ eventId: string, ...meta }` sem texto humano (frontend traduz via `src/lib/messages.ts`).
+- Relação de convite inclui `inviterId` (campo opcional) e relação inversa `User.invitesSent` para auditoria futura e métricas (quem convidou quem).
+- **Sistema de notificações**: Inclui `friendshipId` no meta das notificações de solicitação de amizade para links diretos
 - Métricas HTTP + sistema (Prometheus) expostas em `/metrics` para scraping (ex.: Prometheus/Grafana).
 - Endpoint `/health` para checagens básicas de disponibilidade.
 

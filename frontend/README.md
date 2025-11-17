@@ -438,6 +438,8 @@ ENV NEXT_PUBLIC_DEFAULT_COMPANY_LOGO=$NEXT_PUBLIC_DEFAULT_COMPANY_LOGO
 - **Respeito às preferências**: popups só aparecem se o tipo de notificação estiver habilitado
 - **Aparecem em qualquer rota** quando habilitados
 - **Redirecionam para /notifications** ao clicar
+- **Links diretos para solicitações de amizade**: Notificações de amizade incluem link clicável que redireciona para `/friends/[friendshipId]`
+- **Fallback inteligente**: Se `friendshipId` não estiver no meta da notificação, busca automaticamente nas solicitações pendentes
 
 ### Tempo Real
 - WebSocket para atualizações em tempo real

@@ -387,82 +387,268 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
     }
 }
 
-async function bootstrap() {
+/**
+ * EN -
+ * Shutdown context interface containing resources that need to be cleaned up during graceful shutdown.
+ * Encapsulates application instance and cleanup functions.
+ * 
+ * PT -
+ * Interface de contexto de shutdown contendo recursos que precisam ser limpos durante o encerramento gracioso.
+ * Encapsula instância da aplicação e funções de limpeza.
+ */
+interface ShutdownContext {
+    app: any | null;
+    stopAutoCleanup: (() => void) | null;
+}
+
+/**
+ * EN -
+ * Performs graceful shutdown of the consumer by stopping auto cleanup and closing the application.
+ * Ensures all resources are properly released before process termination.
+ * 
+ * PT -
+ * Realiza o encerramento gracioso do consumidor parando a limpeza automática e fechando a aplicação.
+ * Garante que todos os recursos sejam liberados adequadamente antes da terminação do processo.
+ * 
+ * @param context - Shutdown context containing app instance and cleanup function
+ * @param logger - Logger service instance for logging shutdown messages
+ */
+async function performGracefulShutdown(context: ShutdownContext, logger: LoggerService): Promise<void> {
+    logger.default('Shutting down realtime notifications consumer...');
+    
+    if (context.stopAutoCleanup) {
+        context.stopAutoCleanup();
+    }
+    
+    if (context.app) {
+        await context.app.close();
+    }
+}
+
+/**
+ * EN -
+ * Handles SIGINT signal (Ctrl+C) by performing graceful shutdown and exiting with success code.
+ * Ensures clean termination when user interrupts the process.
+ * 
+ * PT -
+ * Trata o sinal SIGINT (Ctrl+C) realizando encerramento gracioso e saindo com código de sucesso.
+ * Garante terminação limpa quando o usuário interrompe o processo.
+ * 
+ * @param context - Shutdown context containing app instance and cleanup function
+ * @param logger - Logger service instance for logging shutdown messages
+ */
+async function handleSIGINT(context: ShutdownContext, logger: LoggerService): Promise<void> {
+    await performGracefulShutdown(context, logger);
+    process.exit(0);
+}
+
+/**
+ * EN -
+ * Handles SIGTERM signal (termination request) by performing graceful shutdown and exiting with success code.
+ * Used by process managers (systemd, Docker, Kubernetes) to request graceful shutdown.
+ * 
+ * PT -
+ * Trata o sinal SIGTERM (solicitação de terminação) realizando encerramento gracioso e saindo com código de sucesso.
+ * Usado por gerenciadores de processo (systemd, Docker, Kubernetes) para solicitar encerramento gracioso.
+ * 
+ * @param context - Shutdown context containing app instance and cleanup function
+ * @param logger - Logger service instance for logging shutdown messages
+ */
+async function handleSIGTERM(context: ShutdownContext, logger: LoggerService): Promise<void> {
+    await performGracefulShutdown(context, logger);
+    process.exit(0);
+}
+
+/**
+ * EN -
+ * Registers signal handlers for SIGINT and SIGTERM to enable graceful shutdown.
+ * Sets up process event listeners for clean termination.
+ * 
+ * PT -
+ * Registra handlers de sinais para SIGINT e SIGTERM para permitir encerramento gracioso.
+ * Configura listeners de eventos do processo para terminação limpa.
+ * 
+ * @param context - Shutdown context containing app instance and cleanup function
+ * @param logger - Logger service instance for logging shutdown messages
+ */
+function registerSignalHandlers(context: ShutdownContext, logger: LoggerService): void {
+    process.on('SIGINT', () => handleSIGINT(context, logger));
+    process.on('SIGTERM', () => handleSIGTERM(context, logger));
+}
+
+/**
+ * EN -
+ * Handles bootstrap errors by performing cleanup and exiting with error code.
+ * Ensures resources are released even when initialization fails.
+ * 
+ * PT -
+ * Trata erros de inicialização realizando limpeza e saindo com código de erro.
+ * Garante que recursos sejam liberados mesmo quando a inicialização falha.
+ * 
+ * @param error - Error that occurred during bootstrap
+ * @param context - Shutdown context containing app instance and cleanup function
+ * @param logger - Logger service instance for logging error messages
+ */
+async function handleBootstrapError(error: any, context: ShutdownContext, logger: LoggerService): Promise<void> {
+    const errorMessage = error?.message || String(error);
+    logger.error(`Failed to start realtime notifications consumer: ${errorMessage}`);
+    
+    await performGracefulShutdown(context, logger);
+    process.exit(1);
+}
+
+/**
+ * EN -
+ * Initializes and starts the NestJS application module.
+ * Creates the application instance and starts the HTTP server on the configured worker port.
+ * 
+ * PT -
+ * Inicializa e inicia o módulo da aplicação NestJS.
+ * Cria a instância da aplicação e inicia o servidor HTTP na porta do worker configurada.
+ * 
+ * @param logger - Logger service instance for logging initialization messages
+ * @returns NestJS application instance
+ */
+async function initializeApplication(logger: LoggerService): Promise<any> {
+    const { AppModule } = require('../../../app.module');
+    const { NestFactory } = require('@nestjs/core');
+    
+    const workerPort = parseInt(process.env.WORKER_PORT || '4001', 10);
+    const app = await NestFactory.create(AppModule);
+    await app.listen(workerPort);
+    
+    logger.default(`Worker HTTP server listening on port ${workerPort} (for WebSocket initialization)`);
+    
+    return app;
+}
+
+/**
+ * EN -
+ * Retrieves required services from the NestJS application dependency injection container.
+ * Extracts services needed for the consumer to function properly.
+ * 
+ * PT -
+ * Recupera serviços necessários do container de injeção de dependência da aplicação NestJS.
+ * Extrai serviços necessários para o consumidor funcionar corretamente.
+ * 
+ * @param app - NestJS application instance
+ * @returns Object containing all required services
+ */
+function getRequiredServices(app: any): {
+    notificationCreator: any;
+    gateway: any;
+    userRepo: any;
+    notificationRepo: any;
+    deliveryConfirmation: any;
+    RT_EVENT: any;
+} {
+    const { NotificationCreatorService } = require('@application/services/notification-creator.service');
+    const { EventsGateway, RT_EVENT } = require('../../../realtime/events.gateway');
+    const { USER_REPOSITORY } = require('@domain/repositories/users/user.repository');
+    const { NOTIFICATION_REPOSITORY } = require('@domain/repositories/notifications/notification.repository');
+    const { DeliveryConfirmationService } = require('@infrastructure/messaging/services/delivery-confirmation.service');
+    
+    return {
+        notificationCreator: app.get(NotificationCreatorService),
+        gateway: app.get(EventsGateway),
+        userRepo: app.get(USER_REPOSITORY),
+        notificationRepo: app.get(NOTIFICATION_REPOSITORY),
+        deliveryConfirmation: app.get(DeliveryConfirmationService),
+        RT_EVENT,
+    };
+}
+
+/**
+ * EN -
+ * Initializes RabbitMQ service and establishes connection.
+ * Prepares messaging infrastructure for consumer operations.
+ * 
+ * PT -
+ * Inicializa o serviço RabbitMQ e estabelece conexão.
+ * Prepara infraestrutura de mensageria para operações do consumidor.
+ * 
+ * @param config - Configuration service instance
+ * @returns Initialized RabbitMQ service instance
+ */
+async function initializeRabbitMQ(config: ConfigService): Promise<any> {
+    const rabbit = new (require('@infrastructure/messaging/services/rabbitmq.service').RabbitMQService)(config);
+    await rabbit.onModuleInit();
+    return rabbit;
+}
+
+/**
+ * EN -
+ * Creates and starts the RealtimeNotificationsConsumer instance.
+ * Initializes the consumer with all required dependencies and begins message consumption.
+ * 
+ * PT -
+ * Cria e inicia a instância do RealtimeNotificationsConsumer.
+ * Inicializa o consumidor com todas as dependências necessárias e inicia o consumo de mensagens.
+ * 
+ * @param rabbit - RabbitMQ service instance
+ * @param config - Configuration service instance
+ * @param services - Required services for the consumer
+ * @param logger - Logger service instance for logging consumer status
+ */
+async function startConsumer(
+    rabbit: any,
+    config: ConfigService,
+    services: {
+        notificationCreator: any;
+        gateway: any;
+        userRepo: any;
+        notificationRepo: any;
+        deliveryConfirmation: any;
+        RT_EVENT: any;
+    },
+    logger: LoggerService
+): Promise<void> {
+    const consumer = new RealtimeNotificationsConsumer(rabbit, config, services.deliveryConfirmation, {
+        notificationCreator: services.notificationCreator,
+        gateway: services.gateway,
+        userRepo: services.userRepo,
+        notificationRepo: services.notificationRepo,
+        RT_EVENT: services.RT_EVENT,
+    });
+    
+    await consumer.start();
+    logger.default('Realtime notifications consumer started.');
+}
+
+/**
+ * EN -
+ * Main bootstrap function that orchestrates the entire consumer initialization process.
+ * Handles application setup, service retrieval, consumer startup, and signal handler registration.
+ * Implements error handling and graceful shutdown capabilities.
+ * 
+ * PT -
+ * Função principal de bootstrap que orquestra todo o processo de inicialização do consumidor.
+ * Gerencia configuração da aplicação, recuperação de serviços, inicialização do consumidor e registro de handlers de sinais.
+ * Implementa tratamento de erros e capacidades de encerramento gracioso.
+ */
+async function bootstrap(): Promise<void> {
     const config = new ConfigService();
     const logger = new LoggerService('RealtimeNotificationsConsumer', config);
     logger.default('Starting realtime notifications consumer...');
     
-    let app: any = null;
-    let stopAutoCleanup: (() => void) | null = null;
+    const context: ShutdownContext = {
+        app: null,
+        stopAutoCleanup: null,
+    };
     
     try {
-        const { AppModule } = require('../../../app.module');
-        const { NestFactory } = require('@nestjs/core');
+        context.app = await initializeApplication(logger);
         
-
-        const workerPort = parseInt(process.env.WORKER_PORT || '4001', 10);
-        app = await NestFactory.create(AppModule);
-        await app.listen(workerPort);
-        logger.default(`Worker HTTP server listening on port ${workerPort} (for WebSocket initialization)`);
+        const services = getRequiredServices(context.app);
+        context.stopAutoCleanup = services.deliveryConfirmation.startAutoCleanup(60000);
         
-        const { NotificationCreatorService } = require('@application/services/notification-creator.service');
-        const { EventsGateway, RT_EVENT } = require('../../../realtime/events.gateway');
-        const { USER_REPOSITORY } = require('@domain/repositories/users/user.repository');
-        const { NOTIFICATION_REPOSITORY } = require('@domain/repositories/notifications/notification.repository');
-        const { DeliveryConfirmationService } = require('@infrastructure/messaging/services/delivery-confirmation.service');
+        const rabbit = await initializeRabbitMQ(config);
         
-        const notificationCreator = app.get(NotificationCreatorService);
-        const gateway = app.get(EventsGateway);
-        const userRepo = app.get(USER_REPOSITORY);
-        const notificationRepo = app.get(NOTIFICATION_REPOSITORY);
-        const deliveryConfirmation = app.get(DeliveryConfirmationService);
-
-        stopAutoCleanup = deliveryConfirmation.startAutoCleanup(60000);
-
-        const rabbit = new (require('@infrastructure/messaging/services/rabbitmq.service').RabbitMQService)(config);
-        await rabbit.onModuleInit();
+        await startConsumer(rabbit, config, services, logger);
         
-        const consumer = new RealtimeNotificationsConsumer(rabbit, config, deliveryConfirmation, {
-            notificationCreator,
-            gateway,
-            userRepo,
-            notificationRepo,
-            RT_EVENT,
-        });
-        
-        await consumer.start();
-        logger.default('Realtime notifications consumer started.');
-        
-        process.on('SIGINT', async () => {
-            logger.default('Shutting down realtime notifications consumer...');
-            if (stopAutoCleanup) {
-                stopAutoCleanup();
-            }
-            if (app) {
-                await app.close();
-            }
-            process.exit(0);
-        });
-        
-        process.on('SIGTERM', async () => {
-            logger.default('Shutting down realtime notifications consumer...');
-            if (stopAutoCleanup) {
-                stopAutoCleanup();
-            }
-            if (app) {
-                await app.close();
-            }
-            process.exit(0);
-        });
+        registerSignalHandlers(context, logger);
     } catch (error: any) {
-        logger.error(`Failed to start realtime notifications consumer: ${error?.message || String(error)}`);
-        if (stopAutoCleanup) {
-            stopAutoCleanup();
-        }
-        if (app) {
-            await app.close();
-        }
-        process.exit(1);
+        await handleBootstrapError(error, context, logger);
     }
 }
 

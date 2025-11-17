@@ -391,12 +391,19 @@ function getNotificationContext(notification: Notification): string {
     return 'Esta é uma resposta a uma notificação anterior';
 }
 
-function parseNotificationBody(body: string, title?: string, meta?: Notification['meta']): React.ReactNode {
+function parseNotificationBody(
+    body: string, 
+    title?: string, 
+    meta?: Notification['meta'],
+    resolvedFriendshipId?: string | null
+): React.ReactNode {
     if (!body) return null;
     
     const formattedLines = formatNotificationBody(body, title);
-    const isFriendRequest = meta?.kind === 'friend.request.sent' || title?.toUpperCase().includes('FRIEND_REQUEST_SENT');
-    const friendshipId = meta?.friendshipId;
+    const isFriendRequest = meta?.kind === 'friend.request.sent' || 
+        title?.toUpperCase().includes('FRIEND_REQUEST_SENT') ||
+        meta?.channel === 'friend';
+    const friendshipId = resolvedFriendshipId || meta?.friendshipId;
     
     return (
         <div className="space-y-2">
@@ -450,7 +457,7 @@ function parseNotificationBody(body: string, title?: string, meta?: Notification
                             href={`/friends/${friendshipId}`}
                             className="text-blue-600 dark:text-blue-400 hover:underline break-all font-medium"
                         >
-                            Ver solicitação de amizade
+                            Ver solicitação de amizade ({friendshipId})
                         </Link>
                     </div>
                 </div>
@@ -1130,26 +1137,40 @@ export default function NotificationsPage() {
 
                                     <div className="mb-4">
                                         <div className="text-sm sm:text-base text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-800">
-                                            {expandedNotifications[notification.id] ? (
-                                                parseNotificationBody(notification.body, notification.title, notification.meta)
-                                            ) : (
-                                                <>
-                                                    {parseNotificationBody(truncate(notification.body, 400), notification.title, notification.meta)}
-                                                    {notification.body.length > 400 && (
-                                                        <button
-                                                            className="text-blue-600 dark:text-blue-400 underline ml-2 text-sm"
-                                                            onClick={() =>
-                                                                setExpandedNotifications((prev) => ({
-                                                                    ...prev,
-                                                                    [notification.id]: !prev[notification.id],
-                                                                }))
-                                                            }
-                                                        >
-                                                            Ler mais
-                                                        </button>
-                                                    )}
-                                                </>
-                                            )}
+                                            {(() => {
+                                                const isFriendRequest = notification.meta?.kind === 'friend.request.sent' || 
+                                                    notification.title?.toUpperCase().includes('FRIEND_REQUEST_SENT') ||
+                                                    notification.meta?.channel === 'friend';
+                                                
+                                                let resolvedFriendshipId = notification.meta?.friendshipId;
+                                                
+                                                if (!resolvedFriendshipId && isFriendRequest) {
+                                                    const senderId = notification.meta?.sender?.id;
+                                                    const senderEmail = notification.meta?.sender?.email;
+                                                    resolvedFriendshipId = getFriendshipIdFromRequests(senderId, senderEmail) || undefined;
+                                                }
+                                                
+                                                return expandedNotifications[notification.id] ? (
+                                                    parseNotificationBody(notification.body, notification.title, notification.meta, resolvedFriendshipId)
+                                                ) : (
+                                                    <>
+                                                        {parseNotificationBody(truncate(notification.body, 400), notification.title, notification.meta, resolvedFriendshipId)}
+                                                        {notification.body.length > 400 && (
+                                                            <button
+                                                                className="text-blue-600 dark:text-blue-400 underline ml-2 text-sm"
+                                                                onClick={() =>
+                                                                    setExpandedNotifications((prev) => ({
+                                                                        ...prev,
+                                                                        [notification.id]: !prev[notification.id],
+                                                                    }))
+                                                                }
+                                                            >
+                                                                Ler mais
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                             {notification.body.length > 400 && expandedNotifications[notification.id] && (
                                                 <button
                                                     className="text-blue-600 dark:text-blue-400 underline ml-2 text-sm block mt-2"
@@ -1163,58 +1184,6 @@ export default function NotificationsPage() {
                                                     Mostrar menos
                                                 </button>
                                             )}
-                                            {(() => {
-                                                const isFriendRequest = notification.meta?.kind === 'friend.request.sent' || 
-                                                    notification.title?.toUpperCase().includes('FRIEND_REQUEST_SENT') ||
-                                                    notification.meta?.channel === 'friend';
-                                                
-                                                let friendshipId = notification.meta?.friendshipId;
-                                                
-                                                if (!friendshipId && isFriendRequest) {
-                                                    const senderId = notification.meta?.sender?.id;
-                                                    const senderEmail = notification.meta?.sender?.email;
-                                                    friendshipId = getFriendshipIdFromRequests(senderId, senderEmail) || undefined;
-                                                }
-                                                
-                                                if (isFriendRequest) {
-                                                    if (friendshipId) {
-                                                        return (
-                                                            <div className="text-sm flex items-start gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
-                                                                <span className="text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0">
-                                                                    <MdLink className="inline mr-1" />
-                                                                </span>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <strong className="text-gray-700 dark:text-gray-300">Link da Solicitação: </strong>
-                                                                    <Link
-                                                                        href={`/friends/${friendshipId}`}
-                                                                        className="text-blue-600 dark:text-blue-400 hover:underline break-all font-medium"
-                                                                    >
-                                                                        Ver solicitação de amizade
-                                                                    </Link>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    } else {
-                                                        return (
-                                                            <div className="text-sm flex items-start gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
-                                                                <span className="text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0">
-                                                                    <MdLink className="inline mr-1" />
-                                                                </span>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <strong className="text-gray-700 dark:text-gray-300">Link da Solicitação: </strong>
-                                                                    <Link
-                                                                        href={`/friends`}
-                                                                        className="text-blue-600 dark:text-blue-400 hover:underline break-all font-medium"
-                                                                    >
-                                                                        Ver solicitações de amizade
-                                                                    </Link>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    }
-                                                }
-                                                return null;
-                                            })()}
                                         </div>
                                     </div>
 
