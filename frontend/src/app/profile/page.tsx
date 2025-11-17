@@ -240,10 +240,10 @@ export default function ProfilePage() {
 
                             <div className="mt-4 flex justify-center sm:justify-start">
                                 <button className="w-full px-4 py-3 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700
-                                dark:hover:bg-red-600 transition-colors font-medium" onClick={handleDeleteAccountClick}>
-                                    Excluir permanentemente
-                                </button>
-                            </div>
+                            dark:hover:bg-red-600 transition-colors font-medium" onClick={handleDeleteAccountClick}>
+                                Excluir permanentemente
+                            </button>
+                        </div>
                     </div>
                     <ConfirmModal
                         open={showDeleteModal}

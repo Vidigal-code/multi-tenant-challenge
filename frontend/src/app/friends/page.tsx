@@ -34,11 +34,15 @@ export default function FriendsPage() {
   const [messageTitle, setMessageTitle] = useState('');
   const [messageBody, setMessageBody] = useState('');
   const [removeConfirm, setRemoveConfirm] = useState<string | null>(null);
+  const [selectedFriendsIds, setSelectedFriendsIds] = useState<string[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteIds, setDeleteIds] = useState<string[]>([]);
   const [tabIndex, setTabIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [friendsPage, setFriendsPage] = useState(1);
   const [requestsPage, setRequestsPage] = useState(1);
   const [messagesPage, setMessagesPage] = useState(1);
+  const [searchResultsPage, setSearchResultsPage] = useState(1);
   const itemsPerPage = 3;
   const { show } = useToast();
   const queryClient = useQueryClient();
@@ -144,6 +148,7 @@ export default function FriendsPage() {
               user.email.toLowerCase() !== currentUserEmail,
           );
           setSearchResults(filtered);
+          setSearchResultsPage(1);
           if (filtered.length === 0) {
             show({ message: 'Usuário não encontrado', type: 'error' });
           }
@@ -200,6 +205,7 @@ export default function FriendsPage() {
       removeFriendMutation.mutate(removeConfirm, {
         onSuccess: () => {
           setRemoveConfirm(null);
+          setSelectedFriendsIds(prev => prev.filter(id => id !== removeConfirm));
           show({ message: 'Amigo removido', type: 'success' });
         },
         onError: (error) => {
@@ -208,6 +214,52 @@ export default function FriendsPage() {
       });
     }
   };
+
+  function handleSelectAll(items: Friendship[]) {
+    setSelectedFriendsIds(items.map(i => i.id));
+  }
+
+  async function handleDelete(ids: string[]) {
+    setShowDeleteModal(false);
+    if (ids.length === 1) {
+      removeFriendMutation.mutate(ids[0], {
+        onSuccess: () => {
+          setSelectedFriendsIds(prev => prev.filter(id => id !== ids[0]));
+          setDeleteIds([]);
+          show({ message: 'Amigo removido', type: 'success' });
+        },
+        onError: (err: any) => {
+          const m = getErrorMessage(err, 'Não foi possível remover o amigo');
+          show({ type: 'error', message: m });
+        },
+      });
+    } else {
+      const results = [];
+      for (let i = 0; i < ids.length; i++) {
+        try {
+          await removeFriendMutation.mutateAsync(ids[i]);
+          results.push({ id: ids[i], status: 'success' });
+          if (i < ids.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        } catch (err: any) {
+          results.push({ id: ids[i], status: 'failed', error: getErrorMessage(err) });
+        }
+      }
+      
+      const successCount = results.filter(r => r.status === 'success').length;
+      const failedCount = results.filter(r => r.status === 'failed').length;
+      
+      setSelectedFriendsIds(prev => prev.filter(id => !ids.includes(id)));
+      setDeleteIds([]);
+      
+      if (failedCount === 0) {
+        show({ message: `${successCount} amigo(s) removido(s)`, type: 'success' });
+      } else {
+        show({ message: `${successCount} removido(s), ${failedCount} falhou(ram)`, type: 'warning' });
+      }
+    }
+  }
 
   const handleSendMessage = (friend: User) => {
     setSelectedFriend(friend);
@@ -341,35 +393,65 @@ export default function FriendsPage() {
           </button>
         </div>
 
-        {searchResults.length > 0 && (
-          <div className="mt-4 space-y-3">
-            {searchResults.map((user) => {
-              if (!user || !user.id) {
-                return null;
-              }
-              return (
-                <div key={user.id} className="flex flex-col sm:flex-row
-                 items-start sm:items-center justify-between gap-3 p-4
-                 border border-gray-200 dark:border-gray-800 rounded-lg
-                 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-gray-900 dark:text-white">{user.name || 'Unknown'}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{user.email || ''}</div>
+        {searchResults.length > 0 && (() => {
+          const startIndex = (searchResultsPage - 1) * itemsPerPage;
+          const endIndex = startIndex + itemsPerPage;
+          const paginatedResults = searchResults.slice(startIndex, endIndex);
+          const totalPages = Math.max(1, Math.ceil(searchResults.length / itemsPerPage));
+          
+          return (
+            <>
+              <div className="mt-4 space-y-3">
+                {paginatedResults.map((user) => {
+                  if (!user || !user.id) {
+                    return null;
+                  }
+                  return (
+                    <div key={user.id} className="flex flex-col sm:flex-row
+                     items-start sm:items-center justify-between gap-3 p-4
+                     border border-gray-200 dark:border-gray-800 rounded-lg
+                     bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-gray-900 dark:text-white">{user.name || 'Unknown'}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{user.email || ''}</div>
+                      </div>
+                      <button
+                        onClick={() => handleSendRequest(user.email)}
+                        disabled={sendRequestMutation.isPending}
+                        className="px-4 py-2 bg-gray-900 dark:bg-white
+                        text-white dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800
+                        dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap flex-shrink-0"
+                      >
+                        Enviar solicitação
+                      </button>
+                    </div>
+                  );
+                }).filter(Boolean)}
+              </div>
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800 mt-4">
+                  <div className="flex items-center gap-2 flex-wrap justify-center w-full">
+                    <button
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      onClick={() => setSearchResultsPage(p => Math.max(1, p - 1))}
+                      disabled={searchResultsPage === 1}
+                    >
+                      Avançar
+                    </button>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Página {searchResultsPage} de {totalPages}</span>
+                    <button
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      onClick={() => setSearchResultsPage(p => p + 1)}
+                      disabled={searchResultsPage >= totalPages}
+                    >
+                      Próximo
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleSendRequest(user.email)}
-                    disabled={sendRequestMutation.isPending}
-                    className="px-4 py-2 bg-gray-900 dark:bg-white
-                    text-white dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800
-                    dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap flex-shrink-0"
-                  >
-                    Enviar solicitação
-                  </button>
                 </div>
-              );
-            }).filter(Boolean)}
-          </div>
-        )}
+              )}
+            </>
+          );
+        })()}
       </div>
 
       <div className="mb-6">
@@ -437,6 +519,34 @@ export default function FriendsPage() {
             
             return (
               <>
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-4 justify-center">
+                  <button 
+                    className="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-sm font-medium whitespace-nowrap" 
+                    onClick={() => handleSelectAll(friends)}
+                  >
+                    Selecionar todos
+                  </button>
+                  <button 
+                    className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
+                    disabled={!selectedFriendsIds.length} 
+                    onClick={() => { 
+                      setDeleteIds(selectedFriendsIds); 
+                      setShowDeleteModal(true); 
+                    }}
+                  >
+                    Deletar selecionados
+                  </button>
+                  <button 
+                    className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
+                    disabled={!friends.length} 
+                    onClick={() => { 
+                      setDeleteIds(friends.map(f => f.id)); 
+                      setShowDeleteModal(true); 
+                    }}
+                  >
+                    Limpar todos
+                  </button>
+                </div>
                 {paginatedFriends.map((friendship) => {
               if (!friendship.requester || !friendship.addressee) {
                 return null;
@@ -450,9 +560,19 @@ export default function FriendsPage() {
                  sm:flex-row items-start sm:items-center justify-between
                  gap-3 p-4 sm:p-6 border border-gray-200 dark:border-gray-800
                  rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-gray-900 dark:text-white text-base sm:text-lg mb-1">{friend.name || 'Unknown'}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{friend.email || ''}</div>
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedFriendsIds.includes(friendship.id)} 
+                      onChange={e => {
+                        setSelectedFriendsIds(sel => e.target.checked ? [...sel, friendship.id] : sel.filter(sid => sid !== friendship.id));
+                      }} 
+                      className="mt-1 flex-shrink-0 w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-gray-900 dark:text-white text-base sm:text-lg mb-1">{friend.name || 'Unknown'}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{friend.email || ''}</div>
+                    </div>
                   </div>
                   <div className="flex gap-2 w-full sm:w-auto">
                     <button
@@ -696,6 +816,14 @@ export default function FriendsPage() {
         onCancel={() => setRemoveConfirm(null)}
       >
         Tem certeza que deseja remover este amigo?
+      </ConfirmModal>
+      <ConfirmModal 
+        open={showDeleteModal} 
+        title="Remover amigos?" 
+        onCancel={()=>{setShowDeleteModal(false); setDeleteIds([]);}} 
+        onConfirm={()=>handleDelete(deleteIds)}
+      >
+        Tem certeza que deseja remover {deleteIds.length} amigo(s)? Esta ação não pode ser desfeita.
       </ConfirmModal>
       <Modal open={showMessageModal} title={messageMode === 'global' ? 'Enviar Mensagem Global' : 'Enviar Mensagem Seletiva'} onClose={() => {
         setShowMessageModal(false);

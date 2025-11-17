@@ -220,10 +220,6 @@ function InvitesPageInner() {
         };
     }, [page, pageSize, qc]);
 
-    useEffect(() => {
-        setSelected([]);
-    }, [tab]);
-
     function renderList() {
         let items: any[] = [];
         let isLoading = false;
