@@ -16,7 +16,19 @@ async function bootstrap() {
     true,
   );
 
-  app.use(helmet());
+  const corsSitesEnabledAll = process.env.CORS_SITES_ENABLES_ALL === "true";
+  
+  if (corsSitesEnabledAll) {
+    app.use(
+      helmet({
+        crossOriginResourcePolicy: { policy: "cross-origin" },
+        crossOriginEmbedderPolicy: false,
+      }),
+    );
+  } else {
+    app.use(helmet());
+  }
+  
   app.use(cookieParser());
 
   if (loggingEnabled) {
@@ -30,63 +42,71 @@ async function bootstrap() {
       }),
     );
   }
-  const corsOrigins: string[] = [];
+  
+  if (corsSitesEnabledAll) {
+    app.enableCors({
+      origin: true,
+      credentials: true,
+    });
+  } else {
+    const corsOrigins: string[] = [];
 
-  const frontendBaseUrl = process.env.FRONTEND_BASE_URL;
-  if (frontendBaseUrl) {
-    corsOrigins.push(frontendBaseUrl);
-  }
+    const frontendBaseUrl = process.env.FRONTEND_BASE_URL;
+    if (frontendBaseUrl) {
+      corsOrigins.push(frontendBaseUrl);
+    }
 
-  const wsCorsOrigin = process.env.WS_CORS_ORIGIN;
-  if (wsCorsOrigin) {
-    const wsOrigins = wsCorsOrigin
-      .replace(/^\[|\]$/g, "")
-      .split(",")
-      .map((origin) => origin.trim())
-      .filter((origin) => origin.length > 0)
-      .map((origin) => {
-        if (!origin.startsWith("http://") && !origin.startsWith("https://")) {
-          return `http://${origin}`;
+    const wsCorsOrigin = process.env.WS_CORS_ORIGIN;
+    if (wsCorsOrigin) {
+      const wsOrigins = wsCorsOrigin
+        .replace(/^\[|\]$/g, "")
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0)
+        .map((origin) => {
+          if (!origin.startsWith("http://") && !origin.startsWith("https://")) {
+            return `http://${origin}`;
+          }
+          return origin;
+        });
+
+      wsOrigins.forEach((origin) => {
+        if (origin !== frontendBaseUrl && !corsOrigins.includes(origin)) {
+          corsOrigins.push(origin);
         }
-        return origin;
       });
+    }
 
-    wsOrigins.forEach((origin) => {
-      if (origin !== frontendBaseUrl && !corsOrigins.includes(origin)) {
-        corsOrigins.push(origin);
-      }
+    if (corsOrigins.length === 0) {
+      corsOrigins.push("http://localhost:3000");
+    }
+
+    const corsSitesEnabled = process.env.CORS_SITES_ENABLED;
+    if (corsSitesEnabled) {
+      const sites = corsSitesEnabled
+        .replace(/^\[|\]$/g, "")
+        .split(",")
+        .map((site) => site.trim())
+        .filter((site) => site.length > 0)
+        .map((site) => {
+          if (!site.startsWith("http://") && !site.startsWith("https://")) {
+            return `http://${site}`;
+          }
+          return site;
+        });
+
+      sites.forEach((site) => {
+        if (!corsOrigins.includes(site)) {
+          corsOrigins.push(site);
+        }
+      });
+    }
+
+    app.enableCors({
+      origin: corsOrigins,
+      credentials: true,
     });
   }
-
-  if (corsOrigins.length === 0) {
-    corsOrigins.push("http://localhost:3000");
-  }
-
-  const corsSitesEnabled = process.env.CORS_SITES_ENABLED;
-  if (corsSitesEnabled) {
-    const sites = corsSitesEnabled
-      .replace(/^\[|\]$/g, "")
-      .split(",")
-      .map((site) => site.trim())
-      .filter((site) => site.length > 0)
-      .map((site) => {
-        if (!site.startsWith("http://") && !site.startsWith("https://")) {
-          return `http://${site}`;
-        }
-        return site;
-      });
-
-    sites.forEach((site) => {
-      if (!corsOrigins.includes(site)) {
-        corsOrigins.push(site);
-      }
-    });
-  }
-
-  app.enableCors({
-    origin: corsOrigins,
-    credentials: true,
-  });
   app.use(
     rateLimit({
       windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 60000),

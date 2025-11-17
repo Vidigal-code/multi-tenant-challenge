@@ -72,7 +72,12 @@ export const RT_EVENT = {
  * - Monitore contagens de conexões WebSocket e taxas de mensagens
  * - Ajuste limites de taxa baseado na carga da aplicação
  */
-function parseWsCorsOrigins(): string[] | "*" {
+function parseWsCorsOrigins(): string[] | "*" | true {
+  const wsCorsOriginAll = process.env.WS_CORS_ORIGIN_ALL === "true";
+  if (wsCorsOriginAll) {
+    return true;
+  }
+
   const wsCorsOrigin = process.env.WS_CORS_ORIGIN;
   if (!wsCorsOrigin) {
     return "*";
