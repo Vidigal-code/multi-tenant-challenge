@@ -51,7 +51,7 @@ describe('InviteForm', () => {
     render(<InviteForm companyId="c1" onInvited={mockOnInvited} />);
 
     const emailInput = screen.getByPlaceholderText('Email ou ID do usuário');
-    const submitButton = screen.getByRole('button', { name: /invite|convidar/i });
+    const submitButton = screen.getByRole('button', { name: 'Enviar Convite' });
 
     fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
     fireEvent.click(submitButton);

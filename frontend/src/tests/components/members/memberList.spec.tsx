@@ -16,6 +16,7 @@ describe('MemberList', () => {
 
   it('renders rows', () => {
     render(<MemberList members={[{ id: '1', userId: 'u1', role: 'OWNER' }]} {...baseProps} />);
-    expect(screen.getByText('PROPRIETÁRIO')).toBeInTheDocument();
+    // Component renders "PROPRIETÁRIO" in both mobile and desktop views, so we check for at least one
+    expect(screen.getAllByText('PROPRIETÁRIO').length).toBeGreaterThan(0);
   });
 });
