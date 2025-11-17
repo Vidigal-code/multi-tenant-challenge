@@ -5,7 +5,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: multitenant
-    ports: ["5432:5432"]
+    ports:
+      - "0.0.0.0:5432:5432"  # Acessível de outros PCs na rede
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -13,10 +14,15 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - multitenant-network
 
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    ports:
+      - "0.0.0.0:6379:6379"  # Acessível de outros PCs na rede
+    networks:
+      - multitenant-network
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -24,13 +30,26 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "0.0.0.0:5672:5672"   # AMQP - Acessível de outros PCs na rede
+      - "0.0.0.0:15672:15672"  # Management UI - Acessível de outros PCs na rede
+    networks:
+      - multitenant-network
 
   api:
     build: ./backend
-    env_file: ./backend/.env
-    ports: ["4000:4000"]
+    env_file: 
+      - ./backend/.env.example-docker  # Usa .env.example-docker como base
+      - ./backend/.env                  # Sobrescreve com .env se existir
+    ports:
+      - "0.0.0.0:4000:4000"  # Acessível de outros PCs na rede
+    environment:
+      # Sobrescreve URLs para usar nomes dos serviços Docker
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      # Permite acesso de outros PCs na rede
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3000}
+      - WS_CORS_ORIGIN=${WS_CORS_ORIGIN:-http://localhost:3000}
     depends_on:
       db:
         condition: service_healthy
@@ -42,10 +61,18 @@ services:
       - ./backend:/app
       - /app/node_modules
     command: sh -c "if [ -d prisma/migrations ] && [ \"$(ls -A prisma/migrations 2>/dev/null)\" ]; then npx prisma migrate deploy; else npx prisma migrate dev --name init; fi; npx prisma generate; npm run dev"
+    networks:
+      - multitenant-network
 
   worker-invites:
     build: ./backend
-    env_file: ./backend/.env
+    env_file: 
+      - ./backend/.env.example-docker
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -53,10 +80,18 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    networks:
+      - multitenant-network
 
   worker-members:
     build: ./backend
-    env_file: ./backend/.env
+    env_file: 
+      - ./backend/.env.example-docker
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -64,17 +99,28 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    networks:
+      - multitenant-network
 
   web:
     build:
       context: ./frontend
       args:
         NEXT_PUBLIC_DEFAULT_COMPANY_LOGO: ${NEXT_PUBLIC_DEFAULT_COMPANY_LOGO:-https://example.com/default-companys.png}
-    env_file: ./frontend/.env
-    ports: ["3000:3000"]
+    env_file: 
+      - ./frontend/.env.example  # Usa .env.example como base se existir
+      - ./frontend/.env           # Sobrescreve com .env se existir
+    ports:
+      - "0.0.0.0:3000:3000"  # Acessível de outros PCs na rede
+    environment:
+      # Configura API URL para usar nome do serviço Docker
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-http://localhost:4000}
     depends_on:
       - api
     command: sh -c "npm run start"
+    networks:
+      - multitenant-network
 
   api-test:
     image: node:20-alpine
@@ -94,3 +140,7 @@ services:
 
 volumes:
   db_data:
+
+networks:
+  multitenant-network:
+    driver: bridge

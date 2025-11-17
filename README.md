@@ -434,9 +434,22 @@ Executar periodicamente `npm audit` e avaliar correções antes de aplicar `--fo
 ## Como Rodar (Windows PowerShell)
 
 ```powershell
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+# Copiar arquivo de exemplo para .env (se não existir)
+if (-not (Test-Path backend/.env)) {
+    Copy-Item backend/.env.example-docker backend/.env
+    Write-Host "Arquivo backend/.env criado a partir de .env.example-docker"
+}
+
+if (-not (Test-Path frontend/.env)) {
+    if (Test-Path frontend/.env.example) {
+        Copy-Item frontend/.env.example frontend/.env
+        Write-Host "Arquivo frontend/.env criado a partir de .env.example"
+    }
+}
+
+# Subir todos os serviços
 docker compose up -d --build
+
 # Apply Prisma schema, generate client, then seed
 # If this is the first run (no tables yet), run dev with a name; otherwise, deploy existing migrations
 docker compose exec api npx prisma migrate deploy
@@ -444,10 +457,21 @@ docker compose exec api npx prisma generate
 docker compose exec api npm run seed
 ```
 
-Nota docker-compose (serviço web): o Dockerfile já define `CMD ["npm","run","start"]`. A linha `command: sh -c "npm run start"` é opcional; pode ser removida para usar a configuração padrão do container. Garanta que `frontend/.env` está configurado (por exemplo, `NEXT_PUBLIC_API_URL=http://api:4000` dentro da rede Docker) para evitar chamadas a `localhost` entre contêineres.
+**Configuração para acesso de outros PCs na rede:**
 
-- API: `http://localhost:4000` (Swagger em `/doc`).
-- Frontend: `http://localhost:3000`.
+O `docker-compose.yml` está configurado para permitir acesso de outros PCs na mesma rede:
+- Todas as portas estão bindadas em `0.0.0.0` (não apenas `localhost`)
+- Uma rede Docker `multitenant-network` conecta todos os serviços
+- Para acessar de outro PC, use o IP da máquina host:
+  - API: `http://<IP-DO-HOST>:4000` (Swagger em `/doc`)
+  - Frontend: `http://<IP-DO-HOST>:3000`
+  - RabbitMQ Management: `http://<IP-DO-HOST>:15672` (guest/guest)
+
+**Nota docker-compose (serviço web):** o Dockerfile já define `CMD ["npm","run","start"]`. A linha `command: sh -c "npm run start"` é opcional; pode ser removida para usar a configuração padrão do container. Garanta que `frontend/.env` está configurado (por exemplo, `NEXT_PUBLIC_API_URL=http://<IP-DO-HOST>:4000` para acesso externo ou `http://api:4000` dentro da rede Docker) para evitar chamadas a `localhost` entre contêineres.
+
+- API: `http://localhost:4000` (Swagger em `/doc`) - Acessível de outros PCs via `<IP-DO-HOST>:4000`
+- Frontend: `http://localhost:3000` - Acessível de outros PCs via `<IP-DO-HOST>:3000`
+- RabbitMQ Management: `http://localhost:15672` - Acessível de outros PCs via `<IP-DO-HOST>:15672`
 
 As migrações Prisma são aplicadas automaticamente no boot da API (`migrate deploy` com fallback `migrate dev --name init`). O seed é idempotente.
 
@@ -470,7 +494,7 @@ As migrações Prisma são aplicadas automaticamente no boot da API (`migrate de
 |------|-----------|---------|
 | PORT | Porta HTTP | 4000 |
 | NODE_ENV | Ambiente | development |
-| DATABASE_URL | PostgreSQL | postgresql://postgres:postgres@db:5432/multitenant?schema=public |
+| DATABASE_URL | PostgreSQL | postgresql://postgres:postgres@db:5432/multitenant?schema=public (Docker) ou postgresql://postgres:postgres@localhost:5432/multitenant?schema=public (local) |
 | JWT_SECRET | Segredo JWT | supersecretjwt |
 | JWT_EXPIRES_IN | Expiração | 7d |
 | COOKIE_NAME | Cookie de sessão | mt_session |
@@ -481,11 +505,11 @@ As migrações Prisma são aplicadas automaticamente no boot da API (`migrate de
 | BCRYPT_COST | Custo bcrypt | 10 |
 | REDIS_URL | Redis | redis://redis:6379 |
 | RABBITMQ_URL | RabbitMQ | amqp://guest:guest@rabbitmq:5672 |
-| FRONTEND_BASE_URL | Base para geração de links | http://localhost:3000 |
+| FRONTEND_BASE_URL | Base para geração de links | http://localhost:3000 (local) ou http://<IP-DO-HOST>:3000 (rede) |
 | RABBITMQ_PREFETCH | Prefetch de consumidores | 50 |
 | RABBITMQ_RETRY_MAX | Tentativas de retry | 5 |
 | WS_NAMESPACE | Namespace WebSocket | /rt |
-| WS_CORS_ORIGIN | Origem permitida CORS WS | http://localhost:3000 |
+| WS_CORS_ORIGIN | Origem permitida CORS WS | http://localhost:3000 (local) ou http://<IP-DO-HOST>:3000 (rede) |
 | USE_WS_REDIS_ADAPTER | Habilita adapter Redis | false |
 | WS_RATE_LIMIT_WINDOW_MS | Janela fixa rate limit WS | 1000 |
 | WS_RATE_LIMIT_MAX | Máx emits por janela (por chave) | 50 |
