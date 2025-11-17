@@ -72,10 +72,31 @@ export const RT_EVENT = {
  * - Monitore contagens de conexões WebSocket e taxas de mensagens
  * - Ajuste limites de taxa baseado na carga da aplicação
  */
+function parseWsCorsOrigins(): string[] | "*" {
+  const wsCorsOrigin = process.env.WS_CORS_ORIGIN;
+  if (!wsCorsOrigin) {
+    return "*";
+  }
+
+  const origins = wsCorsOrigin
+    .replace(/^\[|\]$/g, "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0)
+    .map((origin) => {
+      if (!origin.startsWith("http://") && !origin.startsWith("https://")) {
+        return `http://${origin}`;
+      }
+      return origin;
+    });
+
+  return origins.length > 0 ? origins : "*";
+}
+
 @Injectable()
 @WebSocketGateway({
   cors: {
-    origin: process.env.WS_CORS_ORIGIN?.split(",") || "*",
+    origin: parseWsCorsOrigins(),
     credentials: true,
   },
   namespace: process.env.WS_NAMESPACE || "/rt",
