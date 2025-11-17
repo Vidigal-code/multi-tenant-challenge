@@ -223,47 +223,70 @@ export default function CompanyPage() {
 
         return (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <img
-                        src={logoError || !company.logoUrl ? defaultLogo : company.logoUrl}
-                        alt="Logo da empresa"
-                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg flex-shrink-0"
-                        onError={() => setLogoError(true)}
-                    />
-                    <div className="min-w-0 flex-1">
-                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">{company.name}</h1>
-                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">ID: {company.id}</p>
+                <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 p-6 sm:p-8 shadow-sm">
+                    <div className="flex flex-col items-center gap-6 text-center justify-center">
+                        <img
+                            src={logoError || !company.logoUrl ? defaultLogo : company.logoUrl}
+                            alt="Logo da empresa"
+                            className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg flex-shrink-0 border border-gray-200 dark:border-gray-800"
+                            onError={() => setLogoError(true)}
+                        />
+                        <div className="min-w-0 w-full">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 break-words">{company.name}</h1>
+                            {company.description && (
+                                <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-2 mb-4">
+                                    <p className="break-words">{company.description}</p>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="w-full border-t border-gray-200 dark:border-gray-800 pt-6 space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm sm:text-base">
+                                <div className="text-left sm:text-center">
+                                    <div className="font-semibold text-gray-900 dark:text-white mb-1">ID da Empresa</div>
+                                    <div className="text-gray-600 dark:text-gray-400 break-all font-mono text-xs sm:text-sm">{company.id}</div>
+                                </div>
+                                {company.createdAt && (
+                                    <div className="text-left sm:text-center">
+                                        <div className="font-semibold text-gray-900 dark:text-white mb-1">Data de Criação</div>
+                                        <div className="text-gray-600 dark:text-gray-400">{formatDate(company.createdAt)}</div>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {primaryOwnerQuery.data && (
+                                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-800">
+                                    <div className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2">
+                                        <FiStar className="text-yellow-500" />
+                                        <span>Proprietário Principal</span>
+                                    </div>
+                                    <div className="text-gray-700 dark:text-gray-300 space-y-1">
+                                        {primaryOwnerQuery.data.primaryOwnerName && primaryOwnerQuery.data.primaryOwnerName !== 'N/A' && (
+                                            <div className="font-medium">{primaryOwnerQuery.data.primaryOwnerName}</div>
+                                        )}
+                                        {primaryOwnerQuery.data.primaryOwnerEmail && primaryOwnerQuery.data.primaryOwnerEmail !== 'N/A' && (
+                                            <div className="text-sm break-all">{primaryOwnerQuery.data.primaryOwnerEmail}</div>
+                                        )}
+                                        {(!primaryOwnerQuery.data.primaryOwnerName || primaryOwnerQuery.data.primaryOwnerName === 'N/A') && 
+                                         (!primaryOwnerQuery.data.primaryOwnerEmail || primaryOwnerQuery.data.primaryOwnerEmail === 'N/A') && (
+                                            <div className="text-sm text-gray-500 dark:text-gray-400">Não disponível</div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="w-full pt-4">
+                            <button
+                                onClick={() => setShowRequestToJoinModal(true)}
+                                className="w-full sm:w-auto px-6 py-3 bg-gray-900 dark:bg-white text-white
+                                dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base"
+                            >
+                                Pedir para participar
+                            </button>
+                        </div>
                     </div>
                 </div>
-                {company.description && (
-                    <div className="mb-4">
-                        <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300">{company.description}</p>
-                    </div>
-                )}
-                {company && company.is_public && !isMember && (
-                    <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 space-y-2">
-                        {primaryOwnerQuery.data && (
-                            <>
-                                <p><strong className="text-gray-900 dark:text-white">Proprietário Principal:</strong> {
-                                    primaryOwnerQuery.data.primaryOwnerName && primaryOwnerQuery.data.primaryOwnerName !== 'N/A'
-                                        ? `${primaryOwnerQuery.data.primaryOwnerName}${primaryOwnerQuery.data.primaryOwnerEmail && primaryOwnerQuery.data.primaryOwnerEmail !== 'N/A' ?
-                                            ` (${primaryOwnerQuery.data.primaryOwnerEmail})` : ''}`
-                                        : 'Não disponível'
-                                }</p>
-                            </>
-                        )}
-                        {company.createdAt && (
-                            <p><strong className="text-gray-900 dark:text-white">Data de Criação:</strong> {formatDate(company.createdAt)}</p>
-                        )}
-                    </div>
-                )}
-                <button
-                    onClick={() => setShowRequestToJoinModal(true)}
-                    className="px-6 py-3 bg-gray-900 dark:bg-white text-white
-                    dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base"
-                >
-                    Pedir para participar
-                </button>
                 <Modal
                     open={showRequestToJoinModal}
                     title="Pedir para Participar"

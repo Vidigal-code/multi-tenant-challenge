@@ -15,7 +15,8 @@ export function NotificationIconBadge({ enabled }: NotificationIconBadgeProps) {
     const [isOpen, setIsOpen] = useState(false);
     const queryClient = useQueryClient();
     
-    const { data: notifications = [] } = useNotifications();
+    const { data: notificationsData } = useNotifications(1, 100);
+    const notifications = notificationsData?.items ?? [];
     const unreadCount = notifications.filter(n => !n.read).length;
 
     useEffect(() => {
