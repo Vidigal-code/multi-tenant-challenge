@@ -1,6 +1,15 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { InviteForm } from '../../../components/invites/InviteForm';
 
+jest.mock('../../../lib/http', () => ({
+  http: {
+    get: jest.fn(),
+    post: jest.fn().mockResolvedValue({
+      data: { inviteUrl: 'http://example.com/invite/token123', token: 'token123' },
+    }),
+  },
+}));
+
 /**
  * EN -
  * Unit tests for InviteForm component following TDD principles.
