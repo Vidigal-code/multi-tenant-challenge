@@ -38,8 +38,7 @@ services:
   api:
     build: ./backend
     env_file: 
-      - ./backend/.env.example-docker  # Usa .env.example-docker como base
-      - ./backend/.env                  # Sobrescreve com .env se existir
+      - ./backend/.env  # Use backend/.env.example-docker como base e copie para backend/.env
     ports:
       - "0.0.0.0:4000:4000"  # Acessível de outros PCs na rede
     environment:
@@ -67,7 +66,6 @@ services:
   worker-invites:
     build: ./backend
     env_file: 
-      - ./backend/.env.example-docker
       - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -86,7 +84,6 @@ services:
   worker-members:
     build: ./backend
     env_file: 
-      - ./backend/.env.example-docker
       - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -105,7 +102,6 @@ services:
   worker-generic:
     build: ./backend
     env_file: 
-      - ./backend/.env.example-docker
       - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -124,7 +120,6 @@ services:
   worker-realtime:
     build: ./backend
     env_file: 
-      - ./backend/.env.example-docker
       - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -146,8 +141,7 @@ services:
       args:
         NEXT_PUBLIC_DEFAULT_COMPANY_LOGO: ${NEXT_PUBLIC_DEFAULT_COMPANY_LOGO:-https://example.com/default-companys.png}
     env_file: 
-      - ./frontend/.env.example  # Usa .env.example como base se existir
-      - ./frontend/.env           # Sobrescreve com .env se existir
+      - ./frontend/.env  # Use frontend/.env.example como base e copie para frontend/.env
     ports:
       - "0.0.0.0:3000:3000"  # Acessível de outros PCs na rede
     environment:
@@ -180,7 +174,6 @@ services:
   prisma-migrate:
     build: ./backend
     env_file: 
-      - ./backend/.env.example-docker
       - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -198,7 +191,6 @@ services:
   prisma-reset:
     build: ./backend
     env_file: 
-      - ./backend/.env.example-docker
       - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -216,7 +208,6 @@ services:
   prisma-generate:
     build: ./backend
     env_file: 
-      - ./backend/.env.example-docker
       - ./backend/.env
     command: sh -c "npm run prisma:generate"
     volumes:
@@ -229,7 +220,6 @@ services:
   seed:
     build: ./backend
     env_file: 
-      - ./backend/.env.example-docker
       - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -264,7 +254,7 @@ services:
     # Uso: docker compose exec redis redis-cli FLUSHDB
     # Ou para limpar apenas chaves evt:* e msg:*: docker compose exec redis redis-cli --scan --pattern "evt:*" | xargs docker compose exec redis redis-cli DEL
     image: redis:7-alpine
-    command: redis-cli -h redis --scan --pattern "evt:*" | xargs -I {} redis-cli -h redis DEL {} || redis-cli -h redis FLUSHDB
+    command: ["sh", "-c", "redis-cli -h redis --scan --pattern 'evt:*' | xargs -I {} redis-cli -h redis DEL {} || redis-cli -h redis FLUSHDB"]
     depends_on:
       redis:
         condition: service_started

@@ -516,8 +516,13 @@ docker build -t frontend:latest .
 ### Executar
 
 ```bash
-docker run -p 3000:3000 --env-file .env.local frontend:latest
+# Certifique-se de ter copiado frontend/.env.example para frontend/.env
+docker run -p 3000:3000 --env-file .env frontend:latest
 ```
+
+**Nota sobre arquivos .env:**
+- O `docker-compose.yml` usa apenas `frontend/.env` (não o arquivo de exemplo)
+- Copie `frontend/.env.example` para `frontend/.env` antes de executar
 
 ### Variáveis de Ambiente no Docker
 

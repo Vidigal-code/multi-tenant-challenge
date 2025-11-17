@@ -275,7 +275,29 @@ Os use cases estão organizados por domínio em `src/application/use-cases/`:
 
 ### Variáveis de Ambiente
 
-Crie um arquivo `.env` na raiz do backend:
+**Arquivos de Configuração de Ambiente:**
+
+O backend possui dois arquivos de exemplo para diferentes cenários:
+
+1. **`backend/.env.example-docker`** (71 linhas) - Para uso com Docker Compose
+   - URLs configuradas para serviços Docker (db, redis, rabbitmq)
+   - Use este arquivo quando executar via `docker compose`
+
+2. **`backend/.env-local.example`** (79 linhas) - Para desenvolvimento local (sem Docker)
+   - URLs configuradas para localhost
+   - Use este arquivo quando executar localmente sem Docker
+
+**Importante:** O `docker-compose.yml` usa apenas `backend/.env`. Copie o arquivo de exemplo apropriado:
+
+```powershell
+# Para Docker Compose
+Copy-Item backend/.env.example-docker backend/.env
+
+# Para desenvolvimento local
+Copy-Item backend/.env-local.example backend/.env
+```
+
+Crie um arquivo `.env` na raiz do backend (copiando do exemplo apropriado):
 
 ```env
 # Database
@@ -506,8 +528,14 @@ docker build -t backend:latest .
 ### Executar
 
 ```bash
+# Certifique-se de ter copiado backend/.env.example-docker para backend/.env
 docker run -p 4000:4000 --env-file .env backend:latest
 ```
+
+**Nota sobre arquivos .env:**
+- O `docker-compose.yml` usa apenas `backend/.env` (não os arquivos de exemplo)
+- Para Docker Compose: copie `backend/.env.example-docker` para `backend/.env`
+- Para desenvolvimento local: copie `backend/.env-local.example` para `backend/.env`
 
 ## 🔌 API Endpoints
 

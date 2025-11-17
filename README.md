@@ -434,10 +434,22 @@ Executar periodicamente `npm audit` e avaliar correções antes de aplicar `--fo
 ## Como Rodar (Windows PowerShell)
 
 ```powershell
+# IMPORTANTE: Configurar arquivos .env antes de iniciar
+# Backend possui dois arquivos de exemplo:
+#   - backend/.env.example-docker (71 linhas) - Para uso com Docker Compose
+#   - backend/.env-local.example (79 linhas) - Para uso local (sem Docker)
+# Frontend possui:
+#   - frontend/.env.example - Arquivo de exemplo
+
 # Copiar arquivo de exemplo para .env (se não existir)
 if (-not (Test-Path backend/.env)) {
-    Copy-Item backend/.env.example-docker backend/.env
-    Write-Host "Arquivo backend/.env criado a partir de .env.example-docker"
+    if (Test-Path backend/.env.example-docker) {
+        Copy-Item backend/.env.example-docker backend/.env
+        Write-Host "Arquivo backend/.env criado a partir de .env.example-docker (Docker)"
+    } elseif (Test-Path backend/.env-local.example) {
+        Copy-Item backend/.env-local.example backend/.env
+        Write-Host "Arquivo backend/.env criado a partir de .env-local.example (Local)"
+    }
 }
 
 if (-not (Test-Path frontend/.env)) {
@@ -467,6 +479,18 @@ O `docker-compose.yml` está configurado para permitir acesso de outros PCs na m
   - Frontend: `http://<IP-DO-HOST>:3000`
   - RabbitMQ Management: `http://<IP-DO-HOST>:15672` (guest/guest)
 
+**Configuração de Variáveis de Ambiente:**
+
+O `docker-compose.yml` usa apenas `backend/.env` e `frontend/.env`. Antes de iniciar, copie os arquivos de exemplo:
+
+- **Backend**: 
+  - `backend/.env.example-docker` (71 linhas) - Use este para Docker Compose
+  - `backend/.env-local.example` (79 linhas) - Use este para desenvolvimento local sem Docker
+  - Copie o apropriado para `backend/.env`
+
+- **Frontend**: 
+  - `frontend/.env.example` - Copie para `frontend/.env`
+
 **Nota docker-compose (serviço web):** o Dockerfile já define `CMD ["npm","run","start"]`. A linha `command: sh -c "npm run start"` é opcional; pode ser removida para usar a configuração padrão do container. Garanta que `frontend/.env` está configurado (por exemplo, `NEXT_PUBLIC_API_URL=http://<IP-DO-HOST>:4000` para acesso externo ou `http://api:4000` dentro da rede Docker) para evitar chamadas a `localhost` entre contêineres.
 
 - API: `http://localhost:4000` (Swagger em `/doc`) - Acessível de outros PCs via `<IP-DO-HOST>:4000`
@@ -487,6 +511,17 @@ As migrações Prisma são aplicadas automaticamente no boot da API (`migrate de
 8. Remover membro (não OWNER único) e checar `activeCompanyId` limpo.
 
 ## Variáveis de Ambiente
+
+**Arquivos de Exemplo:**
+
+- **Backend**: 
+  - `backend/.env.example-docker` (71 linhas) - Para Docker Compose (URLs: db, redis, rabbitmq)
+  - `backend/.env-local.example` (79 linhas) - Para desenvolvimento local (URLs: localhost)
+  - O `docker-compose.yml` usa apenas `backend/.env` - copie o arquivo apropriado
+
+- **Frontend**: 
+  - `frontend/.env.example` - Arquivo de exemplo
+  - O `docker-compose.yml` usa apenas `frontend/.env` - copie do exemplo
 
 ### Backend
 
@@ -1005,7 +1040,7 @@ NEXT_PUBLIC_DEFAULT_COMPANY_LOGO=/logo-fallback.png
 ```
 
 **Para Docker:**
-A variável `NEXT_PUBLIC_DEFAULT_COMPANY_LOGO` precisa ser passada como build arg durante a construção da imagem. O `docker-compose.yml` já está configurado para ler do arquivo `.env` do frontend ou usar um valor padrão. Para personalizar, você pode:
+A variável `NEXT_PUBLIC_DEFAULT_COMPANY_LOGO` precisa ser passada como build arg durante a construção da imagem. O `docker-compose.yml` já está configurado para ler do arquivo `frontend/.env` (copie de `frontend/.env.example`) ou usar um valor padrão. Para personalizar, você pode:
 
 1. Definir a variável no arquivo `frontend/.env` (recomendado)
 2. Ou definir como variável de ambiente do sistema antes de executar `docker-compose build`
