@@ -40,7 +40,11 @@ API REST desenvolvida com NestJS seguindo arquitetura hexagonal (DDD) e princíp
 - **Prometheus** (prom-client) - Métricas
 
 ### Documentação
-- **Swagger** - Documentação da API
+- **Swagger (OpenAPI v1.5)** - Documentação completa da API acessível em `/doc`
+  - Todos os endpoints documentados com exemplos
+  - Autenticação cookie-based documentada
+  - Catálogo completo de eventos WebSocket
+  - Error codes e success codes documentados
 
 ## 🏗 Arquitetura
 

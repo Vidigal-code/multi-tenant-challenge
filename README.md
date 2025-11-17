@@ -96,7 +96,7 @@ Exposição de métricas de processo e HTTP em `/metrics` para observabilidade (
 
 | Serviço | Porta(s) | Função |
 |---------|----------|--------|
-| `api` | 4000 | NestJS + Prisma + Swagger (v1.4) + JWT (migrações automáticas no startup) |
+| `api` | 4000 | NestJS + Prisma + Swagger (v1.5) + JWT (migrações automáticas no startup) |
 | `worker-invites` | — | Consumer RabbitMQ resiliente (events.invites → notifications.realtime) |
 | `worker-members` | — | Consumer RabbitMQ resiliente (events.members → notifications.realtime) |
 | `web` | 3000 | Next.js App Router (SSR/CSR) |
@@ -803,17 +803,48 @@ curl -X PATCH http://localhost:4000/company/COMPANY_ID/members/USER_ID/role \
 
 **Status**: Todos os 27 testes passando (100% verde)
 
-## Swagger 
+## Swagger (OpenAPI)
 
-Documentação atualizada acessível em `/doc` incluindo:
-- Endpoint PATCH /company/{id}/members/{userId}/role
-- Schemas de eventos (descrição em texto) USER_REMOVED / USER_STATUS_UPDATED
-- Respostas 403/404 padronizadas com campos `{ statusCode, code, message, timestamp, path }`
-- **ErrorCode e SuccessCode**: Documentação reflete uso de enums centralizados
-- **Friendships**: Endpoints de busca, solicitação, aceitação e remoção de amizades
-- **Notificações**: Endpoints de leitura e resposta a notificações
-- **Realtime**: Catálogo completo de eventos WebSocket incluindo eventos de amizades
-- Todas as descrições e exemplos em inglês (100% English Swagger)
+Documentação completa da API acessível em `http://localhost:4000/doc` (Swagger UI).
+
+### Cobertura da Documentação
+
+**Módulos Documentados**:
+- ✅ **Auth** - Signup, login, profile management, account deletion
+- ✅ **Companies** - CRUD completo, seleção de empresa ativa, informações públicas
+- ✅ **Memberships** - Listagem, remoção, alteração de papel, transferência de propriedade
+- ✅ **Invites** - Criação, listagem (criados/recebidos), aceitação, rejeição
+- ✅ **Friendships** - Busca de usuários, solicitações, aceitação, rejeição, remoção
+- ✅ **Notifications** - Envio, listagem, leitura, resposta, exclusão
+- ✅ **Users** - Busca de usuários, exclusão de conta
+- ✅ **Realtime** - Catálogo de eventos WebSocket e handshake
+
+### Recursos da Documentação
+
+- **Autenticação**: Cookie-based JWT (`mt_session`) documentado
+- **Error Responses**: Todos os erros 4xx/5xx documentados com formato padronizado `{ statusCode, code, message, timestamp, path }`
+- **Success Codes**: Respostas de sucesso incluem campo `code` do enum SuccessCode
+- **WebSocket Events**: Catálogo completo de eventos disponíveis no namespace `/rt`
+- **Exemplos**: Todos os endpoints incluem exemplos de request/response
+- **Schemas**: DTOs documentados com validações e tipos
+- **Versionamento**: API versão 1.5
+
+### Estrutura
+
+A documentação está organizada por tags (módulos):
+- `auth` - Autenticação e gerenciamento de conta
+- `company` - Gerenciamento de empresas
+- `membership` - Gerenciamento de membros e papéis
+- `invite` / `invites` - Sistema de convites
+- `friendships` - Sistema de amizades
+- `notifications` - Sistema de notificações
+- `users` - Busca e gerenciamento de usuários
+- `realtimes` - WebSocket e eventos em tempo real
+- `workers` - Status de workers (interno)
+
+### Idioma
+
+Todas as descrições, exemplos e documentação estão em **inglês** (100% English Swagger) para padronização internacional.
 
 
 ## Checklist do Desafio
