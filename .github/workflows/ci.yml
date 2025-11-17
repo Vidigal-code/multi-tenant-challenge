@@ -57,13 +57,15 @@ jobs:
             pnpm install --frozen-lockfile || {
               echo "pnpm falhou, tentando npm..."
               if [ -f package-lock.json ]; then
-                npm ci
+                # Tenta npm ci, se falhar usa npm install (lockfile pode estar desatualizado)
+                npm ci || npm install
               else
                 npm install
               fi
             }
           elif [ -f package-lock.json ]; then
-            npm ci
+            # Tenta npm ci, se falhar usa npm install (lockfile pode estar desatualizado)
+            npm ci || npm install
           else
             npm install
           fi
@@ -120,13 +122,15 @@ jobs:
             pnpm install --frozen-lockfile || {
               echo "pnpm falhou, tentando npm..."
               if [ -f package-lock.json ]; then
-                npm ci
+                # Tenta npm ci, se falhar usa npm install (lockfile pode estar desatualizado)
+                npm ci || npm install
               else
                 npm install
               fi
             }
           elif [ -f package-lock.json ]; then
-            npm ci
+            # Tenta npm ci, se falhar usa npm install (lockfile pode estar desatualizado)
+            npm ci || npm install
           else
             npm install
           fi
