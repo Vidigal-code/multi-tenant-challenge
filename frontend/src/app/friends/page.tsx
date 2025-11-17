@@ -9,6 +9,7 @@ import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { Modal } from '../../components/modals/Modal';
 import { subscribe, whenReady, RT_EVENTS } from '../../lib/realtime';
 import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { useParams } from 'next/navigation';
 import {
     useFriendships,
     useFriendRequests,
@@ -23,10 +24,12 @@ import {
 import { useProfile } from '../../services/api/auth.api';
 
 export default function FriendsPage() {
+    const params = useParams();
+    const requestId = params?.id as string | undefined;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
-  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'messages'>('friends');
+  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'messages'>(requestId ? 'requests' : 'friends');
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<User | null>(null);
   const [selectedFriends, setSelectedFriends] = useState<User[]>([]);
@@ -59,11 +62,24 @@ export default function FriendsPage() {
     return req.addressee.id === currentUserId;
   });
 
+  const filteredRequests = useMemo(() => {
+    if (requestId) {
+      return requests.filter(req => req.id === requestId);
+    }
+    return requests;
+  }, [requests, requestId]);
+
   const allTabs = useMemo(() => [
     { id: 'friends', label: `Amigos (${friends.length})` },
-    { id: 'requests', label: `Solicitações Pendentes (${requests.length})` },
+    { id: 'requests', label: `Solicitações Pendentes (${requestId ? filteredRequests.length : requests.length})` },
     { id: 'messages', label: 'Enviar Mensagem' },
-  ], [friends.length, requests.length]);
+  ], [friends.length, requests.length, filteredRequests.length, requestId]);
+
+  useEffect(() => {
+    if (requestId) {
+      setActiveTab('requests');
+    }
+  }, [requestId]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -75,10 +91,6 @@ export default function FriendsPage() {
   }, []);
 
   const maxVisibleTabs = useMemo(() => isMobile ? 1 : 3, [isMobile]);
-
-  const activeIndex = useMemo(() => {
-    return allTabs.findIndex(tab => tab.id === activeTab);
-  }, [allTabs, activeTab]);
 
   useEffect(() => {
     const currentActiveIndex = allTabs.findIndex(tab => tab.id === activeTab);
@@ -432,7 +444,9 @@ export default function FriendsPage() {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800 mt-4">
                   <div className="flex items-center gap-2 flex-wrap justify-center w-full">
                     <button
-                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                      text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed
+                      transition-colors text-sm font-medium"
                       onClick={() => setSearchResultsPage(p => Math.max(1, p - 1))}
                       disabled={searchResultsPage === 1}
                     >
@@ -440,7 +454,9 @@ export default function FriendsPage() {
                     </button>
                     <span className="text-sm text-gray-600 dark:text-gray-400">Página {searchResultsPage} de {totalPages}</span>
                     <button
-                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                      text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50
+                      disabled:cursor-not-allowed transition-colors text-sm font-medium"
                       onClick={() => setSearchResultsPage(p => p + 1)}
                       disabled={searchResultsPage >= totalPages}
                     >
@@ -521,13 +537,16 @@ export default function FriendsPage() {
               <>
                 <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-4 justify-center">
                   <button 
-                    className="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-sm font-medium whitespace-nowrap" 
+                    className="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                    text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-sm font-medium whitespace-nowrap"
                     onClick={() => handleSelectAll(friends)}
                   >
                     Selecionar todos
                   </button>
                   <button 
-                    className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
+                    className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600
+                     dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors
+                      text-sm font-medium whitespace-nowrap"
                     disabled={!selectedFriendsIds.length} 
                     onClick={() => { 
                       setDeleteIds(selectedFriendsIds); 
@@ -537,7 +556,9 @@ export default function FriendsPage() {
                     Deletar selecionados
                   </button>
                   <button 
-                    className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
+                    className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white
+                    dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50
+                     disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
                     disabled={!friends.length} 
                     onClick={() => { 
                       setDeleteIds(friends.map(f => f.id)); 
@@ -567,7 +588,8 @@ export default function FriendsPage() {
                       onChange={e => {
                         setSelectedFriendsIds(sel => e.target.checked ? [...sel, friendship.id] : sel.filter(sid => sid !== friendship.id));
                       }} 
-                      className="mt-1 flex-shrink-0 w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
+                      className="mt-1 flex-shrink-0 w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900
+                      dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-gray-900 dark:text-white text-base sm:text-lg mb-1">{friend.name || 'Unknown'}</div>
@@ -598,7 +620,9 @@ export default function FriendsPage() {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                   <div className="flex items-center gap-2 flex-wrap justify-center w-full">
                     <button
-                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                      text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50
+                      disabled:cursor-not-allowed transition-colors text-sm font-medium"
                       onClick={() => setFriendsPage(p => Math.max(1, p - 1))}
                       disabled={friendsPage === 1}
                     >
@@ -606,7 +630,9 @@ export default function FriendsPage() {
                     </button>
                     <span className="text-sm text-gray-600 dark:text-gray-400">Página {friendsPage} de {totalPages}</span>
                     <button
-                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                      text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900
+                      disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                       onClick={() => setFriendsPage(p => p + 1)}
                       disabled={friendsPage >= totalPages}
                     >
@@ -691,7 +717,9 @@ export default function FriendsPage() {
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                     <div className="flex items-center gap-2 flex-wrap justify-center w-full">
                       <button
-                        className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                        text-gray-900 dark:text-white hover:bg-gray-50
+                        dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                         onClick={() => setMessagesPage(p => Math.max(1, p - 1))}
                         disabled={messagesPage === 1}
                       >
@@ -699,7 +727,9 @@ export default function FriendsPage() {
                       </button>
                       <span className="text-sm text-gray-600 dark:text-gray-400">Página {messagesPage} de {totalPages}</span>
                       <button
-                        className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                        text-gray-900 dark:text-white hover:bg-gray-50
+                        dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                         onClick={() => setMessagesPage(p => p + 1)}
                         disabled={messagesPage >= totalPages}
                       >
@@ -740,20 +770,18 @@ export default function FriendsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {requests.length === 0 ? (
+          {filteredRequests.length === 0 ? (
             <div className="text-center text-gray-600 dark:text-gray-400 py-12 sm:py-16
              border border-gray-200 dark:border-gray-800 rounded-lg bg-gray-50 dark:bg-gray-900">
-              <p className="text-sm sm:text-base">Nenhuma solicitação pendente</p>
+              <p className="text-sm sm:text-base">{requestId ? 'Solicitação não encontrada' : 'Nenhuma solicitação pendente'}</p>
             </div>
           ) : (() => {
-            const startIndex = (requestsPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const paginatedRequests = requests.slice(startIndex, endIndex);
-            const totalPages = Math.max(1, Math.ceil(requests.length / itemsPerPage));
+            const displayRequests = requestId ? filteredRequests : filteredRequests.slice((requestsPage - 1) * itemsPerPage, requestsPage * itemsPerPage);
+            const totalPages = requestId ? 1 : Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage));
             
             return (
               <>
-                {paginatedRequests.map((request) => {
+                {displayRequests.map((request) => {
               if (!request.requester || !request.requester.name) {
                 return null;
               }
@@ -761,23 +789,30 @@ export default function FriendsPage() {
                 return null;
               }
               return (
-                <div key={request.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 sm:p-6 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-gray-900 dark:text-white text-base sm:text-lg mb-1">{request.requester.name || 'Unknown'}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{request.requester.email || ''}</div>
+                <div key={request.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 sm:p-6 border
+                border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                  <div className="min-w-0 flex-1 w-full sm:w-auto">
+                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono text-center sm:text-left">id:{request.id}</div>
+                    <div className="font-medium text-gray-900 dark:text-white text-base sm:text-lg mb-1 text-center sm:text-left">
+                        {request.requester.name || 'Unknown'}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 truncate text-center sm:text-left">{request.requester.email || ''}</div>
                   </div>
                   <div className="flex gap-2 w-full sm:w-auto">
                     <button
                       onClick={() => handleAcceptRequest(request.id)}
                       disabled={acceptRequestMutation.isPending}
-                      className="flex-1 sm:flex-initial px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap"
+                      className="flex-1 sm:flex-initial px-4 py-2 bg-gray-900 dark:bg-white text-white
+                      dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50
+                       disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap"
                     >
                       Aceitar
                     </button>
                     <button
                       onClick={() => handleRejectRequest(request.id)}
                       disabled={removeFriendMutation.isPending}
-                      className="flex-1 sm:flex-initial px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors font-medium whitespace-nowrap"
+                      className="flex-1 sm:flex-initial px-4 py-2 border border-gray-200 dark:border-gray-800
+                      rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50
+                      dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors font-medium whitespace-nowrap"
                     >
                       Rejeitar
                     </button>
@@ -785,25 +820,31 @@ export default function FriendsPage() {
                 </div>
               );
             }).filter(Boolean)}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                  <div className="flex items-center gap-2 flex-wrap justify-center w-full">
-                    <button
-                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-                      onClick={() => setRequestsPage(p => Math.max(1, p - 1))}
-                      disabled={requestsPage === 1}
-                    >
-                      Avançar
-                    </button>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Página {requestsPage} de {totalPages}</span>
-                    <button
-                      className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-                      onClick={() => setRequestsPage(p => p + 1)}
-                      disabled={requestsPage >= totalPages}
-                    >
-                      Próximo
-                    </button>
+                {!requestId && filteredRequests.length > itemsPerPage && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center gap-2 flex-wrap justify-center w-full">
+                      <button
+                        className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                        text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50
+                        disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        onClick={() => setRequestsPage(p => Math.max(1, p - 1))}
+                        disabled={requestsPage === 1}
+                      >
+                        Avançar
+                      </button>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Página {requestsPage} de {totalPages}</span>
+                      <button
+                        className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                        text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed
+                        transition-colors text-sm font-medium"
+                        onClick={() => setRequestsPage(p => p + 1)}
+                        disabled={requestsPage >= totalPages}
+                      >
+                        Próximo
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </>
             );
           })()}
@@ -855,7 +896,9 @@ export default function FriendsPage() {
               value={messageTitle}
               onChange={e => setMessageTitle(e.target.value)}
               placeholder="Assunto"
-              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"
+              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+              dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400
+              focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"
               required
             />
           </div>
@@ -864,7 +907,9 @@ export default function FriendsPage() {
               value={messageBody}
               onChange={e => setMessageBody(e.target.value)}
               placeholder="Mensagem"
-              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent resize-none transition-colors"
+              className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+              dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400
+               focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent resize-none transition-colors"
               rows={5}
               required
             />
@@ -879,14 +924,16 @@ export default function FriendsPage() {
                 setMessageTitle('');
                 setMessageBody('');
               }}
-              className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm"
+              className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+              dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={sendMessageMutation.isPending || (messageMode === 'selective' && selectedFriends.length === 0 && !selectedFriend)}
-              className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+              className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg
+               hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
             >
               {sendMessageMutation.isPending ? 'Enviando...' : 'Enviar'}
             </button>
