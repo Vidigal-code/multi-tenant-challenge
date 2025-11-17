@@ -792,22 +792,35 @@ export default function CompanyPage() {
                             required
                         >
                             <option value="">Selecione um membro...</option>
-                            {(membersQuery.data?.members || [])
-                                .filter((m: Member) => m.userId !== profileQuery.data?.id && m.role !== 'OWNER')
-                                .map((m: Member) => {
-                                    const roleTranslations: Record<string, string> = {
-                                        'OWNER': 'PROPRIETÁRIO',
-                                        'ADMIN': 'ADMINISTRADOR',
-                                        'MEMBER': 'MEMBRO'
-                                    };
-                                    return (
-                                        <option key={m.userId} value={m.userId}>
-                                            {m.name || 'Desconhecido'} ({m.email || m.userId}) - {roleTranslations[m.role] || m.role}
-                                        </option>
-                                    );
-                                })}
+                            {(() => {
+                                const isPrimaryOwner = primaryOwnerQuery.data?.primaryOwnerUserId === profileQuery.data?.id;
+                                const members = (membersQuery.data?.members || [])
+                                    .filter((m: Member) => {
+                                        if (m.userId === profileQuery.data?.id) return false;
+                                        if (isPrimaryOwner) {
+                                            return m.role === 'OWNER' || m.role === 'ADMIN';
+                                        }
+                                        return m.role !== 'OWNER';
+                                    });
+                                
+                                const roleTranslations: Record<string, string> = {
+                                    'OWNER': 'PROPRIETÁRIO',
+                                    'ADMIN': 'ADMINISTRADOR',
+                                    'MEMBER': 'MEMBRO'
+                                };
+                                
+                                return members.map((m: Member) => (
+                                    <option key={m.userId} value={m.userId}>
+                                        {m.name || 'Desconhecido'} ({m.email || m.userId}) - {roleTranslations[m.role] || m.role}
+                                    </option>
+                                ));
+                            })()}
                         </select>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Você se tornará um ADMINISTRADOR após transferir a propriedade.</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            {primaryOwnerQuery.data?.primaryOwnerUserId === profileQuery.data?.id
+                                ? 'Você pode transferir a propriedade para outros PROPRIETÁRIOS ou ADMINISTRADORES. Você se tornará um ADMINISTRADOR após transferir a propriedade.'
+                                : 'Você se tornará um ADMINISTRADOR após transferir a propriedade.'}
+                        </p>
                     </div>
                     <div className="flex justify-end gap-3">
                         <button
