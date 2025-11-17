@@ -140,12 +140,26 @@ describe("Notification Flow Integration", () => {
         const ownerInRepo = await userRepo.findById(owner.id);
         expect(ownerInRepo).toBeDefined();
 
+        const eventBuilder = {
+            async build(input: any): Promise<any> {
+                return {
+                    eventId: input.eventId,
+                    timestamp: new Date().toISOString(),
+                    sender: null,
+                    receiver: null,
+                    companyId: input.companyId || input.additionalData?.companyId,
+                    ...input.additionalData,
+                };
+            },
+        } as any;
+
         const sendNotification = new SendNotificationUseCase(
             membershipRepo as any,
             notificationRepo as any,
             userRepo as any,
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder,
         );
 
         const result = await sendNotification.execute({
@@ -260,12 +274,26 @@ describe("Notification Flow Integration", () => {
         const ownerInRepo = await userRepo.findById(owner.id);
         expect(ownerInRepo).toBeDefined();
 
+        const eventBuilder = {
+            async build(input: any): Promise<any> {
+                return {
+                    eventId: input.eventId,
+                    timestamp: new Date().toISOString(),
+                    sender: null,
+                    receiver: null,
+                    companyId: input.companyId || input.additionalData?.companyId,
+                    ...input.additionalData,
+                };
+            },
+        } as any;
+
         const sendNotification = new SendNotificationUseCase(
             membershipRepo as any,
             notificationRepo as any,
             userRepo as any,
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder,
         );
 
         const result = await sendNotification.execute({

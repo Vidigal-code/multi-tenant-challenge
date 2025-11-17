@@ -85,6 +85,6 @@ describe('InvitesPage', () => {
         await waitFor(() => expect(http.get).toHaveBeenCalledWith('/invites', {params: {page: 1, pageSize: 10}}));
         
         fireEvent.click(await screen.findByRole('button', {name: /Aceitar/i}));
-        await waitFor(() => expect(http.post).toHaveBeenCalledWith('/invites/accept-invites', {token: 'tok1'}));
+        await waitFor(() => expect(http.post).toHaveBeenCalledWith('/auth/accept-invites', {token: 'tok1'}));
     });
 });

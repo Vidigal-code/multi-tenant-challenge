@@ -40,9 +40,14 @@ describe('EventsGateway Rate Limiting', () => {
     beforeEach(() => {
         process.env.WS_RATE_LIMIT_WINDOW_MS = '1000';
         process.env.WS_RATE_LIMIT_MAX = '3';
-        process.env.WS_RATE_LIMIT_MAX_NOTIFICATION_CREATED = '5';
+        process.env.WS_RATE_LIMIT_MAX_NOTIFICATIONS_CREATED = '5';
         delete (process.env as any).REDIS_URL;
-        gateway = new EventsGateway(new JwtService({}), new ConfigService(), {listByUser: async () => []} as any);
+        gateway = new EventsGateway(
+            new JwtService({}),
+            new ConfigService(),
+            {listByUser: async () => []} as any,
+            {confirmDelivery: jest.fn()} as any,
+        );
         (gateway as any).redisClient = new RedisMock('redis://mock');
     });
 

@@ -8,10 +8,12 @@ import {
 } from "@domain/repositories/companys/company.repository";
 import {CreateMembershipInput, MembershipRepository,} from "@domain/repositories/memberships/membership.repository";
 import {CreateInviteInput, InviteRepository,} from "@domain/repositories/invites/invite.repository";
+import {FriendshipRepository, CreateFriendshipInput, FriendshipFilters, FriendshipListResult} from "@domain/repositories/friendships/friendship.repository";
 import {User} from "@domain/entities/users/user.entity";
 import {Company} from "@domain/entities/companys/company.entity";
 import {Membership} from "@domain/entities/memberships/membership.entity";
 import {Invite} from "@domain/entities/invites/invite.entity";
+import {Friendship, FriendshipStatus} from "@domain/entities/friendships/friendship.entity";
 import {Role} from "@domain/enums/role.enum";
 import {InviteStatus} from "@domain/enums/invite-status.enum";
 import {Email} from "@domain/value-objects/email.vo";
@@ -334,5 +336,71 @@ export class AlwaysTrueEmailValidationService
     implements EmailValidationService {
     async exists(_email: string): Promise<boolean> {
         return true;
+    }
+}
+
+export class InMemoryFriendshipRepository implements FriendshipRepository {
+    items: Friendship[] = [];
+
+    async create(input: CreateFriendshipInput): Promise<Friendship> {
+        const friendship = Friendship.create({
+            id: randomId(),
+            requesterId: input.requesterId,
+            addresseeId: input.addresseeId,
+            status: FriendshipStatus.PENDING,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
+        this.items.push(friendship);
+        return friendship;
+    }
+
+    async findById(id: string): Promise<Friendship | null> {
+        return this.items.find((f) => f.id === id) || null;
+    }
+
+    async findByUsers(requesterId: string, addresseeId: string): Promise<Friendship | null> {
+        return this.items.find(
+            (f) =>
+                (f.requesterId === requesterId && f.addresseeId === addresseeId) ||
+                (f.requesterId === addresseeId && f.addresseeId === requesterId)
+        ) || null;
+    }
+
+    async listByUser(filters: FriendshipFilters): Promise<FriendshipListResult> {
+        let filtered = this.items.filter(
+            (f) => f.requesterId === filters.userId || f.addresseeId === filters.userId
+        );
+
+        if (filters.status) {
+            filtered = filtered.filter((f) => f.status === filters.status);
+        }
+
+        const total = filtered.length;
+        const start = (filters.page - 1) * filters.pageSize;
+        const data = filtered.slice(start, start + filters.pageSize);
+
+        return {
+            data,
+            total,
+            page: filters.page,
+            pageSize: filters.pageSize,
+        };
+    }
+
+    async updateStatus(id: string, status: FriendshipStatus): Promise<Friendship> {
+        const friendship = await this.findById(id);
+        if (!friendship) throw new Error("NOT_FOUND");
+        (friendship as any).props.status = status;
+        return friendship;
+    }
+
+    async delete(id: string): Promise<void> {
+        this.items = this.items.filter((f) => f.id !== id);
+    }
+
+    async areFriends(userId1: string, userId2: string): Promise<boolean> {
+        const friendship = await this.findByUsers(userId1, userId2);
+        return friendship?.status === FriendshipStatus.ACCEPTED || false;
     }
 }

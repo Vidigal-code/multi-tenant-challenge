@@ -1,6 +1,10 @@
 import { getRealtimeSocket, whenReady, subscribe } from '../../lib/realtime';
 
-jest.mock('axios', () => ({ get: jest.fn(() => Promise.resolve({ data: { userRoom: 'users:u1', companyRooms: [], events: {}, namespace: '/rt' } })) }));
+jest.mock('../../api/apiClient', () => ({
+    api: {
+        get: jest.fn(() => Promise.resolve({ data: { userRoom: 'users:u1', companyRooms: [], events: {}, namespace: '/rt' } })),
+    },
+}));
 jest.mock('socket.io-client', () => ({
   io: jest.fn(() => {
     const handlers: Record<string, Function[]> = {};

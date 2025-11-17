@@ -84,7 +84,8 @@ export const MemberList = React.memo(function MemberList({
                             type="button"
                             onClick={() => canClickMember && !isLoading && onMemberClick(m)}
                             disabled={isLoading}
-                            className={`w-full text-left border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 p-3 shadow-sm transition-colors ${
+                            className={`w-full text-left border border-gray-200 dark:border-gray-800 rounded-lg bg-white 
+                            dark:bg-gray-950 p-3 shadow-sm transition-colors ${
                                 canClickMember && !isLoading
                                     ? 'hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer hover:border-gray-300 dark:hover:border-gray-700'
                                     : 'cursor-default'
@@ -104,7 +105,8 @@ export const MemberList = React.memo(function MemberList({
                                         {m.name || 'Desconhecido'}
                                     </span>
                                 </div>
-                                <span className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+                                <span className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px]
+                                font-semibold bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
                                     {translateRole(m.role)}
                                 </span>
                             </div>
@@ -138,7 +140,9 @@ export const MemberList = React.memo(function MemberList({
                         <button
                             onClick={handlePreviousPage}
                             disabled={safePage === 1}
-                            className="p-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                            text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50
+                            disabled:cursor-not-allowed transition-colors"
                             type="button"
                         >
                             <MdChevronLeft className="w-4 h-4" />
@@ -149,7 +153,9 @@ export const MemberList = React.memo(function MemberList({
                         <button
                             onClick={handleNextPage}
                             disabled={safePage === totalPages}
-                            className="p-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                            text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50
+                            disabled:cursor-not-allowed transition-colors"
                             type="button"
                         >
                             <MdChevronRight className="w-4 h-4" />
@@ -187,7 +193,8 @@ export const MemberList = React.memo(function MemberList({
                             key={m.id}
                             onClick={() => canClickMember && onMemberClick(m)}
                             className={`border-t border-gray-200 dark:border-gray-800 transition-colors ${
-                                canClickMember ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-950 hover:border-gray-300 dark:hover:border-gray-700' : ''
+                                canClickMember ? 'cursor-pointer hover:bg-gray-50 ' +
+                                    'dark:hover:bg-gray-950 hover:border-gray-300 dark:hover:border-gray-700' : ''
                             }`}
                             title={canClickMember ? 'Clique para ver informações do membro' : undefined}
                         >
@@ -230,7 +237,8 @@ export const MemberList = React.memo(function MemberList({
             </div>
 
             {totalPages > 1 && (
-                <div className="hidden md:flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+                <div className="hidden md:flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-200
+                dark:border-gray-800">
                     <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                         Membros {startIndex + 1}–{Math.min(endIndex, totalMembers)} de {totalMembers}
                     </div>
@@ -238,7 +246,9 @@ export const MemberList = React.memo(function MemberList({
                         <button
                             onClick={handlePreviousPage}
                             disabled={safePage === 1}
-                            className="p-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                            text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50
+                             disabled:cursor-not-allowed transition-colors"
                             type="button"
                         >
                             <MdChevronLeft className="w-4 h-4" />
@@ -249,7 +259,9 @@ export const MemberList = React.memo(function MemberList({
                         <button
                             onClick={handleNextPage}
                             disabled={safePage === totalPages}
-                            className="p-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                             text-gray-900 dark:text-white hover:bg-gray-50
+                             dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             type="button"
                         >
                             <MdChevronRight className="w-4 h-4" />

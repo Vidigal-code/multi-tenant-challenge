@@ -8,12 +8,27 @@ import {Role} from "@domain/enums/role.enum";
 import {DomainEvent, DomainEventsService} from "@domain/services/domain-events.service";
 import {ApplicationError} from "@application/errors/application-error";
 import {ErrorCode} from "@application/errors/error-code";
+import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
 
 class RecordingDomainEventsService implements DomainEventsService {
     events: DomainEvent<any>[] = [];
 
     async publish<T>(event: DomainEvent<T>): Promise<void> {
         this.events.push(event);
+    }
+}
+
+class MockEventPayloadBuilderService {
+    async build(input: any): Promise<any> {
+        const companyId = input.companyId || input.additionalData?.companyId;
+        return {
+            eventId: input.eventId,
+            timestamp: new Date().toISOString(),
+            sender: null,
+            receiver: null,
+            ...input.additionalData,
+            companyId: companyId, // Ensure companyId is not overwritten by additionalData
+        };
     }
 }
 
@@ -57,10 +72,14 @@ describe("RemoveMemberUseCase", () => {
             companyId: company.id,
             role: Role.ADMIN,
         });
+        const events = new RecordingDomainEventsService();
+        const eventBuilder = new MockEventPayloadBuilderService() as any;
         const usecase = new RemoveMemberUseCase(
             memberships as any,
             companies as any,
             users as any,
+            events,
+            eventBuilder,
         );
         const error = await usecase.execute({
             requesterId: admin.id,
@@ -90,10 +109,14 @@ describe("RemoveMemberUseCase", () => {
             companyId: company.id,
             role: Role.OWNER,
         });
+        const events = new RecordingDomainEventsService();
+        const eventBuilder = new MockEventPayloadBuilderService() as any;
         const usecase = new RemoveMemberUseCase(
             memberships as any,
             companies as any,
             users as any,
+            events,
+            eventBuilder,
         );
         const error = await usecase.execute({
             requesterId: owner.id,
@@ -136,11 +159,14 @@ describe("RemoveMemberUseCase", () => {
         await memberships.create({userId: admin.id, companyId: company.id, role: Role.ADMIN});
         await memberships.create({userId: member.id, companyId: company.id, role: Role.MEMBER});
 
+        const eventBuilder = new MockEventPayloadBuilderService() as any;
+
         const usecase = new RemoveMemberUseCase(
             memberships as any,
             companies as any,
             users as any,
             events,
+            eventBuilder,
         );
 
         await usecase.execute({
@@ -158,6 +184,8 @@ describe("RemoveMemberUseCase", () => {
             initiatorId: owner.id,
             role: Role.MEMBER,
         });
-        expect(payload.notifiedUserIds.sort()).toEqual([admin.id, owner.id]);
+        // The owner (requester) should be notified along with admin
+        // Both are OWNER/ADMIN and not the target
+        expect(payload.notifiedUserIds.sort()).toEqual([admin.id, owner.id].sort());
     });
 });

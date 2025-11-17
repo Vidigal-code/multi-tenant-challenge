@@ -133,9 +133,22 @@ describe("Company Lifecycle Integration", () => {
         const updatedMember = await userRepo.findById(member.id);
         expect(updatedMember?.activeCompanyId).toBe(company.id);
 
+        const eventBuilder = {
+            async build(input: any): Promise<any> {
+                return {
+                    eventId: input.eventId,
+                    timestamp: new Date().toISOString(),
+                    sender: null,
+                    receiver: null,
+                    ...input.additionalData,
+                };
+            },
+        } as any;
+
         const changeRole = new ChangeMemberRoleUseCase(
             membershipRepo as any,
             domainEvents as any,
+            eventBuilder,
         );
 
         await changeRole.execute({
@@ -182,11 +195,24 @@ describe("Company Lifecycle Integration", () => {
         });
 
 
+        const eventBuilder = {
+            async build(input: any): Promise<any> {
+                return {
+                    eventId: input.eventId,
+                    timestamp: new Date().toISOString(),
+                    sender: null,
+                    receiver: null,
+                    ...input.additionalData,
+                };
+            },
+        } as any;
+
         const removeMember = new RemoveMemberUseCase(
             membershipRepo as any,
-            userRepo as any,
             companyRepo as any,
+            userRepo as any,
             domainEvents as any,
+            eventBuilder,
         );
 
         const error = await removeMember

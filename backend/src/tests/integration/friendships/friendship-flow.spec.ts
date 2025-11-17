@@ -13,6 +13,19 @@ import {
 import {FriendshipStatus} from "@domain/entities/friendships/friendship.entity";
 import {ApplicationError} from "@application/errors/application-error";
 import {ErrorCode} from "@application/errors/error-code";
+import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
+
+class MockEventPayloadBuilderService {
+    async build(input: any): Promise<any> {
+        return {
+            eventId: input.eventId,
+            timestamp: new Date().toISOString(),
+            sender: null,
+            receiver: null,
+            ...input.additionalData,
+        };
+    }
+}
 
 class InMemoryFriendshipRepository {
     items: any[] = [];
@@ -107,6 +120,7 @@ describe("Friendship Flow Integration", () => {
     let notificationRepo: InMemoryNotificationRepository;
     let hashing: FakeHashingService;
     let domainEvents: FakeDomainEventsService;
+    let eventBuilder: MockEventPayloadBuilderService;
 
     beforeEach(() => {
         userRepo = new InMemoryUserRepository();
@@ -114,6 +128,7 @@ describe("Friendship Flow Integration", () => {
         notificationRepo = new InMemoryNotificationRepository();
         hashing = new FakeHashingService();
         domainEvents = new FakeDomainEventsService();
+        eventBuilder = new MockEventPayloadBuilderService();
     });
 
     it("complete flow: signup -> send request -> accept -> send message -> delete", async () => {
@@ -135,6 +150,7 @@ describe("Friendship Flow Integration", () => {
             userRepo as any,
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         const {friendship: request} = await sendRequest.execute({
@@ -160,6 +176,7 @@ describe("Friendship Flow Integration", () => {
         const acceptRequest = new AcceptFriendRequestUseCase(
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         await acceptRequest.execute({
@@ -178,6 +195,7 @@ describe("Friendship Flow Integration", () => {
             userRepo as any,
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         const result = await sendMessage.execute({
@@ -202,6 +220,7 @@ describe("Friendship Flow Integration", () => {
         const deleteFriendship = new DeleteFriendshipUseCase(
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         await deleteFriendship.execute({
@@ -232,6 +251,7 @@ describe("Friendship Flow Integration", () => {
             userRepo as any,
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         const {friendship: request} = await sendRequest.execute({
@@ -242,6 +262,7 @@ describe("Friendship Flow Integration", () => {
         const rejectRequest = new RejectFriendRequestUseCase(
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         await rejectRequest.execute({
@@ -266,6 +287,7 @@ describe("Friendship Flow Integration", () => {
             userRepo as any,
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         const error = await sendRequest
@@ -298,6 +320,7 @@ describe("Friendship Flow Integration", () => {
             userRepo as any,
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         await sendRequest.execute({

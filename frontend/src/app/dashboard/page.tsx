@@ -229,7 +229,7 @@ export default function DashboardPage() {
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Minhas Empresas</h1>
                 <p className="text-gray-600 dark:text-gray-400">Gerencie suas empresas e organizações</p>
             </div>
-
+            <a href="/company/new" className="text-sm text-gray-900 dark:text-white hover:underline font-medium text-center">Criar nova empresa</a>
             <div className="border-b border-gray-200 dark:border-gray-800 w-full">
                 <div className="flex items-center gap-2 w-full justify-center">
                     {startTabIndex > 0 && (
@@ -328,7 +328,6 @@ export default function DashboardPage() {
                                 Próxima
                             </button>
                         </div>
-                        <a href="/company/new" className="text-sm text-gray-900 dark:text-white hover:underline font-medium">Criar nova empresa</a>
                     </div>
                 </>
             )}

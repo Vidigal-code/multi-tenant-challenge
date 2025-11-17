@@ -58,6 +58,18 @@ export class RemoveMemberUseCase {
             throw new ApplicationError(ErrorCode.TARGET_NOT_MEMBER);
         }
 
+        // Check if removing last owner BEFORE checking self-removal
+        if (targetMembership.role === Role.OWNER) {
+            const ownerCount = await this.membershipRepository.countByCompanyAndRole(
+                input.companyId,
+                Role.OWNER,
+            );
+            if (ownerCount <= 1) {
+                this.logger.default(`Remove member failed: last owner cannot be removed - owner: ${input.targetUserId}, company: ${input.companyId}`);
+                throw new ApplicationError(ErrorCode.LAST_OWNER_CANNOT_BE_REMOVED);
+            }
+        }
+
         if (input.requesterId === input.targetUserId) {
             this.logger.default(`Remove member failed: forbidden action - user cannot remove self - user: ${input.targetUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
@@ -70,16 +82,6 @@ export class RemoveMemberUseCase {
         const isRequesterPrimaryOwner = primaryOwner && primaryOwner.userId === input.requesterId;
 
         if (!isRequesterPrimaryOwner) {
-        if (targetMembership.role === Role.OWNER) {
-            const ownerCount = await this.membershipRepository.countByCompanyAndRole(
-                input.companyId,
-                Role.OWNER,
-            );
-            if (ownerCount <= 1) {
-                    this.logger.default(`Remove member failed: last owner cannot be removed - owner: ${input.targetUserId}, company: ${input.companyId}`);
-                throw new ApplicationError(ErrorCode.LAST_OWNER_CANNOT_BE_REMOVED);
-            }
-        }
 
         const allowed = CompanyPermissionService.canModify(
             requesterMembership.role,

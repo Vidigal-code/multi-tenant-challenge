@@ -115,12 +115,29 @@ describe("SendNotificationUseCase", () => {
         await memberships.create({userId: admin.id, companyId: "companys-1", role: Role.ADMIN});
         await memberships.create({userId: member.id, companyId: "companys-1", role: Role.MEMBER});
 
+        const eventBuilder = {
+            async build(input: any): Promise<any> {
+                const companyId = input.companyId !== null && input.companyId !== undefined 
+                    ? input.companyId 
+                    : (input.additionalData?.companyId || "companys-1");
+                return {
+                    eventId: input.eventId,
+                    timestamp: new Date().toISOString(),
+                    sender: null,
+                    receiver: null,
+                    ...input.additionalData,
+                    companyId: companyId, // Ensure companyId is not overwritten by additionalData
+                };
+            },
+        } as any;
+
         const useCase = new SendNotificationUseCase(
             memberships as any,
             notifications as any,
             users as any,
             friendships as any,
             events,
+            eventBuilder,
         );
 
         const result = await useCase.execute({
@@ -168,12 +185,26 @@ describe("SendNotificationUseCase", () => {
             status: FriendshipStatus.ACCEPTED,
         });
 
+        const eventBuilder = {
+            async build(input: any): Promise<any> {
+                return {
+                    eventId: input.eventId,
+                    timestamp: new Date().toISOString(),
+                    sender: null,
+                    receiver: null,
+                    companyId: input.companyId || input.additionalData?.companyId,
+                    ...input.additionalData,
+                };
+            },
+        } as any;
+
         const useCase = new SendNotificationUseCase(
             memberships as any,
             notifications as any,
             users as any,
             friendships as any,
             events,
+            eventBuilder,
         );
 
         const result = await useCase.execute({

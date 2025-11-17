@@ -32,7 +32,8 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
         <>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors flex-shrink-0"
+                className="md:hidden p-2 rounded-lg hover:bg-gray-100
+                dark:hover:bg-gray-900 transition-colors flex-shrink-0"
                 aria-label="Toggle menu"
                 aria-expanded={isOpen}
                 type="button"
@@ -52,13 +53,15 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
             {isOpen && (
                 <>
                     <div
-                        className="fixed inset-0 z-[10003] bg-black/70 dark:bg-black/90 backdrop-blur-md transition-all duration-300 opacity-100 pointer-events-auto"
+                        className="fixed inset-0 z-[10003] bg-black/70
+                        dark:bg-black/90 backdrop-blur-md transition-all duration-300 opacity-100 pointer-events-auto"
                         onClick={() => setIsOpen(false)}
                         aria-hidden="true"
                     />
                     <div
                         className={`fixed inset-0 z-[10004] bg-white dark:bg-black w-full    
-                         ${isAuth ? "min-h-[554px]" : "min-h-[320px]"}  h-full shadow-2xl transition-all duration-300 ease-out overflow-y-auto border-l border-gray-200 dark:border-gray-800"`}
+                         ${isAuth ? "min-h-[554px]" : "min-h-[320px]"}  h-full shadow-2xl transition-all duration-300 ease-out 
+                         overflow-y-auto border-l border-gray-200 dark:border-gray-800"`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="p-6 relative h-full flex flex-col">
@@ -71,7 +74,9 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                 </div>
                                 <button
                                     onClick={() => setIsOpen(false)}
-                                    className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm border border-gray-200 dark:border-gray-800"
+                                    className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-900
+                                    dark:hover:bg-gray-800 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm border border-gray-200
+                                    dark:border-gray-800"
                                     type="button"
                                     aria-label="Close menu"
                                 >
@@ -86,11 +91,14 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                             <nav className="flex flex-col gap-2">
 
                                 <div
-                                    className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
+                                    className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900
+                                    dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white
+                                    transition-all duration-200 border border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
                                     onClick={() => dispatch(toggleTheme())}
                                 >
                                     <div
-                                        className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                        className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100
+                                         transition-opacity"></div>
                                     {theme === 'light' ? (
                                         <FiMoon className="w-5 h-5"/>
                                     ) : (
@@ -103,47 +111,67 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                     <>
                                         <Link
                                             href="/dashboard"
-                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
+                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900
+                                            dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900
+                                            dark:hover:text-white transition-all duration-200 border border-gray-200
+                                            dark:border-gray-800 hover:shadow-md flex items-center gap-3"
                                             onClick={() => setIsOpen(false)}
                                         >
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100
+                                                opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             <span className="font-medium">Dashboard</span>
                                         </Link>
                                         <Link
                                             href="/profile"
-                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
+                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100
+                                            dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300
+                                            hover:text-gray-900 dark:hover:text-white transition-all duration-200 border
+                                            border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
                                             onClick={() => setIsOpen(false)}
                                         >
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100
+                                                opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             <span className="font-medium">Perfil</span>
                                         </Link>
                                         <Link
                                             href="/invites"
-                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
+                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100
+                                            dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300
+                                            hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200
+                                            dark:border-gray-800 hover:shadow-md flex items-center gap-3"
                                             onClick={() => setIsOpen(false)}
                                         >
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100
+                                                opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             <span className="font-medium">Convites</span>
                                         </Link>
                                         <Link
                                             href="/friends"
-                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
+                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100
+                                            dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300
+                                            hover:text-gray-900 dark:hover:text-white transition-all duration-200 border
+                                            border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
                                             onClick={() => setIsOpen(false)}
                                         >
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100
+                                                 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             <span className="font-medium">Amigos</span>
                                         </Link>
                                         <Link
                                             href="/notifications"
-                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
+                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100
+                                            dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300
+                                            hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200
+                                            dark:border-gray-800 hover:shadow-md flex items-center gap-3"
                                             onClick={() => setIsOpen(false)}
                                         >
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100
+                                                opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             <span className="font-medium">Notificações</span>
                                         </Link>
 
@@ -152,7 +180,10 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                                 void logout();
                                                 setIsOpen(false);
                                             }}
-                                            className="px-5 py-4 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 transition-all duration-200 text-left font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] border border-gray-900 dark:border-white"
+                                            className="px-5 py-4 rounded-xl bg-gray-900 dark:bg-white text-white
+                                            dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 transition-all
+                                             duration-200 text-left font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] border
+                                              border-gray-900 dark:border-white"
                                             type="button"
                                         >
                                             Sair
@@ -162,16 +193,23 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                     <>
                                         <Link
                                             href="/login"
-                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
+                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100
+                                            dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300
+                                            hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200
+                                            dark:border-gray-800 hover:shadow-md flex items-center gap-3"
                                             onClick={() => setIsOpen(false)}
                                         >
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100
+                                                 transition-opacity"></div>
                                             <span className="font-medium">Entrar</span>
                                         </Link>
                                         <Link
                                             href="/signup"
-                                            className="px-5 py-4 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-100 transition-all duration-200 text-center font-semibold mt-2 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] border border-gray-900 dark:border-white"
+                                            className="px-5 py-4 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black
+                                            hover:bg-gray-800 dark:hover:bg-gray-100 transition-all duration-200 text-center
+                                             font-semibold mt-2 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] border
+                                             border-gray-900 dark:border-white"
                                             onClick={() => setIsOpen(false)}
                                         >
                                             Criar Conta

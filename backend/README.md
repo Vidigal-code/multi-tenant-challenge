@@ -369,9 +369,20 @@ npx prisma migrate reset
 
 ## 🧪 Testes
 
+### CI/CD
+O workflow de CI (`/.github/workflows/ci.yml`) executa apenas testes unitários para velocidade:
+- `pnpm test:unit` - Executa apenas testes unitários (exclui integração)
+
+Testes de integração devem ser executados localmente antes de fazer commit.
+
 ### Estrutura
 
-- **Unit Tests** (`src/tests/unit/`) - Testes unitários de use cases e controllers
+- **Unit Tests (TDD)** (`src/tests/unit/`) - Testes unitários seguindo TDD
+  - Use cases
+  - Services
+  - Guards
+  - Controllers
+  - Todos documentados com padrão EN/PT
 - **Integration Tests** (`src/tests/integration/`) - Testes de integração de fluxos completos
 
 ### Executar
@@ -380,6 +391,15 @@ npx prisma migrate reset
 # Todos os testes
 npm test
 
+# Apenas testes TDD (unitários, não integrados)
+npm run test:tdd
+
+# Apenas testes unitários
+npm run test:unit
+
+# Apenas testes de integração
+npm run test:integration
+
 # Watch mode
 npm run test:watch
 
@@ -387,12 +407,82 @@ npm run test:watch
 npm test -- invites.controller.spec.ts
 ```
 
+### Padrão de Documentação TDD
+
+Todos os testes seguem o padrão JSDoc bilingue:
+
+```typescript
+/**
+ * EN -
+ * Description of what the test suite covers in English.
+ * 
+ * PT -
+ * Descrição do que a suíte de testes cobre em português.
+ */
+describe("ClassName", () => {
+    /**
+     * EN -
+     * Description of individual test case in English.
+     * 
+     * PT -
+     * Descrição do caso de teste individual em português.
+     */
+    it("should do something", () => {
+        // Test implementation
+    });
+});
+```
+
+### Padrões de Teste
+
+#### Testes Unitários (TDD)
+
+Os testes unitários (`src/tests/unit/`) seguem TDD puro:
+
+1. **Red**: Escrever teste que falha
+2. **Green**: Implementar código mínimo para passar
+3. **Refactor**: Melhorar código mantendo testes verdes
+
+**Exemplo de estrutura**:
+```typescript
+describe('UpdateCompanyUseCase', () => {
+  it('should update company name', async () => {
+    // Arrange
+    const company = createMockCompany();
+    const repository = createMockRepository();
+    
+    // Act
+    const result = await useCase.execute({ name: 'New Name' });
+    
+    // Assert
+    expect(result.name).toBe('New Name');
+    expect(repository.update).toHaveBeenCalledWith(...);
+  });
+});
+```
+
+#### Testes de Integração
+
+Os testes de integração (`src/tests/integration/`) verificam fluxos completos:
+
+- **Controllers**: Testes HTTP end-to-end com Supertest
+- **Use Cases**: Integração com repositórios reais (em memória)
+- **Eventos**: Verificação de publicação de eventos de domínio
+
+**Padrões**:
+- Usar repositórios em memória para isolamento
+- Mockar serviços externos (ex: DomainEventsService)
+- Verificar códigos de erro específicos (`ErrorCode` enum)
+- Validar invariantes de domínio (ex: empresa sempre tem OWNER)
+
 ### Cobertura
 
 Os testes utilizam:
 - **Jest** - Framework de testes
 - **Supertest** - Testes HTTP
 - **In-memory repositories** - Mocks de repositórios
+- **Mock factories** - Para criar dados de teste
+- **TDD Principles** - Test-Driven Development
 
 ## 🐳 Docker
 

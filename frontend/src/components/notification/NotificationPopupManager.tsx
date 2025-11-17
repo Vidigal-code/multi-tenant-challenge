@@ -124,16 +124,16 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                             try {
                                 const { emit } = await import('../../lib/realtime');
                                 emit(RT_EVENTS.NOTIFICATION_DELIVERED, { messageId });
-                                console.log('[NotificationPopupManager] Delivery confirmed (popup disabled):', messageId);
+                              //  console.log('[NotificationPopupManager] Delivery confirmed (popup disabled):', messageId);
                             } catch (error) {
-                                console.error('[NotificationPopupManager] Error confirming delivery:', error);
+                               // console.error('[NotificationPopupManager] Error confirming delivery:', error);
                             }
                         }
                         queryClient.invalidateQueries({ 
                             queryKey: queryKeys.notifications(),
                         }).catch((error: any) => {
                             if (error?.name !== 'CancelledError') {
-                                console.error('[NotificationPopupManager] Error invalidating queries:', error);
+                               // console.error('[NotificationPopupManager] Error invalidating queries:', error);
                             }
                         });
                         return;
@@ -202,16 +202,16 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                             }
                         }
                     } catch (fetchError) {
-                        console.error('[NotificationPopupManager] Error fetching notifications:', fetchError);
+                       // console.error('[NotificationPopupManager] Error fetching notifications:', fetchError);
                     }
 
                     if (messageId) {
                         try {
                             const { emit } = await import('../../lib/realtime');
                             emit(RT_EVENTS.NOTIFICATION_DELIVERED, { messageId });
-                            console.log('[NotificationPopupManager] Delivery confirmed:', messageId);
+                            //console.log('[NotificationPopupManager] Delivery confirmed:', messageId);
                         } catch (error) {
-                            console.error('[NotificationPopupManager] Error confirming delivery:', error);
+                           // console.error('[NotificationPopupManager] Error confirming delivery:', error);
                         }
                     }
 
@@ -223,7 +223,7 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                                 queryKey: queryKeys.notifications(),
                             }).catch((error: any) => {
                                 if (error?.name !== 'CancelledError') {
-                                    console.error('[NotificationPopupManager] Error invalidating queries:', error);
+                                    //console.error('[NotificationPopupManager] Error invalidating queries:', error);
                                 }
                             });
 
@@ -238,12 +238,12 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                             queryKey: queryKeys.notifications(),
                         }).catch((error: any) => {
                             if (error?.name !== 'CancelledError') {
-                                console.error('[NotificationPopupManager] Error invalidating queries:', error);
+                                //console.error('[NotificationPopupManager] Error invalidating queries:', error);
                             }
                         });
                     }
                 } catch (error) {
-                    console.error('[NotificationPopupManager] Error handling notification:', error);
+                    //console.error('[NotificationPopupManager] Error handling notification:', error);
                 }
             };
 
@@ -274,7 +274,7 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                     queryKey: queryKeys.notifications(),
                 }).catch((error: any) => {
                     if (error?.name !== 'CancelledError') {
-                        console.error('[NotificationPopupManager] Error invalidating queries:', error);
+                     //   console.error('[NotificationPopupManager] Error invalidating queries:', error);
                     }
                 });
             }}

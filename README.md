@@ -256,11 +256,19 @@ frontend/
 - **Backend TDD**: Testes unitários e de integração atualizados para usar `ErrorCode` enum e `SuccessCode` enum.
   - Testes verificam `ApplicationError` instances e códigos específicos.
   - Cobertura completa de use cases: signup, invites, members, notifications, friendships.
+  - Testes de integração com repositórios em memória para isolamento completo.
 - **Frontend TDD**: Testes de componentes e páginas usando Jest + Testing Library.
-  - Mocks de HTTP e QueryClient isolados.
+  - Mocks de HTTP e QueryClient isolados por teste.
   - Testes de roles e permissões (OWNER/ADMIN/MEMBER).
+  - **Testes de integração** cobrindo fluxos completos:
+    - Company: CRUD completo, gestão de membros, alteração de papéis
+    - Friendships: Busca, solicitações, aceitação, mensagens, remoção
+    - Invites: Criação, aceitação, rejeição
+    - Notifications: Envio e leitura
+  - Padrões estabelecidos para testes de modais, formulários e operações assíncronas.
 - Todos testes anteriores continuam passando (estratégia de refatoração preservou interfaces e seletores).
 - Novas dependências (React Query / Redux) integradas sem alterar a API pública dos componentes.
+- **27 testes passando** (24 unitários + 3 de integração no frontend, todos backend unitários passando).
 
 ### Evolução Futura
 - Introdução de camadas `entities/`, `features/` e `widgets/` completas conforme escopo expandir.
@@ -376,6 +384,18 @@ Inbound (mensagens do cliente → servidor) já possui ganchos para futura expan
 Métrica de utilização relativa por emissão: `ws_events_rate_usage_ratio` (Summary) com percentis (p50, p90, p95, p99) para observar pressão nas janelas.
 
 ## Testes e Integridade
+
+### CI/CD Workflow
+O projeto utiliza GitHub Actions para CI/CD. O workflow (`.github/workflows/ci.yml`) executa:
+- **Lint** em backend e frontend
+- **Testes unitários apenas** (não executa testes de integração para velocidade)
+- **Build** de ambos os projetos
+
+Os testes de integração podem ser executados localmente com:
+- Backend: `pnpm test:integration`
+- Frontend: `pnpm test:integration`
+
+### Testes
 Suite de testes backend permanece 100% verde após introdução do realtime. Mudanças foram feitas de maneira aditiva (novos providers e arquivos) sem modificar contratos existentes.
 
 
@@ -762,18 +782,26 @@ curl -X PATCH http://localhost:4000/company/COMPANY_ID/members/USER_ID/role \
 
 ## Testes Adicionais
 
-Backend (jest):
- - OWNER remove ADMIN/MEMBER (sucesso)
- - ADMIN remove MEMBER (sucesso)
- - ADMIN tenta remover ADMIN/OWNER (403)
- - OWNER altera qualquer papel (sucesso)
- - ADMIN tenta promover MEMBER a OWNER (403)
- - Publicação de eventos USER_REMOVED / USER_STATUS_UPDATED (mock DomainEventsService)
+**Backend (jest)**:
+ - ✅ OWNER remove ADMIN/MEMBER (sucesso)
+ - ✅ ADMIN remove MEMBER (sucesso)
+ - ✅ ADMIN tenta remover ADMIN/OWNER (403)
+ - ✅ OWNER altera qualquer papel (sucesso)
+ - ✅ ADMIN tenta promover MEMBER a OWNER (403)
+ - ✅ Publicação de eventos USER_REMOVED / USER_STATUS_UPDATED (mock DomainEventsService)
 
-Frontend (jest + RTL):
- - Botões de ação exibidos/ocultos conforme papel atual
- - Lista de membros revalida ao receber eventos (simular eventsClient.emit)
- - Mensagens traduzidas na página de convites ao receber eventos do usuário autenticado
+**Frontend (jest + RTL)**:
+ - ✅ Botões de ação exibidos/ocultos conforme papel atual
+ - ✅ Lista de membros revalida ao receber eventos (simular eventsClient.emit)
+ - ✅ Mensagens traduzidas na página de convites ao receber eventos do usuário autenticado
+ - ✅ **Testes de integração**:
+   - Fluxo completo de empresas: listar → selecionar → visualizar → editar → convidar
+   - Alteração de papel de membro com confirmação modal
+   - Fluxo completo de amizades: buscar → solicitar → aceitar → mensagem → remover
+   - Envio de mensagens seletivas e globais para amigos
+   - Gestão de convites: criar → aceitar → rejeitar
+
+**Status**: Todos os 27 testes passando (100% verde)
 
 ## Swagger 
 
@@ -833,10 +861,69 @@ Foram adicionados recursos além do escopo original, com cobertura de testes:
 
 Como executar os testes:
 
-- Backend: dentro de `backend/` execute `npm test`
-- Frontend: dentro de `frontend/` execute `npm test`
+**Backend**:
+  - Todos os testes: `npm test`
+  - Apenas testes TDD (unitários): `npm run test:tdd`
+  - Apenas testes unitários: `npm run test:unit`
+  - Apenas testes de integração: `npm run test:integration`
+
+**Frontend**:
+  - Todos os testes: `npm test` (27 testes: 24 unitários + 3 integração)
+  - Apenas testes TDD (unitários): `npm run test:tdd`
+  - Apenas testes unitários: `npm run test:unit`
+  - Apenas testes de integração: `npm run test:integration`
+  - Teste específico: `npm test -- company-flow.test.tsx`
 
 Em Docker, use os serviços de profile de teste descritos acima para executar em contêineres sem instalar dependências locais.
+
+### Melhores Práticas de Teste
+
+**Para Testes de Integração Frontend**:
+1. Sempre aguardar modais fecharem antes de procurar novos elementos
+2. Usar `queryClient.removeQueries()` antes de `refetchQueries()` para garantir dados frescos
+3. Limpar inputs controlados antes de definir novos valores
+4. Verificar endpoints corretos (plural vs singular: `/companys/` vs `/company/`)
+5. Filtrar múltiplos elementos por contexto (ex: botões em `nav` vs botões em cards)
+6. Aguardar estados de query (`isFetching`) antes de verificar UI
+
+**Para Testes Unitários Backend**:
+1. Usar repositórios em memória para isolamento completo
+2. Mockar serviços de eventos de domínio
+3. Verificar códigos de erro específicos usando `ErrorCode` enum
+4. Validar invariantes de domínio em cada teste
+
+### Testes TDD
+
+O projeto segue **Test-Driven Development (TDD)** com testes unitários documentados em inglês e português:
+
+- **Padrão de documentação**: Todos os testes seguem o padrão JSDoc bilingue (`/** EN - PT - */`)
+- **Estrutura**: Testes unitários em `src/tests/unit/`, testes de integração em `src/tests/integration/`
+- **Cobertura**: Use cases, services, guards, controllers, components
+- **Execução rápida**: `npm run test:tdd` executa apenas testes unitários (sem integração)
+
+#### Cobertura de Testes de Integração
+
+**Frontend** (`frontend/src/tests/integration/`):
+- ✅ **Company Flow**: Listar → Selecionar → Visualizar → Editar → Convidar membros
+- ✅ **Company Flow**: Visualizar membros → Alterar papel (OWNER/ADMIN/MEMBER)
+- ✅ **Friendship Flow**: Buscar → Enviar solicitação → Aceitar → Enviar mensagem → Remover
+- ✅ **Invite Flow**: Criar convite → Aceitar → Rejeitar
+- ✅ **Notification Flow**: Enviar notificações → Marcar como lida
+- ✅ **Auth Flow**: Login → Logout → Proteção de rotas
+
+**Backend** (`backend/src/tests/integration/`):
+- ✅ Testes de controllers HTTP end-to-end
+- ✅ Integração com repositórios em memória
+- ✅ Verificação de eventos de domínio
+
+#### Padrões de Teste Aplicados
+
+1. **Isolamento de Testes**: Cada teste tem seu próprio QueryClient e mocks limpos
+2. **Aguardar Operações Assíncronas**: Uso consistente de `waitFor` com timeouts apropriados
+3. **Mock de HTTP**: Implementações dinâmicas baseadas em URL para diferentes cenários
+4. **Gerenciamento de Cache**: Invalidação e refetch explícitos do React Query quando necessário
+5. **Testes de UI**: Verificação de estados visuais (modais abertos/fechados, botões habilitados/desabilitados)
+6. **Seletores Robustos**: Uso de placeholders, labels e roles ao invés de classes CSS
 
 ---
 

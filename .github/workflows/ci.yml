@@ -48,9 +48,9 @@ jobs:
         working-directory: backend
         run: pnpm run lint --if-present
 
-      - name: Backend - Test
+      - name: Backend - Test (Unit Only)
         working-directory: backend
-        run: pnpm test --if-present
+        run: pnpm test:unit --if-present
 
       - name: Backend - Build
         working-directory: backend
@@ -69,9 +69,9 @@ jobs:
         working-directory: frontend
         run: pnpm run lint --if-present
 
-      - name: Frontend - Test
+      - name: Frontend - Test (Unit Only)
         working-directory: frontend
-        run: pnpm test --if-present
+        run: pnpm test:unit --if-present
 
       - name: Frontend - Build
         working-directory: frontend

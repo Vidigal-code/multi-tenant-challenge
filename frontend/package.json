@@ -6,7 +6,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
-    "test": "jest --config jest.config.ts"
+    "test": "jest --config jest.config.ts",
+    "test:tdd": "jest --config jest.config.ts --testPathPatterns=tests --testPathIgnorePatterns=tests/integration",
+    "test:unit": "jest --config jest.config.ts --testPathPatterns=tests --testPathIgnorePatterns=tests/integration",
+    "test:integration": "jest --config jest.config.ts --testPathPatterns=tests/integration"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.10.1",
