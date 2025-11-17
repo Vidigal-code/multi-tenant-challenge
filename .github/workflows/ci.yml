@@ -22,7 +22,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'  # Cache para npm também
+          # Não usa cache aqui pois os lockfiles estão em backend/ e frontend/
+          # O cache é gerenciado manualmente abaixo
 
       - name: Get pnpm store directory
         shell: bash
@@ -36,6 +37,17 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
+
+      - name: Setup npm cache (fallback)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            backend/node_modules
+            frontend/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('backend/package-lock.json', 'frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
 
       - name: Backend - Install
         working-directory: backend
