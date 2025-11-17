@@ -38,41 +38,75 @@ jobs:
       - name: Backend - Install
         working-directory: backend
         run: |
-          if [ -f pnpm-lock.yaml ]; then
+          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
             pnpm install --frozen-lockfile
+          elif [ -f package-lock.json ]; then
+            npm ci
           else
-            pnpm install
+            npm install
           fi
 
       - name: Backend - Lint
         working-directory: backend
-        run: pnpm run lint --if-present
+        run: |
+          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+            pnpm run lint --if-present
+          else
+            npm run lint --if-present
+          fi
 
       - name: Backend - Test (Unit Only)
         working-directory: backend
-        run: pnpm test:unit --if-present
+        run: |
+          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+            pnpm test:unit --if-present
+          else
+            npm run test:unit --if-present
+          fi
 
       - name: Backend - Build
         working-directory: backend
-        run: pnpm run build --if-present
+        run: |
+          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+            pnpm run build --if-present
+          else
+            npm run build --if-present
+          fi
 
       - name: Frontend - Install
         working-directory: frontend
         run: |
-          if [ -f pnpm-lock.yaml ]; then
+          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
             pnpm install --frozen-lockfile
+          elif [ -f package-lock.json ]; then
+            npm ci
           else
-            pnpm install
+            npm install
           fi
 
       - name: Frontend - Lint
         working-directory: frontend
-        run: pnpm run lint --if-present
+        run: |
+          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+            pnpm run lint --if-present
+          else
+            npm run lint --if-present
+          fi
 
       - name: Frontend - Test (Unit Only)
         working-directory: frontend
-        run: pnpm test:unit --if-present
+        run: |
+          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+            pnpm test:unit --if-present
+          else
+            npm run test:unit --if-present
+          fi
 
       - name: Frontend - Build
         working-directory: frontend
-        run: pnpm run build --if-present
+        run: |
+          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+            pnpm run build --if-present
+          else
+            npm run build --if-present
+          fi
