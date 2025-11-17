@@ -1,10 +1,12 @@
-import {FriendshipFilters, FriendshipRepository} from "@domain/repositories/friendships/friendship.repository";
+import {
+  FriendshipFilters,
+  FriendshipRepository,
+} from "@domain/repositories/friendships/friendship.repository";
 
 export class ListFriendshipsUseCase {
-    constructor(private readonly friendships: FriendshipRepository) {
-    }
+  constructor(private readonly friendships: FriendshipRepository) {}
 
-    async execute(filters: FriendshipFilters) {
-        return this.friendships.listByUser(filters);
-    }
+  async execute(filters: FriendshipFilters) {
+    return this.friendships.listByUser(filters);
+  }
 }

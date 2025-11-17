@@ -1,7 +1,7 @@
 export interface HashingService {
-    hash(value: string): Promise<string>;
+  hash(value: string): Promise<string>;
 
-    compare(value: string, hash: string): Promise<boolean>;
+  compare(value: string, hash: string): Promise<boolean>;
 }
 
 export const HASHING_SERVICE = Symbol("HASHING_SERVICE");
