@@ -1,13 +1,13 @@
 services:
   db:
     image: postgres:16-alpine
-    pull_policy: if_not_present  # Usa imagem local se disponível, evita pull em caso de erro TLS
+    pull_policy: missing
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
       POSTGRES_DB: multitenant
     ports:
-      - "0.0.0.0:5432:5432"  # Acessível de outros PCs na rede
+      - "0.0.0.0:5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,9 +21,9 @@ services:
 
   redis:
     image: redis:7-alpine
-    pull_policy: if_not_present  # Usa imagem local se disponível
+    pull_policy: missing
     ports:
-      - "0.0.0.0:6379:6379"  # Acessível de outros PCs na rede
+      - "0.0.0.0:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -35,13 +35,13 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
-    pull_policy: if_not_present  # Usa imagem local se disponível
+    pull_policy: missing
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     ports:
-      - "0.0.0.0:5672:5672"   # AMQP - Acessível de outros PCs na rede
-      - "0.0.0.0:15672:15672"  # Management UI - Acessível de outros PCs na rede
+      - "0.0.0.0:5672:5672"
+      - "0.0.0.0:15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -55,17 +55,15 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    pull_policy: build  # Sempre faz build, não tenta pull
+    pull_policy: build
     env_file: 
-      - ./backend/.env  # Use backend/.env.example-docker como base e copie para backend/.env
+      - ./backend/.env
     ports:
-      - "0.0.0.0:4000:4000"  # Acessível de outros PCs na rede
+      - "0.0.0.0:4000:4000"
     environment:
-      # Sobrescreve URLs para usar nomes dos serviços Docker
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
       - REDIS_URL=redis://redis:6379
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      # Permite acesso de outros PCs na rede
       - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3000}
       - WS_CORS_ORIGIN=${WS_CORS_ORIGIN:-http://localhost:3000}
     depends_on:
@@ -193,7 +191,6 @@ services:
     restart: unless-stopped
     networks:
       - multitenant-network
-    # Nota: Para usar replicas, use docker compose up --scale worker-queries=2
 
   worker-delete-account:
     build:
@@ -295,11 +292,10 @@ services:
         NEXT_PUBLIC_DEFAULT_COMPANY_LOGO: ${NEXT_PUBLIC_DEFAULT_COMPANY_LOGO:-https://example.com/default-companys.png}
     pull_policy: build
     env_file: 
-      - ./frontend/.env  # Use frontend/.env.example como base e copie para frontend/.env
+      - ./frontend/.env
     ports:
-      - "0.0.0.0:3000:3000"  # Acessível de outros PCs na rede
+      - "0.0.0.0:3000:3000"
     environment:
-      # Configura API URL para usar nome do serviço Docker
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000}
       - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-http://localhost:4000}
     depends_on:
@@ -326,7 +322,6 @@ services:
     command: sh -c "npm ci && npm test"
     profiles: ["test"]
 
-  # Serviços utilitários para comandos do package.json
   prisma-migrate:
     build: ./backend
     env_file: 
@@ -392,23 +387,12 @@ services:
       - multitenant-network
     profiles: ["tools"]
 
-  # Nota: clean:queues e clear:dedup são scripts PowerShell que devem ser executados localmente
-  # Para limpar filas RabbitMQ: docker compose exec rabbitmq rabbitmqctl purge_queue <queue-name>
-  # Para limpar Redis: docker compose exec redis redis-cli FLUSHDB
-  # Ou use os comandos diretos abaixo:
-
   clean-queues:
-    # Executa comandos rabbitmqctl diretamente no container rabbitmq
-    # Uso: docker compose exec rabbitmq sh -c "rabbitmqctl purge_queue events.invites && rabbitmqctl purge_queue events.members && rabbitmqctl purge_queue events.generic && rabbitmqctl purge_queue notifications.realtimes"
-    # Este serviço é apenas um placeholder - use docker compose exec rabbitmq diretamente
     image: rabbitmq:3-management
     command: ["sh", "-c", "echo 'Use: docker compose exec rabbitmq rabbitmqctl purge_queue <queue-name>'"]
     profiles: ["tools"]
 
   clear-dedup:
-    # Limpa chaves de deduplicação do Redis
-    # Uso: docker compose exec redis redis-cli FLUSHDB
-    # Ou para limpar apenas chaves evt:* e msg:*: docker compose exec redis redis-cli --scan --pattern "evt:*" | xargs docker compose exec redis redis-cli DEL
     image: redis:7-alpine
     command: ["sh", "-c", "redis-cli -h redis --scan --pattern 'evt:*' | xargs -I {} redis-cli -h redis DEL {} || redis-cli -h redis FLUSHDB"]
     depends_on:
