@@ -1,4 +1,4 @@
-import {Body, Controller, Delete, Get, Query, UseGuards} from '@nestjs/common';
+import {Controller, Delete, Get, Query, UseGuards} from '@nestjs/common';
 import {ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {JwtAuthGuard} from '@common/guards/jwt.guard';
 import {CurrentUser} from '@common/decorators/current-user.decorator';

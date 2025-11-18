@@ -39,7 +39,7 @@ async function bootstrap() {
     const config = new ConfigService();
     const logger = new LoggerService('MembersEventsConsumer', config);
     logger.default('Starting members events consumer...');
-    const rabbit = new (require('@infrastructure/messaging/services/rabbitmq.service').RabbitMQService)(config);
+    const rabbit = new RabbitMQService(config);
     await rabbit.onModuleInit();
     const consumer = new MembersEventsConsumer(rabbit, config);
     await consumer.start();

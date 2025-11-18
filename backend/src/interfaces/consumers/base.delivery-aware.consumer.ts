@@ -192,8 +192,7 @@ export abstract class BaseDeliveryAwareConsumer<T = any> extends BaseResilientCo
      * @param payload - Payload da mensagem
      * @returns string - Unique message ID
      */
-    protected generateMessageId(payload: T): string {
-        const payloadStr = JSON.stringify(payload);
+    protected generateMessageId(_payload: T): string {
         const timestamp = Date.now();
         const random = crypto.randomBytes(8).toString('hex');
         return `msg_${timestamp}_${random}`;

@@ -652,7 +652,7 @@ export class NotificationCreatorService {
         await this.emitNotificationCreated(notification, companyId, receiverId, senderId);
     }
 
-    private async handleInviteRejected(payload: any): Promise<void> {
+    private async handleInviteRejected(_payload: any): Promise<void> {
         // Already handled in invites.controller.ts rejectByCode
         // This is a fallback
     }
@@ -958,7 +958,7 @@ export class NotificationCreatorService {
         // This would require getting all members, which is handled elsewhere
     }
 
-    private async handleCompanyDeleted(payload: any): Promise<void> {
+    private async handleCompanyDeleted(_payload: any): Promise<void> {
         // Company is deleted, so we can't create notifications
         // This is handled by cascade delete
     }

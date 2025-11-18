@@ -108,6 +108,8 @@ jobs:
 
       - name: Backend - Lint
         working-directory: backend
+        env:
+          ESLINT_USE_FLAT_CONFIG: "false"
         run: |
           if [ "${{ steps.backend-pm.outputs.pm }}" == "pnpm" ]; then
             pnpm run lint
@@ -115,13 +117,13 @@ jobs:
             npm run lint
           fi
 
-      - name: Backend - Test (Unit Only)
+      - name: Backend - Test
         working-directory: backend
         run: |
           if [ "${{ steps.backend-pm.outputs.pm }}" == "pnpm" ]; then
-            pnpm test:unit
+            pnpm test
           else
-            npm run test:unit
+            npm run test
           fi
 
       - name: Backend - Build
@@ -193,6 +195,8 @@ jobs:
 
       - name: Frontend - Lint
         working-directory: frontend
+        env:
+          ESLINT_USE_FLAT_CONFIG: "false"
         run: |
           if [ "${{ steps.frontend-pm.outputs.pm }}" == "pnpm" ]; then
             pnpm run lint
@@ -200,13 +204,13 @@ jobs:
             npm run lint
           fi
 
-      - name: Frontend - Test (Unit Only)
+      - name: Frontend - Test
         working-directory: frontend
         run: |
           if [ "${{ steps.frontend-pm.outputs.pm }}" == "pnpm" ]; then
-            pnpm test:unit
+            pnpm test
           else
-            npm run test:unit
+            npm run test
           fi
 
       - name: Frontend - Build

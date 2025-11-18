@@ -83,7 +83,7 @@ export abstract class BaseResilientConsumer<T = any> {
                 payload = JSON.parse(raw);
                 this.logger.rabbitmq(`Message received from queue: ${this.opts.queue}, size: ${raw.length} bytes`);
                 this.logger.rabbitmq(`Payload: ${raw.substring(0, 200)}...`);
-            } catch (e) {
+            } catch (_error) {
                 this.logger.rabbitmq(`Invalid JSON, routing to DLQ: ${raw.substring(0, 100)}`);
                 channel.nack(msg, false, false);
                 return;
@@ -104,7 +104,7 @@ export abstract class BaseResilientConsumer<T = any> {
                 if (key) await this.redis.set(key, '1', 'EX', this.opts.dedupTtlSeconds);
                 this.logger.rabbitmq(`Message processed successfully: ${this.opts.queue}`);
                 channel.ack(msg);
-            } catch (err: any) {
+            } catch (_err: any) {
                 const retries = this.getRetryCount(msg) + 1;
                 if (retries >= this.opts.retryMax) {
                     this.logger.rabbitmq(`Message failed after ${retries} attempts. Dead-lettering.`);

@@ -52,9 +52,11 @@ export class InMemoryUserRepository implements UserRepository {
         const user = await this.findById(data.id);
         if (!user) throw new Error("NOT_FOUND");
         if (data.activeCompanyId !== undefined) {
-            data.activeCompanyId
-                ? user.setActiveCompany(data.activeCompanyId)
-                : user.clearActiveCompany();
+            if (data.activeCompanyId) {
+                user.setActiveCompany(data.activeCompanyId);
+            } else {
+                user.clearActiveCompany();
+            }
         }
         return user;
     }

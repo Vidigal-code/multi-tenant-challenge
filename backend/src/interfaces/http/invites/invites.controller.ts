@@ -49,7 +49,7 @@ export class InvitesController {
         const email = user.email;
         const p = Math.max(1, Number(page) || 1);
         const ps = Math.min(50, Math.max(1, Number(pageSize) || 10));
-        const {data, total} = await this.invites.listByEmail(email, p, ps);
+        const {data} = await this.invites.listByEmail(email, p, ps);
         const pendingInvites = data.filter(i => i.status === InviteStatus.PENDING);
         const invitesWithCompany = await Promise.all(pendingInvites.map(async (i) => {
             const company = await this.companies.findById(i.companyId);
@@ -90,7 +90,7 @@ export class InvitesController {
     async listCreated(@CurrentUser() user: any, @Query("page") page = 1, @Query("pageSize") pageSize = 10) {
         const p = Math.max(1, Number(page) || 1);
         const ps = Math.min(50, Math.max(1, Number(pageSize) || 10));
-        const {data, total} = await this.invites.listByInviter(user.sub, p, ps);
+        const {data} = await this.invites.listByInviter(user.sub, p, ps);
         const invitesWithCompany = await Promise.all(data.map(async (i) => {
             const company = await this.companies.findById(i.companyId);
             const recipient = await this.users.findByEmail(i.email.toString());

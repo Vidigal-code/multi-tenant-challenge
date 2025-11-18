@@ -59,7 +59,7 @@ async function bootstrap() {
     const config = new ConfigService();
     const logger = new LoggerService('GenericEventsConsumer', config);
     logger.default('Starting generic events consumer...');
-    const rabbit = new (require('@infrastructure/messaging/services/rabbitmq.service').RabbitMQService)(config);
+    const rabbit = new RabbitMQService(config);
     await rabbit.onModuleInit();
     const consumer = new GenericEventsConsumer(rabbit, config);
     await consumer.start();
