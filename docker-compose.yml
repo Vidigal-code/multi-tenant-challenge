@@ -2,10 +2,10 @@ services:
   db:
     image: postgres:16-alpine
     pull_policy: missing
-    environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: multitenant
+    # environment:
+    #   POSTGRES_PASSWORD: postgres
+    #   POSTGRES_USER: postgres
+    #   POSTGRES_DB: multitenant
     ports:
       - "0.0.0.0:5432:5432"
     volumes:
@@ -36,9 +36,9 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     pull_policy: missing
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+    # environment:
+    #   RABBITMQ_DEFAULT_USER: guest
+    #   RABBITMQ_DEFAULT_PASS: guest
     ports:
       - "0.0.0.0:5672:5672"
       - "0.0.0.0:15672:15672"
@@ -60,12 +60,12 @@ services:
       - ./backend/.env
     ports:
       - "0.0.0.0:4000:4000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3000}
-      - WS_CORS_ORIGIN=${WS_CORS_ORIGIN:-http://localhost:3000}
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    #   - REDIS_URL=redis://redis:6379
+    #   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    #   - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-http://localhost:3000}
+    #   - WS_CORS_ORIGIN=${WS_CORS_ORIGIN:-http://localhost:3000}
     depends_on:
       db:
         condition: service_healthy
@@ -88,10 +88,10 @@ services:
     pull_policy: build
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    #   - REDIS_URL=redis://redis:6379
+    #   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -110,10 +110,10 @@ services:
     pull_policy: build
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    #   - REDIS_URL=redis://redis:6379
+    #   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -132,10 +132,10 @@ services:
     pull_policy: build
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    #   - REDIS_URL=redis://redis:6379
+    #   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -154,10 +154,10 @@ services:
     pull_policy: build
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    #   - REDIS_URL=redis://redis:6379
+    #   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -176,10 +176,10 @@ services:
     pull_policy: build
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    #   - REDIS_URL=redis://redis:6379
+    #   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -199,10 +199,10 @@ services:
     pull_policy: build
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    #   - REDIS_URL=redis://redis:6379
+    #   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -222,10 +222,10 @@ services:
     pull_policy: build
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    #   - REDIS_URL=redis://redis:6379
+    #   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -245,10 +245,10 @@ services:
     pull_policy: build
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    #   - REDIS_URL=redis://redis:6379
+    #   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -268,10 +268,10 @@ services:
     pull_policy: build
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    #   - REDIS_URL=redis://redis:6379
+    #   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - rabbitmq
       - api
@@ -295,9 +295,9 @@ services:
       - ./frontend/.env
     ports:
       - "0.0.0.0:3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000}
-      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-http://localhost:4000}
+    # environment:
+    #   - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    #   - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-http://localhost:4000}
     depends_on:
       api:
         condition: service_started
@@ -326,8 +326,8 @@ services:
     build: ./backend
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
     depends_on:
       db:
         condition: service_healthy
@@ -343,8 +343,8 @@ services:
     build: ./backend
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
     depends_on:
       db:
         condition: service_healthy
@@ -372,8 +372,8 @@ services:
     build: ./backend
     env_file: 
       - ./backend/.env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
+    # environment:
+    #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
     depends_on:
       db:
         condition: service_healthy
