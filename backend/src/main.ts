@@ -22,6 +22,8 @@ async function bootstrap() {
 
     const frontendBaseUrl = process.env.FRONTEND_BASE_URL || "http://localhost:3000";
     
+    const frontendOrigin = frontendBaseUrl.replace(/\/$/, "");
+    
     if (corsSitesEnabledAll) {
         app.use(
             helmet({
@@ -31,7 +33,7 @@ async function bootstrap() {
                         styleSrc: ["'self'", "'unsafe-inline'"],
                         scriptSrc: ["'self'"],
                         imgSrc: ["'self'", "data:", "https:"],
-                        connectSrc: ["'self'", frontendBaseUrl],
+                        connectSrc: ["'self'", frontendOrigin, "http://localhost:4000", "ws://localhost:4000"],
                         fontSrc: ["'self'"],
                         objectSrc: ["'none'"],
                         mediaSrc: ["'self'"],
@@ -69,7 +71,7 @@ async function bootstrap() {
                         styleSrc: ["'self'", "'unsafe-inline'"],
                         scriptSrc: ["'self'"],
                         imgSrc: ["'self'", "data:", "https:"],
-                        connectSrc: ["'self'", frontendBaseUrl],
+                        connectSrc: ["'self'", frontendOrigin, "http://localhost:4000", "ws://localhost:4000"],
                         fontSrc: ["'self'"],
                         objectSrc: ["'none'"],
                         mediaSrc: ["'self'"],
@@ -203,7 +205,18 @@ async function bootstrap() {
     swaggerSetup(app);
 
     const port = Number(process.env.PORT) || 4000;
-    await app.listen(port, "0.0.0.0");
+    
+    try {
+        await app.listen(port, "0.0.0.0");
+        console.log(`Application is running on: http://0.0.0.0:${port}`);
+        console.log(` Swagger documentation: http://0.0.0.0:${port}/api`);
+    } catch (error) {
+        console.error("Failed to start application:", error);
+        process.exit(1);
+    }
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+    console.error("Fatal error during bootstrap:", error);
+    process.exit(1);
+});
