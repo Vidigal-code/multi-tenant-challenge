@@ -57,6 +57,7 @@ function shouldShowNotification(notification: NotificationData, derived: any): b
     if (!derived) return true;
 
     const kind = notification.meta?.kind as NotificationKind || '';
+    const channel = notification.meta?.channel;
     const title = (notification.title || '').toUpperCase();
     const body = (notification.body || '').toUpperCase();
 
@@ -68,6 +69,15 @@ function shouldShowNotification(notification: NotificationData, derived: any): b
     if (FRIEND_REQUEST_KINDS.includes(kind) ||
         title.includes('AMIGO') || title.includes('FRIEND')) {
         return derived.friendRequests !== false;
+    }
+
+    if (channel === 'friend' &&
+        (COMPANY_MESSAGE_KINDS.includes(kind) ||
+            title.includes('NOTIFICATION_SENT') ||
+            title.includes('NOTIFICATION SENT') ||
+            body.includes('NOTIFICATION_SENT') ||
+            body.includes('NOTIFICATION SENT'))) {
+        return derived.friendMessages !== false;
     }
 
     if (COMPANY_MESSAGE_KINDS.includes(kind) ||

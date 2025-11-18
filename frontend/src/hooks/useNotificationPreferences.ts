@@ -10,14 +10,12 @@ export interface NotificationPreferences {
     companyInvitations?: boolean;
     friendRequests?: boolean;
     companyMessages?: boolean;
+    friendMessages?: boolean;
     membershipChanges?: boolean;
     roleChanges?: boolean;
 }
 
-/**
- * Hook to get and derive notification preferences from user profile
- * Defaults to true for all preferences (backwards compatibility)
- */
+
 export function useNotificationPreferences() {
     const { data: profile } = useProfile();
 
@@ -25,7 +23,6 @@ export function useNotificationPreferences() {
         return profile?.notificationPreferences || {};
     }, [profile?.notificationPreferences]);
 
-    // Derive computed values with defaults
     const derived = useMemo(() => {
         return {
             realtimeEnabled: preferences.realtimeEnabled !== false,
@@ -34,6 +31,7 @@ export function useNotificationPreferences() {
             companyInvitations: preferences.companyInvitations !== false,
             friendRequests: preferences.friendRequests !== false,
             companyMessages: preferences.companyMessages !== false,
+            friendMessages: preferences.friendMessages !== false,
             membershipChanges: preferences.membershipChanges !== false,
             roleChanges: preferences.roleChanges !== false,
         };

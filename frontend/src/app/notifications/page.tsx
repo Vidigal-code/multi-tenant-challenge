@@ -378,7 +378,6 @@ function getNotificationContext(notification: Notification): string {
         return 'Esta é uma resposta sobre uma notificação';
     }
     
-    // Fallback: try to infer from body content
     if (bodyUpper.includes('CONVITE') || bodyUpper.includes('INVITE')) {
         return 'Esta é uma resposta sobre um convite';
     }
@@ -469,7 +468,7 @@ function parseNotificationBody(
     );
 }
 
-type NotificationTab = 'all' | 'friends' | 'company-messages' | 'invites' | 'members' | 'roles';
+type NotificationTab = 'all' | 'friends' | 'friend-messages' | 'company-messages' | 'invites' | 'members' | 'roles';
 
 interface NotificationCategory {
     id: NotificationTab;
@@ -524,17 +523,22 @@ export default function NotificationsPage() {
             icon: <MdPerson className="text-lg" />,
                     filter: (notification) => {
                         const kind = notification.meta?.kind || '';
-                        const title = (notification.title || '').toUpperCase();
                         const eventCode = extractEventCode(notification.title || '')?.toUpperCase();
-                        return kind.includes('friend') || 
-                               title.includes('FRIEND') || 
-                               (eventCode?.includes('FRIEND') ?? false) ||
+                        return kind.startsWith('friend.request.') ||
                                eventCode === 'FRIEND_REQUEST_SENT' ||
                                eventCode === 'FRIEND_REQUEST_ACCEPTED' ||
-                               eventCode === 'ACCEPTED_FRIEND' ||
-                               eventCode === 'REJECTED_FRIEND' ||
-                               eventCode === 'FRIEND_REMOVED' ||
-                               notification.meta?.channel === 'friend';
+                               eventCode === 'REJECTED_FRIEND';
+                    },
+        },
+        {
+            id: 'friend-messages',
+            label: 'Mensagens de Amigos',
+            icon: <MdChat className="text-lg" />,
+                    filter: (notification) => {
+                        const kind = notification.meta?.kind || '';
+                        const channel = notification.meta?.channel;
+                        return channel === 'friend' &&
+                               (kind === 'notification.sent' || kind === 'notification.reply');
                     },
         },
         {
@@ -543,13 +547,9 @@ export default function NotificationsPage() {
             icon: <MdMail className="text-lg" />,
                     filter: (notification) => {
                         const kind = notification.meta?.kind || '';
-                        const title = (notification.title || '').toUpperCase();
-                        const eventCode = extractEventCode(notification.title || '')?.toUpperCase();
-                        return (kind === 'notification.sent' || kind === 'notification.reply') ||
-                               title.includes('NOTIFICATION_SENT') || 
-                               title.includes('MENSAGEM') ||
-                               eventCode === 'NOTIFICATION_SENT' ||
-                               (notification.meta?.channel === 'company' && kind.includes('notification'));
+                        const channel = notification.meta?.channel;
+                        return channel === 'company' &&
+                               (kind === 'notification.sent' || kind === 'notification.reply');
                     },
         },
         {
@@ -692,6 +692,7 @@ export default function NotificationsPage() {
         const counts: Record<NotificationTab, number> = {
             all: totalNotifications,
             friends: 0,
+            'friend-messages': 0,
             'company-messages': 0,
             invites: 0,
             members: 0,
