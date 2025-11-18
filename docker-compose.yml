@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
+    pull_policy: if_not_present  # Usa imagem local se disponível, evita pull em caso de erro TLS
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
@@ -14,29 +15,47 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   redis:
     image: redis:7-alpine
+    pull_policy: if_not_present  # Usa imagem local se disponível
     ports:
       - "0.0.0.0:6379:6379"  # Acessível de outros PCs na rede
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   rabbitmq:
     image: rabbitmq:3-management
+    pull_policy: if_not_present  # Usa imagem local se disponível
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     ports:
       - "0.0.0.0:5672:5672"   # AMQP - Acessível de outros PCs na rede
       - "0.0.0.0:15672:15672"  # Management UI - Acessível de outros PCs na rede
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   api:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build  # Sempre faz build, não tenta pull
     env_file: 
       - ./backend/.env  # Use backend/.env.example-docker como base e copie para backend/.env
     ports:
@@ -53,18 +72,22 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - /app/node_modules
     command: sh -c "if [ -d prisma/migrations ] && [ \"$(ls -A prisma/migrations 2>/dev/null)\" ]; then npx prisma migrate deploy; else npx prisma migrate dev --name init; fi; npx prisma generate; npm run dev"
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   worker-invites:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
     env_file: 
       - ./backend/.env
     environment:
@@ -78,11 +101,15 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   worker-members:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
     env_file: 
       - ./backend/.env
     environment:
@@ -96,11 +123,15 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   worker-generic:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
     env_file: 
       - ./backend/.env
     environment:
@@ -114,11 +145,15 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   worker-realtime:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
     env_file: 
       - ./backend/.env
     environment:
@@ -132,11 +167,15 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   worker-queries:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
     env_file: 
       - ./backend/.env
     environment:
@@ -151,13 +190,16 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    restart: unless-stopped
     networks:
       - multitenant-network
-    deploy:
-      replicas: 2
+    # Nota: Para usar replicas, use docker compose up --scale worker-queries=2
 
   worker-delete-account:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
     env_file: 
       - ./backend/.env
     environment:
@@ -172,11 +214,15 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   worker-reject-all-invites:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
     env_file: 
       - ./backend/.env
     environment:
@@ -191,11 +237,15 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   worker-delete-all-invites:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
     env_file: 
       - ./backend/.env
     environment:
@@ -210,11 +260,15 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   worker-clear-all-notifications:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    pull_policy: build
     env_file: 
       - ./backend/.env
     environment:
@@ -229,14 +283,17 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+    restart: unless-stopped
     networks:
       - multitenant-network
 
   web:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_DEFAULT_COMPANY_LOGO: ${NEXT_PUBLIC_DEFAULT_COMPANY_LOGO:-https://example.com/default-companys.png}
+    pull_policy: build
     env_file: 
       - ./frontend/.env  # Use frontend/.env.example como base e copie para frontend/.env
     ports:
@@ -246,8 +303,10 @@ services:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000}
       - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-http://localhost:4000}
     depends_on:
-      - api
-    command: sh -c "npm run start"
+      api:
+        condition: service_started
+    command: sh -c "pnpm run start"
+    restart: unless-stopped
     networks:
       - multitenant-network
 
