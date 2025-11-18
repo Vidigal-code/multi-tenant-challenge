@@ -36,9 +36,9 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     pull_policy: missing
-    # environment:
-    #   RABBITMQ_DEFAULT_USER: guest
-    #   RABBITMQ_DEFAULT_PASS: guest
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     ports:
       - "0.0.0.0:5672:5672"
       - "0.0.0.0:15672:15672"
