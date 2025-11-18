@@ -17,8 +17,7 @@ export function ThemeToggle() {
     if (!mounted) {
         return (
             <button
-                className="p-2 rounded-lg hover:bg-gray-100
-                dark:hover:bg-gray-900 transition-colors"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
                 aria-label="Toggle theme"
                 type="button"
                 disabled
@@ -31,8 +30,7 @@ export function ThemeToggle() {
     return (
         <button
             onClick={() => dispatch(toggleTheme())}
-            className="p-2 rounded-lg hover:bg-gray-100
-            dark:hover:bg-gray-900 transition-colors text-gray-600 dark:text-gray-400"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors text-gray-600 dark:text-gray-400"
             aria-label="Toggle theme"
             type="button"
         >

@@ -332,10 +332,7 @@ npm run build        # Build de produção
 npm run start        # Inicia servidor de produção
 
 # Testes
-npm test             # Executa todos os testes
-npm run test:tdd     # Apenas testes TDD (unitários, não integrados)
-npm run test:unit    # Apenas testes unitários
-npm run test:integration  # Apenas testes de integração
+npm test             # Executa testes
 npm run test:watch   # Testes em watch mode
 
 # Lint
@@ -344,20 +341,10 @@ npm run lint         # Executa ESLint
 
 ## 🧪 Testes
 
-### CI/CD
-O workflow de CI (`/.github/workflows/ci.yml`) executa apenas testes unitários para velocidade:
-- `pnpm test:unit` - Executa apenas testes unitários (exclui integração)
-
-Testes de integração devem ser executados localmente antes de fazer commit.
-
 ### Estrutura
 
-- **Unit Tests (TDD)** (`src/tests/`) - Testes unitários seguindo TDD
-  - Componentes React
-  - Hooks customizados
-  - Services e utilitários
-  - Todos documentados com padrão EN/PT
-- **Integration Tests** (`src/tests/integration/`) - Testes de fluxos completos
+- **Unit Tests** - Testes de componentes e hooks
+- **Integration Tests** - Testes de fluxos completos
 - **E2E Tests** - Testes end-to-end (se aplicável)
 
 ### Executar
@@ -366,15 +353,6 @@ Testes de integração devem ser executados localmente antes de fazer commit.
 # Todos os testes
 npm test
 
-# Apenas testes TDD (unitários, não integrados)
-npm run test:tdd
-
-# Apenas testes unitários
-npm run test:unit
-
-# Apenas testes de integração
-npm run test:integration
-
 # Watch mode
 npm run test:watch
 
@@ -382,121 +360,11 @@ npm run test:watch
 npm test -- invites.page.test.tsx
 ```
 
-### Padrão de Documentação TDD
-
-Todos os testes seguem o padrão JSDoc bilingue:
-
-```typescript
-/**
- * EN -
- * Description of what the test suite covers in English.
- * 
- * PT -
- * Descrição do que a suíte de testes cobre em português.
- */
-describe('ComponentName', () => {
-  /**
-   * EN -
-   * Description of individual test case in English.
-   * 
-   * PT -
-   * Descrição do caso de teste individual em português.
-   */
-  it('should do something', () => {
-    // Test implementation
-  });
-});
-```
-
-### Padrões de Teste para Integração
-
-#### Testes de Fluxos Completos
-
-Os testes de integração (`src/tests/integration/`) cobrem fluxos completos de usuário:
-
-**Company Flow** (`company-flow.test.tsx`):
-- Listar empresas → Selecionar → Visualizar → Editar → Convidar membros
-- Visualizar membros → Alterar papel de membro
-- **Padrões aplicados**:
-  - Mock de endpoints HTTP com `mockImplementation` para diferentes cenários
-  - Aguardar modais fecharem antes de procurar elementos (`waitFor` com timeout)
-  - Usar `fireEvent.change` com limpeza prévia para inputs controlados
-  - Verificar endpoints corretos (ex: `/companys/` plural vs `/company/` singular)
-
-**Friendship Flow** (`friendship-flow.test.tsx`):
-- Buscar usuários → Enviar solicitação → Aceitar → Enviar mensagem → Remover
-- **Padrões aplicados**:
-  - Gerenciar cache do React Query com `queryClient.removeQueries()` e `refetchQueries()`
-  - Usar flags para controlar comportamento de mocks em diferentes chamadas
-  - Aguardar refetch completar antes de verificar UI (`queryState.isFetching`)
-  - Lidar com múltiplos elementos usando filtros e seletores específicos
-
-#### Boas Práticas para Testes de Integração
-
-1. **Mock de HTTP Requests**:
-   ```typescript
-   httpMock.get.mockImplementation((url: string) => {
-     if (url.includes('/endpoint')) {
-       return Promise.resolve({ data: { ... } });
-     }
-     return Promise.resolve({ data: {} });
-   });
-   ```
-
-2. **Gerenciamento de Cache React Query**:
-   ```typescript
-   // Remover cache antes de refetch
-   queryClient.removeQueries({ queryKey: queryKeys.someKey() });
-   await queryClient.refetchQueries({ queryKey: queryKeys.someKey() });
-   
-   // Aguardar refetch completar
-   await waitFor(() => {
-     const queryState = queryClient.getQueryState(queryKeys.someKey());
-     return queryState && !queryState.isFetching;
-   });
-   ```
-
-3. **Testes de Modais e Formulários**:
-   ```typescript
-   // Aguardar modal abrir
-   await waitFor(() => {
-     expect(screen.getByPlaceholderText(/placeholder/i)).toBeInTheDocument();
-   });
-   
-   // Aguardar modal fechar após ação
-   await waitFor(() => {
-     expect(screen.queryByPlaceholderText(/placeholder/i)).not.toBeInTheDocument();
-   });
-   ```
-
-4. **Inputs Controlados**:
-   ```typescript
-   // Limpar antes de definir novo valor
-   fireEvent.change(input, { target: { value: '' } });
-   fireEvent.change(input, { target: { value: 'New Value' } });
-   
-   // Aguardar atualização
-   await waitFor(() => {
-     expect(input.value).toBe('New Value');
-   });
-   ```
-
-5. **Múltiplos Elementos**:
-   ```typescript
-   // Filtrar por contexto específico
-   const buttons = screen.getAllByRole('button').filter(btn => {
-     const parent = btn.closest('nav');
-     return parent !== null; // Tab buttons
-   });
-   ```
-
 ### Configuração
 
 - **Jest** com `jest-environment-jsdom`
 - **Testing Library** para testes de componentes
 - **Mock** de APIs e serviços
-- **React Query** com QueryClient isolado por teste
-- **TDD Principles** - Test-Driven Development
 
 ## 🐳 Docker
 
@@ -516,13 +384,8 @@ docker build -t frontend:latest .
 ### Executar
 
 ```bash
-# Certifique-se de ter copiado frontend/.env.example para frontend/.env
-docker run -p 3000:3000 --env-file .env frontend:latest
+docker run -p 3000:3000 --env-file .env.local frontend:latest
 ```
-
-**Nota sobre arquivos .env:**
-- O `docker-compose.yml` usa apenas `frontend/.env` (não o arquivo de exemplo)
-- Copie `frontend/.env.example` para `frontend/.env` antes de executar
 
 ### Variáveis de Ambiente no Docker
 
@@ -575,8 +438,6 @@ ENV NEXT_PUBLIC_DEFAULT_COMPANY_LOGO=$NEXT_PUBLIC_DEFAULT_COMPANY_LOGO
 - **Respeito às preferências**: popups só aparecem se o tipo de notificação estiver habilitado
 - **Aparecem em qualquer rota** quando habilitados
 - **Redirecionam para /notifications** ao clicar
-- **Links diretos para solicitações de amizade**: Notificações de amizade incluem link clicável que redireciona para `/friends/[friendshipId]`
-- **Fallback inteligente**: Se `friendshipId` não estiver no meta da notificação, busca automaticamente nas solicitações pendentes
 
 ### Tempo Real
 - WebSocket para atualizações em tempo real

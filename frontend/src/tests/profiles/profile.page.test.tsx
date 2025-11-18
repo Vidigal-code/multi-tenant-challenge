@@ -25,8 +25,8 @@ describe('ProfilePage', () => {
   expect(screen.getByDisplayValue('users@example.com')).toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText('Novo nome'), { target: { value: 'New Name' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Salvar alterações' }).closest('form')!);
-    await waitFor(()=> expect(screen.getByText('Perfil atualizado com sucesso')).toBeInTheDocument());
-    expect(http.post).toHaveBeenCalledWith('/auth/profile', { name: 'New Name' });
+    await waitFor(()=> expect(screen.getByText('Perfil atualizado com sucesso.')).toBeInTheDocument());
+    expect(http.post).toHaveBeenCalledWith('/invites/profile', { name: 'New Name' });
   });
 
   it('shows errors message on failure', async () => {
@@ -41,7 +41,7 @@ describe('ProfilePage', () => {
     const submitBtn = await screen.findByRole('button', { name: 'Salvar alterações' });
     fireEvent.submit(submitBtn.closest('form')!);
   await waitFor(()=> {
-    const errorElement = screen.getByTestId('profile-error');
+    const errorElement = screen.getByTestId('profile-errors');
     expect(errorElement).toHaveTextContent('Nenhuma alteração detectada — nenhum campo foi atualizado.');
   }, { timeout: 5000 });
   });

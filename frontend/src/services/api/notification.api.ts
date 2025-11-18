@@ -3,84 +3,81 @@ import { http } from '../../lib/http';
 import { queryKeys } from '../../lib/queryKeys';
 import { extractNotificationsData } from '../../lib/api-response';
 
-
-export interface UserInfo {
-    id: string;
-    name: string;
-    email: string;
-}
-
-
-export interface CompanyInfo {
-    name?: string;
-    description?: string;
-    memberCount?: number;
-}
-
-
-export interface OriginalMeta {
+export interface Notification {
+  id: string;
+  companyId?: string | null;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+  senderId?: string;
+  senderName?: string;
+  senderUserId?: string;
+  recipientUserId?: string | null;
+  meta?: {
     kind?: string;
     channel?: string;
-    sender?: UserInfo;
-    company?: CompanyInfo;
+    sender?: {
+      id: string;
+      name: string;
+      email: string;
+    };
     companyName?: string;
     companyId?: string;
     inviteId?: string;
     inviteUrl?: string;
-    inviteEmail?: string;
     role?: string;
     previousRole?: string;
-    removedBy?: UserInfo;
-    rejectedByName?: string;
-    rejectedByEmail?: string;
-    [key: string]: any;
-}
-
-
-export interface NotificationMeta {
-    kind?: string;
-    channel?: string;
-    sender?: UserInfo;
-    companyName?: string;
-    companyId?: string;
-    inviteId?: string;
-    inviteUrl?: string;
-    inviteEmail?: string;
-    role?: string;
-    previousRole?: string;
-    removedBy?: UserInfo;
+    removedBy?: {
+      id: string;
+      name: string;
+      email: string;
+    };
     originalNotificationId?: string;
     replyTo?: string;
     originalTitle?: string;
     originalBody?: string;
-    originalMeta?: OriginalMeta;
+    originalMeta?: {
+      kind?: string;
+      channel?: string;
+      sender?: {
+        id: string;
+        name: string;
+        email: string;
+      };
+      company?: {
+        name?: string;
+        description?: string;
+        memberCount?: number;
+      };
+      companyName?: string;
+      companyId?: string;
+      inviteId?: string;
+      inviteUrl?: string;
+      inviteEmail?: string;
+      role?: string;
+      previousRole?: string;
+      removedBy?: {
+        id: string;
+        name: string;
+        email: string;
+      };
+      rejectedByName?: string;
+      rejectedByEmail?: string;
+    };
     rejectedByName?: string;
     rejectedByEmail?: string;
+    inviteEmail?: string;
     [key: string]: any;
-}
-
-
-export interface Notification {
-    id: string;
-    companyId?: string | null;
-    title: string;
-    body: string;
-    read: boolean;
-    createdAt: string;
-    senderId?: string;
-    senderName?: string;
-    senderUserId?: string;
-    recipientUserId?: string | null;
-    meta?: NotificationMeta;
+  };
 }
 
 export interface NotificationsResponse {
-    items: Notification[];
-    total: number;
-    page: number;
-    pageSize: number;
+  items: Notification[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
-
 
 export function useNotifications(page: number = 1, pageSize: number = 10) {
   return useQuery<NotificationsResponse>({
@@ -117,7 +114,7 @@ export function useCreateNotification() {
         queryKey: queryKeys.notifications(),
       }).catch((error: any) => {
         if (error?.name !== 'CancelledError') {
-         // console.error('[useCreateNotification] Error invalidating queries:', error);
+          console.error('[useCreateNotification] Error invalidating queries:', error);
         }
       });
       return result;
@@ -137,7 +134,7 @@ export function useMarkNotificationRead() {
         queryKey: queryKeys.notifications(),
       }).catch((error: any) => {
         if (error?.name !== 'CancelledError') {
-         // console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
+          console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
         }
       });
     },
@@ -156,7 +153,7 @@ export function useDeleteNotification() {
         queryKey: queryKeys.notifications(),
       }).catch((error: any) => {
         if (error?.name !== 'CancelledError') {
-          //console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
+          console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
         }
       });
     },
@@ -175,7 +172,7 @@ export function useDeleteNotifications() {
         queryKey: queryKeys.notifications(),
       }).catch((error: any) => {
         if (error?.name !== 'CancelledError') {
-         // console.error('[useDeleteNotifications] Error invalidating queries:', error);
+          console.error('[useDeleteNotifications] Error invalidating queries:', error);
         }
       });
     },
@@ -194,7 +191,7 @@ export function useReplyToNotification() {
         queryKey: queryKeys.notifications(),
       }).catch((error: any) => {
         if (error?.name !== 'CancelledError') {
-         // console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
+          console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
         }
       });
     },

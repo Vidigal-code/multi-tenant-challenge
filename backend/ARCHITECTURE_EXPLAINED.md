@@ -493,17 +493,11 @@ Redis Cluster → Milhões de operações/segundo
 - ⏱️ Rastreamento de entregas
 - 🚦 Rate limiting
 
-**Arquitetura de Código:**
-- 🏗️ **Princípios SOLID aplicados**: Todos os consumidores refatorados seguindo Single Responsibility Principle
-- 📚 **Documentação completa**: Métodos documentados em inglês e português usando padrão JSDoc `/** EN - / PT - */`
-- 🔧 **Manutenibilidade**: Código organizado em métodos pequenos e focados, facilitando testes e evolução
-
 **Resultado:**
 - ✅ Notificações entregues com confiabilidade
 - ✅ Sistema escalável para milhões de usuários
 - ✅ Tolerante a falhas
 - ✅ Tempo real quando possível
-- ✅ Código limpo e bem documentado
 
 ---
 

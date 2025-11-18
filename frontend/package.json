@@ -5,11 +5,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
-    "test": "jest --config jest.config.ts",
-    "test:tdd": "jest --config jest.config.ts --testPathPatterns=tests --testPathIgnorePatterns=tests/integration",
-    "test:unit": "jest --config jest.config.ts --testPathPatterns=tests --testPathIgnorePatterns=tests/integration",
-    "test:integration": "jest --config jest.config.ts --testPathPatterns=tests/integration"
+    "lint": "eslint . --ext .ts,.tsx",
+    "test": "jest --config jest.config.ts"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.10.1",
@@ -31,7 +28,6 @@
     "@types/react": "19.2.5",
     "@types/react-dom": "19.2.3",
     "autoprefixer": "10.4.22",
-    "@typescript-eslint/parser": "^8.46.4",
     "eslint": "9.39.1",
     "eslint-config-next": "16.0.3",
     "identity-obj-proxy": "3.0.0",

@@ -5,8 +5,8 @@ import Skeleton from '../../components/skeleton/Skeleton';
 import {useRouter} from 'next/navigation';
 import {getErrorMessage} from '../../lib/error';
 import {useToast} from '../../hooks/useToast';
-import { useSelectCompany, useDeleteCompany, useLeaveCompany, useUpdateCompany, useCompany } from '../../services/api/company.api';
-import { usePrimaryOwnerCompanies, useMemberCompanies, useProfile } from '../../services/api/auth.api';
+import { useSelectCompany, useDeleteCompany, useLeaveCompany, useUpdateCompany, useCompany } from '../../services/api';
+import { usePrimaryOwnerCompanies, useMemberCompanies, useProfile } from '../../services/api';
 import { translateMemberCompaniesMessage } from '../../lib/messages';
 import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
@@ -88,11 +88,11 @@ export default function DashboardPage() {
         if (currentActiveIndex !== -1 && allTabs.length > 0) {
             const maxStart = Math.max(0, allTabs.length - maxVisibleTabs);
             const newTabIndex = Math.max(0, Math.min(currentActiveIndex, maxStart));
-            
+
             setTabIndex(prev => {
                 const currentStart = Math.max(0, Math.min(prev, maxStart));
                 const currentEnd = currentStart + maxVisibleTabs;
-                
+
                 if (currentActiveIndex < currentStart || currentActiveIndex >= currentEnd) {
                     return newTabIndex;
                 }
@@ -241,7 +241,7 @@ export default function DashboardPage() {
                             <MdChevronLeft className="text-xl text-gray-600 dark:text-gray-400" />
                         </button>
                     )}
-                    
+
                     <nav className="flex-1 flex justify-center items-center space-x-1 overflow-x-auto scrollbar-hide" aria-label="Tabs">
                         {visibleTabsSlice.map((tab) => (
                             <button
@@ -250,9 +250,9 @@ export default function DashboardPage() {
                                 className={`
                                     flex items-center justify-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0 w-full sm:w-auto
                                     ${activeTab === tab.id
-                                        ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                                    }
+                                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                }
                                 `}
                             >
                                 <span className="text-xs sm:text-sm text-center">{tab.label}</span>
@@ -281,15 +281,15 @@ export default function DashboardPage() {
             ) : companies.length === 0 ? (
                 <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-8 sm:p-12 text-center bg-gray-50 dark:bg-gray-900">
                     <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
-                        {activeTab === 'owner' 
+                        {activeTab === 'owner'
                             ? 'Você não é owner principal de nenhuma empresa.'
                             : translateMemberCompaniesMessage()}
                     </p>
                 </div>
             ) : (
                 <>
-                    <CompanyList 
-                        companies={companies} 
+                    <CompanyList
+                        companies={companies}
                         onSelect={handleSelect}
                         onDelete={activeTab === 'owner' ? handleDelete : undefined}
                         onLeave={activeTab === 'member' ? handleLeave : undefined}
@@ -300,29 +300,29 @@ export default function DashboardPage() {
                     />
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                         <div className="flex items-center gap-2 flex-wrap justify-center">
-                            <button 
-                                className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium" 
+                            <button
+                                className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                                 onClick={() => {
                                     if (activeTab === 'owner') {
                                         setOwnerPage(p => Math.max(1, p - 1));
                                     } else {
                                         setMemberPage(p => Math.max(1, p - 1));
                                     }
-                                }} 
+                                }}
                                 disabled={currentPage === 1}
                             >
                                 Anterior
                             </button>
                             <span className="text-sm text-gray-600 dark:text-gray-400">Página {currentPage} de {totalPages}</span>
-                            <button 
-                                className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium" 
+                            <button
+                                className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                                 onClick={() => {
                                     if (activeTab === 'owner') {
                                         setOwnerPage(p => p + 1);
                                     } else {
                                         setMemberPage(p => p + 1);
                                     }
-                                }} 
+                                }}
                                 disabled={currentPage >= totalPages}
                             >
                                 Próxima
@@ -365,54 +365,54 @@ export default function DashboardPage() {
                     <div className="p-4 text-center text-gray-600 dark:text-gray-400">Carregando...</div>
                 ) : (
                     <form className="space-y-4"
-                        onSubmit={async e => {
-                            e.preventDefault();
-                            if (!editCompanyId) return;
-                            setSaving(true);
-                            updateCompanyMutation.mutate({
-                                name: editName || undefined,
-                                logoUrl: editLogo || undefined,
-                                description: editDescription.trim().slice(0, 400) || undefined,
-                                is_public: editIsPublic,
-                            }, {
-                                onSuccess: () => {
-                                    show({ type: 'success', message: 'Empresa atualizada' });
-                                    setShowEditModal(false);
-                                    setEditCompanyId(null);
-                                    primaryOwnerQuery.refetch();
-                                    memberCompaniesQuery.refetch();
-                                },
-                                onError: (err: any) => {
-                                    const m = getErrorMessage(err, 'Falha ao atualizar empresa');
-                                    show({ type: 'error', message: m });
-                                },
-                                onSettled: () => {
-                                    setSaving(false);
-                                },
-                            });
-                        }}>
+                          onSubmit={async e => {
+                              e.preventDefault();
+                              if (!editCompanyId) return;
+                              setSaving(true);
+                              updateCompanyMutation.mutate({
+                                  name: editName || undefined,
+                                  logoUrl: editLogo || undefined,
+                                  description: editDescription.trim().slice(0, 400) || undefined,
+                                  is_public: editIsPublic,
+                              }, {
+                                  onSuccess: () => {
+                                      show({ type: 'success', message: 'Empresa atualizada' });
+                                      setShowEditModal(false);
+                                      setEditCompanyId(null);
+                                      primaryOwnerQuery.refetch();
+                                      memberCompaniesQuery.refetch();
+                                  },
+                                  onError: (err: any) => {
+                                      const m = getErrorMessage(err, 'Falha ao atualizar empresa');
+                                      show({ type: 'error', message: m });
+                                  },
+                                  onSettled: () => {
+                                      setSaving(false);
+                                  },
+                              });
+                          }}>
                         <div>
                             <input value={editName}
-                                onChange={e => setEditName(e.target.value)}
-                                placeholder="Nome da empresa" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
+                                   onChange={e => setEditName(e.target.value)}
+                                   placeholder="Nome da empresa" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
                                     rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500
                                      dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900
                                       dark:focus:ring-white focus:border-transparent transition-colors" />
                         </div>
                         <div>
                             <input value={editLogo}
-                                onChange={e => setEditLogo(e.target.value)}
-                                placeholder="URL do logo" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
+                                   onChange={e => setEditLogo(e.target.value)}
+                                   placeholder="URL do logo" className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
                                    rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500
                                    dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900
                                    dark:focus:ring-white focus:border-transparent transition-colors" />
                         </div>
                         <div>
                             <textarea value={editDescription}
-                                onChange={e => setEditDescription(e.target.value)}
-                                placeholder="Descrição (máximo 400 caracteres)"
-                                maxLength={400}
-                                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
+                                      onChange={e => setEditDescription(e.target.value)}
+                                      placeholder="Descrição (máximo 400 caracteres)"
+                                      maxLength={400}
+                                      className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800
                                    rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white
                                    placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none
                                    focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent
@@ -420,22 +420,22 @@ export default function DashboardPage() {
                         </div>
                         <label className="flex items-center space-x-3 cursor-pointer">
                             <input type="checkbox"
-                                checked={editIsPublic}
-                                onChange={e => setEditIsPublic(e.target.checked)}
-                                className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white
+                                   checked={editIsPublic}
+                                   onChange={e => setEditIsPublic(e.target.checked)}
+                                   className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white
                                     focus:ring-2 focus:ring-gray-900 dark:focus:ring-white" />
                             <span className="text-sm text-gray-700 dark:text-gray-300">Empresa pública (visível para todos os usuários)</span>
                         </label>
                         <div className="flex justify-end gap-3">
                             <button type="button"
-                                onClick={() => {
-                                    setShowEditModal(false);
-                                    setEditCompanyId(null);
-                                    setEditName('');
-                                    setEditLogo('');
-                                    setEditDescription('');
-                                    setEditIsPublic(false);
-                                }} className="px-4 py-2 border border-gray-200
+                                    onClick={() => {
+                                        setShowEditModal(false);
+                                        setEditCompanyId(null);
+                                        setEditName('');
+                                        setEditLogo('');
+                                        setEditDescription('');
+                                        setEditIsPublic(false);
+                                    }} className="px-4 py-2 border border-gray-200
                                     dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white
                                     hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm">Cancelar</button>
                             <button disabled={saving} type="submit" className="px-4 py-2 bg-gray-900 dark:bg-white

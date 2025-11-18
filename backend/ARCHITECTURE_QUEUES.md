@@ -84,14 +84,11 @@ Evento → Fila RabbitMQ → Worker → notifications.realtimes → Worker Realt
   - Roteamento DLQ para mensagens falhadas
   - Desduplicação Redis
   - Controle de prefetch
-  - **Refatorado seguindo SOLID**: Métodos separados por responsabilidade única (`initializeQueues`, `handleMessage`, `parseMessage`, `checkDuplicate`, `processMessage`, `handleProcessingError`, `acknowledgeMessage`, `rejectMessageToDlq`, `rejectMessageForRetry`)
-  - **Documentação completa**: Todos os métodos documentados em inglês e português usando padrão JSDoc `/** EN - / PT - */`
   
 - **Delivery-Aware**: `BaseDeliveryAwareConsumer` (estende `BaseResilientConsumer`)
   - Adiciona etapa de confirmação de entrega
   - Aguarda confirmação do frontend antes de reconhecer
   - Trata lógica de timeout e retry
-  - **Documentação completa**: Todos os métodos protegidos documentados em inglês e português
 
 ## Arquitetura WebSocket
 
@@ -350,31 +347,11 @@ WS_RATE_LIMIT_MAX=50
 ### Consumers
 
 - **BaseResilientConsumer** - Classe base com retry, DLQ, dedup
-  - Refatorado seguindo SOLID com métodos bem separados
-  - Documentação completa em inglês e português
-  
 - **BaseDeliveryAwareConsumer** - Estende com confirmação de entrega
-  - Documentação completa de todos os métodos protegidos
-  
 - **RealtimeNotificationsConsumer** - Processamento de notificações em tempo real
-  - Refatorado com funções auxiliares para bootstrap (`initializeApplication`, `getRequiredServices`, `initializeRabbitMQ`, `startConsumer`, `registerSignalHandlers`, etc.)
-  - Documentação completa em inglês e português
-  
 - **MembersEventsConsumer** - Encaminhamento de eventos de membros
-  - Refatorado com métodos auxiliares (`extractEventId`, `ensureRealtimeQueuesExist`, `serializePayload`, `forwardToRealtimeQueue`)
-  - Documentação completa em inglês e português
-  
 - **InvitesEventsConsumer** - Encaminhamento de eventos de convites
-  - Refatorado com métodos auxiliares (`ensureRealtimeQueuesExist`, `serializePayload`, `forwardToRealtimeQueue`)
-  - Documentação completa em inglês e português
-  
 - **GenericEventsConsumer** - Encaminhamento de eventos genéricos
-  - Refatorado com métodos auxiliares (`extractEventName`, `shouldForwardEvent`, `resolveEventId`, `enrichPayloadWithEventId`, `ensureRealtimeQueuesExist`, `forwardToRealtimeQueue`)
-  - Documentação completa em inglês e português
-  
-- **InviteConsumer** - Consumer legacy para fila de convites
-  - Refatorado com métodos auxiliares (`initializeQueue`, `parseMessageContent`, `logInviteDetails`, `processMessage`)
-  - Documentação completa em inglês e português
 
 ## Resumo
 

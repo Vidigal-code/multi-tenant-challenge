@@ -37,44 +37,35 @@ export type NotificationKind =
     | 'notification.sent'
     | 'notification.reply';
 
-
-export interface UserInfo {
-    id: string;
-    name: string;
-    email: string;
-}
-
-
-export type NotificationChannel = 'company' | 'friend' | string;
-
 export interface NotificationMeta {
     kind?: NotificationKind | string;
-    channel?: NotificationChannel;
-    sender?: UserInfo;
-    removedBy?: UserInfo;
-
+    channel?: 'company' | 'friend' | string;
+    sender?: {
+        id: string;
+        name: string;
+        email: string;
+    };
     companyName?: string;
     companyId?: string;
-
     inviteId?: string;
     inviteUrl?: string;
-    inviteEmail?: string;
-
     friendshipId?: string;
-
     role?: string;
     previousRole?: string;
-
+    removedBy?: {
+        id: string;
+        name: string;
+        email: string;
+    };
     originalNotificationId?: string;
     replyTo?: string;
     originalTitle?: string;
-
     rejectedByName?: string;
     rejectedByEmail?: string;
+    inviteEmail?: string;
 
     [key: string]: any;
 }
-
 
 export interface NotificationData {
     id: string;
@@ -82,14 +73,11 @@ export interface NotificationData {
     body: string;
     createdAt: string;
     read: boolean;
-
     senderUserId: string;
     recipientUserId?: string | null;
     companyId?: string | null;
-
     meta?: NotificationMeta;
 }
-
 
 export function formatNotificationMessage(notification: NotificationData): string {
     const {meta, title, body} = notification;

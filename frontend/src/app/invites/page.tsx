@@ -15,7 +15,6 @@ import {
     useRejectInvite,
     useDeleteInvite,
     useDeleteInvites,
-    useRejectAllInvites,
     type Invite,
 } from '../../services/api/invite.api';
 import { useProfile } from '../../services/api/auth.api';
@@ -107,7 +106,6 @@ function InvitesPageInner() {
 
     const acceptMutation = useAcceptInvite();
     const rejectMutation = useRejectInvite();
-    const rejectAllMutation = useRejectAllInvites();
     const deleteInviteMutation = useDeleteInvite();
     const deleteInvitesMutation = useDeleteInvites();
 
@@ -151,24 +149,18 @@ function InvitesPageInner() {
             return invite?.token;
         }).filter(Boolean) as string[];
 
-        if (tokens.length === 0) {
+        try {
+            for (const token of tokens) {
+                await rejectMutation.mutateAsync(token);
+            }
             setRejectIds([]);
             setSelected([]);
-            return;
+            setMessage('Convites rejeitados');
+        } catch (err: any) {
+            const m = getErrorMessage(err, 'Não foi possível rejeitar os convites');
+            setError(m); 
+            show({ type: 'error', message: m }); 
         }
-
-        rejectAllMutation.mutate(tokens, {
-            onSuccess: () => {
-                setRejectIds([]);
-                setSelected([]);
-                setMessage('Convites rejeitados');
-            },
-            onError: (err: any) => {
-                const m = getErrorMessage(err, 'Não foi possível rejeitar os convites');
-                setError(m);
-                show({ type: 'error', message: m });
-            },
-        });
     }
 
     function handleDelete(ids: string[]) {

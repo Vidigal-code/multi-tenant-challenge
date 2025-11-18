@@ -26,10 +26,7 @@ async function handshake() {
 
 export function getRealtimeSocket() {
   if (socket) return socket;
-  // Use WS URL if defined, otherwise use API URL, otherwise fallback to current origin
-  const base = process.env.NEXT_PUBLIC_WS_URL || 
-               process.env.NEXT_PUBLIC_API_URL || 
-               (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000');
+  const base = process.env.NEXT_PUBLIC_WS_URL || window.location.origin.replace(/^http/, 'http');
   const namespace = '/rt';
   socket = io(base + namespace, {
     withCredentials: true,

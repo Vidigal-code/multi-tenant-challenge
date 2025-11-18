@@ -1,72 +1,73 @@
-import { Email } from "../../value-objects/email.vo";
+import {Email} from "../../value-objects/email.vo";
 
 export interface UserProps {
-  id: string;
-  email: Email;
-  name: string;
-  passwordHash: string;
-  activeCompanyId?: string | null;
-  notificationPreferences?: Record<string, any>;
-  createdAt: Date;
-  updatedAt: Date;
+    id: string;
+    email: Email;
+    name: string;
+    passwordHash: string;
+    activeCompanyId?: string | null;
+    notificationPreferences?: Record<string, any>;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export class User {
-  private constructor(private props: UserProps) {}
+    private constructor(private props: UserProps) {
+    }
 
-  get id(): string {
-    return this.props.id;
-  }
+    get id(): string {
+        return this.props.id;
+    }
 
-  get email(): Email {
-    return this.props.email;
-  }
+    get email(): Email {
+        return this.props.email;
+    }
 
-  get name(): string {
-    return this.props.name;
-  }
+    get name(): string {
+        return this.props.name;
+    }
 
-  get passwordHash(): string {
-    return this.props.passwordHash;
-  }
+    get passwordHash(): string {
+        return this.props.passwordHash;
+    }
 
-  get activeCompanyId(): string | null | undefined {
-    return this.props.activeCompanyId;
-  }
+    get activeCompanyId(): string | null | undefined {
+        return this.props.activeCompanyId;
+    }
 
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
+    get createdAt(): Date {
+        return this.props.createdAt;
+    }
 
-  get updatedAt(): Date {
-    return this.props.updatedAt;
-  }
+    get updatedAt(): Date {
+        return this.props.updatedAt;
+    }
 
-  get notificationPreferences(): Record<string, any> {
-    return this.props.notificationPreferences ?? {};
-  }
+    get notificationPreferences(): Record<string, any> {
+        return this.props.notificationPreferences ?? {};
+    }
 
-  static create(props: UserProps): User {
-    return new User(props);
-  }
+    static create(props: UserProps): User {
+        return new User(props);
+    }
 
-  setActiveCompany(companyId: string): void {
-    this.props.activeCompanyId = companyId;
-  }
+    setActiveCompany(companyId: string): void {
+        this.props.activeCompanyId = companyId;
+    }
 
-  clearActiveCompany(): void {
-    this.props.activeCompanyId = null;
-  }
+    clearActiveCompany(): void {
+        this.props.activeCompanyId = null;
+    }
 
-  toJSON() {
-    return {
-      id: this.id,
-      email: this.email.toString(),
-      name: this.name,
-      activeCompanyId: this.activeCompanyId,
-      notificationPreferences: this.notificationPreferences,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
-  }
+    toJSON() {
+        return {
+            id: this.id,
+            email: this.email.toString(),
+            name: this.name,
+            activeCompanyId: this.activeCompanyId,
+            notificationPreferences: this.notificationPreferences,
+            createdAt: this.createdAt,
+            updatedAt: this.updatedAt,
+        };
+    }
 }

@@ -19,9 +19,7 @@ async function main() {
     },
   });
 
-  let company = await prisma.company.findFirst({
-    where: { name: "Acme Corp" },
-  });
+  let company = await prisma.company.findFirst({ where: { name: "Acme Corp" } });
   if (!company) {
     company = await prisma.company.create({
       data: {
@@ -43,16 +41,16 @@ async function main() {
     update: {
       companyId: company.id,
       email: "member@example.com",
-      role: "MEMBER",
-      status: "PENDING",
+  role: "MEMBER",
+  status: "PENDING",
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
     create: {
       companyId: company.id,
       email: "member@example.com",
-      role: "MEMBER",
+  role: "MEMBER",
       token: "seed-token",
-      status: "PENDING",
+  status: "PENDING",
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });

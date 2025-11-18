@@ -1,27 +1,27 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { Provider as ReduxProvider } from 'react-redux';
-import { store } from '../../store';
-import NavAuthMenu from '../../components/nav/NavAuthMenu';
+import RootLayout from '../../app/layout';
+
+jest.mock('next/headers', () => ({
+  cookies: () => ({ get: () => ({ value: 'jwt' }) })
+}));
 
 jest.mock('next/link', () => ({
   __esModule: true,
   default: (props: any) => React.createElement('a', { href: props.href }, props.children),
 }));
 
-jest.mock('../../hooks/useAuth', () => ({
-  useAuth: () => ({
-    logout: jest.fn(),
-  }),
-}));
-
 describe('RootLayout logout button', () => {
+  const originalError = console.error;
+  beforeAll(() => {
+    console.error = (...args: any[]) => {
+      if (typeof args[0] === 'string' && args[0].includes('validateDOMNesting')) return;
+      originalError(...args);
+    };
+  });
+  afterAll(() => { console.error = originalError; });
   it('shows logout button when authenticated', async () => {
-    render(
-      <ReduxProvider store={store}>
-        <NavAuthMenu initialAuth={true} />
-      </ReduxProvider>
-    );
+    render(<RootLayout><div>content</div></RootLayout>);
     expect(await screen.findByRole('button', { name: /Sair/i })).toBeInTheDocument();
   });
 });

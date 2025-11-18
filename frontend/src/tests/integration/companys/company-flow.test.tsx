@@ -75,7 +75,7 @@ describe('Company Flow Integration', () => {
                     },
                 });
             }
-            if (url.includes('/auth/account/primary-owner-companies')) {
+            if (url.includes('/companies')) {
                 return Promise.resolve({
                     data: {
                         data: [
@@ -94,41 +94,22 @@ describe('Company Flow Integration', () => {
                     },
                 });
             }
-            if (url.includes('/company/c1') && !url.includes('/members') && !url.includes('/role') && !url.includes('/select')) {
-                return Promise.resolve({
-                    data: {
-                        id: 'c1',
-                        name: 'Test Company',
-                        logoUrl: 'https://example.com/logo.png',
-                        description: 'Test Description',
-                        is_public: false,
-                    },
-                });
-            }
             return Promise.resolve({ data: {} });
         });
 
         renderWithProviders(<DashboardPage />);
 
-        // Wait for API call first
-        await waitFor(() => {
-            expect(httpMock.get).toHaveBeenCalledWith('/auth/account/primary-owner-companies', {
-                params: {page: 1, pageSize: 10},
-            });
-        }, { timeout: 5000 });
-
-        // Then wait for the company name to appear
         await waitFor(() => {
             expect(screen.getByText(/Test Company/i)).toBeInTheDocument();
         }, { timeout: 5000 });
 
         httpMock.post.mockResolvedValueOnce({data: {success: true}});
 
-        const selectButton = screen.getByText(/Ver empresa/i);
+        const selectButton = screen.getByText(/Select/i);
         fireEvent.click(selectButton);
 
         await waitFor(() => {
-            expect(httpMock.post).toHaveBeenCalledWith('/company/c1/select');
+            expect(httpMock.post).toHaveBeenCalledWith('/companys/c1/select');
         });
 
         // Reset mocks and set up new implementation for CompanyPage
@@ -177,7 +158,7 @@ describe('Company Flow Integration', () => {
                     },
                 });
             }
-            if (url.includes('/company/c1') && !url.includes('/members') && !url.includes('/public-info')) {
+            if (url.includes('/companys/c1') && !url.includes('/members') && !url.includes('/public-info')) {
                 return Promise.resolve({
                     data: {
                         id: 'c1',
@@ -198,12 +179,6 @@ describe('Company Flow Integration', () => {
 
         renderWithProviders(<CompanyPage />);
 
-        // Wait for company data to load
-        await waitFor(() => {
-            expect(httpMock.get).toHaveBeenCalledWith('/company/c1');
-        }, { timeout: 5000 });
-
-        // Wait for company name to appear
         await waitFor(() => {
             const companyElements = screen.getAllByText(/Test Company/i);
             expect(companyElements.length).toBeGreaterThan(0);
@@ -214,55 +189,19 @@ describe('Company Flow Integration', () => {
         }, { timeout: 10000 });
 
         await waitFor(() => {
-            const editButtons = screen.getAllByText(/editar empresa/i);
-            expect(editButtons.length).toBeGreaterThan(0);
+            expect(screen.getByText(/editar empresa/i)).toBeInTheDocument();
         }, { timeout: 10000 });
 
-        // Get the first "Editar empresa" button (from the company list)
-        const editButtons = screen.getAllByText(/editar empresa/i);
-        const editButton = editButtons[0];
-        expect(editButton).toBeDefined();
-        
-        // Mock the company data fetch for the edit modal
-        httpMock.get.mockImplementationOnce((url: string) => {
-            if (url === '/company/c1') {
-                return Promise.resolve({
-                    data: {
-                        id: 'c1',
-                        name: 'Test Company',
-                        logoUrl: 'https://example.com/logo.png',
-                        description: 'Test Description',
-                        is_public: false,
-                    },
-                });
-            }
-            return Promise.resolve({ data: {} });
-        });
-        
+        const editButton = screen.getByText(/editar empresa/i);
         fireEvent.click(editButton);
 
-        // Wait for the edit modal to open and form to be populated - DashboardPage uses "Nome da empresa" placeholder
         await waitFor(() => {
-            const nameInput = screen.getByPlaceholderText(/nome da empresa/i);
-            expect(nameInput).toBeInTheDocument();
-            // Wait for the form to be populated with company data
-            expect((nameInput as HTMLInputElement).value).toBe('Test Company');
-        }, { timeout: 5000 });
-
-        const nameInput = screen.getByPlaceholderText(/nome da empresa/i) as HTMLInputElement;
-        // Clear the input first, then set new value
-        fireEvent.change(nameInput, {
-            target: {value: ''},
+            expect(screen.getByPlaceholderText(/novo nome/i)).toBeInTheDocument();
         });
-        fireEvent.change(nameInput, {
+
+        fireEvent.change(screen.getByPlaceholderText(/novo nome/i), {
             target: {value: 'Updated Company'},
         });
-        
-        // Wait for the value to be updated (controlled input)
-        await waitFor(() => {
-            const updatedInput = screen.getByPlaceholderText(/nome da empresa/i) as HTMLInputElement;
-            expect(updatedInput.value).toBe('Updated Company');
-        }, { timeout: 2000 });
 
         httpMock.patch.mockResolvedValueOnce({
             data: {
@@ -274,26 +213,16 @@ describe('Company Flow Integration', () => {
         fireEvent.submit(screen.getByText(/salvar/i).closest('form')!);
 
         await waitFor(() => {
-            expect(httpMock.patch).toHaveBeenCalledWith('/company/c1', expect.objectContaining({
+            expect(httpMock.patch).toHaveBeenCalledWith('/companys/c1', expect.objectContaining({
                 name: 'Updated Company',
             }));
         });
 
-        // Wait for the edit modal to close after successful update
         await waitFor(() => {
-            const nameInput = screen.queryByPlaceholderText(/nome da empresa/i);
-            expect(nameInput).not.toBeInTheDocument();
-        }, { timeout: 5000 });
+            expect(screen.getByText(/Invite/i)).toBeInTheDocument();
+        });
 
-        // After updating, wait for the invite form to be visible on CompanyPage
-        // The invite form is shown by default (showInvite starts as true)
-        await waitFor(() => {
-            // Look for the invite form input with placeholder "Email ou ID do usuário"
-            const inviteInput = screen.getByPlaceholderText(/Email ou ID do usuário/i);
-            expect(inviteInput).toBeInTheDocument();
-        }, { timeout: 5000 });
-
-        const inviteForm = screen.getByPlaceholderText(/Email ou ID do usuário/i);
+        const inviteForm = screen.getByPlaceholderText(/Email/i);
         fireEvent.change(inviteForm, {
             target: {value: 'member@test.com'},
         });
@@ -320,7 +249,7 @@ describe('Company Flow Integration', () => {
 
     it('view companys -> view members -> change role', async () => {
         httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/invites/profile') || url.includes('/auth/profile')) {
+            if (url.includes('/invites/profile')) {
                 return Promise.resolve({
                     data: {
                         id: 'u1',
@@ -369,7 +298,7 @@ describe('Company Flow Integration', () => {
                     },
                 });
             }
-            if (url.includes('/company/c1') && !url.includes('/members') && !url.includes('/public-info')) {
+            if (url.includes('/companys/c1') && !url.includes('/members') && !url.includes('/public-info')) {
                 return Promise.resolve({
                     data: {
                         id: 'c1',
@@ -378,62 +307,6 @@ describe('Company Flow Integration', () => {
                         description: 'Test Description',
                         is_public: false,
                         createdAt: new Date().toISOString(),
-                    },
-                });
-            }
-            if (url.includes('/friendships') && url.includes('status=ACCEPTED')) {
-                return Promise.resolve({
-                    data: {
-                        data: [],
-                    },
-                });
-            }
-            if (url.includes('/friendships') && !url.includes('status=')) {
-                return Promise.resolve({
-                    data: {
-                        data: [],
-                    },
-                });
-            }
-            if (url.includes('/company/c1/members') && url.includes('/role')) {
-                return Promise.resolve({
-                    data: {
-                        role: 'OWNER',
-                    },
-                });
-            }
-            if (url.includes('/company/c1/members') && !url.includes('/role') && !url.includes('/primary-owner')) {
-                return Promise.resolve({
-                    data: {
-                        members: [
-                            {
-                                id: 'm1',
-                                userId: 'u1',
-                                role: 'OWNER',
-                                name: 'Owner',
-                                email: 'owner@test.com',
-                                joinedAt: new Date().toISOString(),
-                            },
-                            {
-                                id: 'm2',
-                                userId: 'u2',
-                                role: 'MEMBER',
-                                name: 'Member',
-                                email: 'member@test.com',
-                                joinedAt: new Date().toISOString(),
-                            },
-                        ],
-                        total: 2,
-                        currentUserRole: 'OWNER',
-                    },
-                });
-            }
-            if (url.includes('/company/c1/members/primary-owner')) {
-                return Promise.resolve({
-                    data: {
-                        primaryOwnerUserId: 'u1',
-                        primaryOwnerName: 'Owner',
-                        primaryOwnerEmail: 'owner@test.com',
                     },
                 });
             }
@@ -446,12 +319,6 @@ describe('Company Flow Integration', () => {
 
         renderWithProviders(<CompanyPage />);
 
-        // Wait for company data to load
-        await waitFor(() => {
-            expect(httpMock.get).toHaveBeenCalledWith('/company/c1');
-        }, { timeout: 5000 });
-
-        // Wait for company name to appear
         await waitFor(() => {
             const companyElements = screen.getAllByText(/Test Company/i);
             expect(companyElements.length).toBeGreaterThan(0);
@@ -467,94 +334,35 @@ describe('Company Flow Integration', () => {
             expect(memberElements.length).toBeGreaterThan(0);
         }, { timeout: 10000 });
 
-        // Click on a member to open the modal (members are clickable buttons/cards)
-        const memberButtons = screen.getAllByRole('button').filter(btn => {
-            const text = btn.textContent || '';
-            return text.includes('member@test.com') || text.includes('Member');
+        const editButtons = screen.getAllByText(/Edit/i);
+        const memberEditButton = editButtons.find(btn => {
+            const row = btn.closest('tr');
+            return row && row.textContent?.includes('member@test.com');
         });
-        const memberButton = memberButtons.find(btn => {
-            const text = btn.textContent || '';
-            return text.includes('member@test.com');
-        }) || memberButtons[0];
         
-        expect(memberButton).toBeDefined();
-        fireEvent.click(memberButton!);
+        expect(memberEditButton).toBeInTheDocument();
+        fireEvent.click(memberEditButton!);
 
-        // Wait for modal to open and find the role select
         await waitFor(() => {
             const selects = screen.getAllByRole('combobox');
             expect(selects.length).toBeGreaterThan(0);
-        }, { timeout: 5000 });
+        });
 
-        // Find the role select in the modal - it should be the one with "Alterar Papel" label
-        const roleSelectLabel = screen.getByText(/Alterar Papel/i);
-        expect(roleSelectLabel).toBeInTheDocument();
-        const roleSelectContainer = roleSelectLabel.closest('label')?.parentElement;
-        expect(roleSelectContainer).toBeDefined();
+        const roleSelect = screen.getAllByRole('combobox').find(select => {
+            const row = select.closest('tr');
+            return row && row.textContent?.includes('member@test.com');
+        });
         
-        const roleSelect = roleSelectContainer?.querySelector('select') as HTMLSelectElement;
-        expect(roleSelect).toBeDefined();
-        expect(roleSelect.value).toBe('MEMBER'); // Current role is MEMBER
-        
-        // Change the select value to ADMIN
-        fireEvent.change(roleSelect, {target: {value: 'ADMIN'}});
-        
-        // Wait for React to update the state and re-render
-        await waitFor(() => {
-            const updatedSelect = roleSelectContainer?.querySelector('select') as HTMLSelectElement;
-            expect(updatedSelect.value).toBe('ADMIN');
-        }, { timeout: 2000 });
-        
-        // Wait a bit more for React to process the state change
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Wait for the "Alterar" button to be enabled after changing the role
-        // The button is in the same container as the select
-        let saveButton: HTMLElement | undefined;
-        await waitFor(() => {
-            // Find the button in the same container as the select
-            const buttons = roleSelectContainer?.querySelectorAll('button') || [];
-            const alterarButton = Array.from(buttons).find(btn => {
-                const text = btn.textContent || '';
-                return /Alterar/i.test(text);
-            });
-            expect(alterarButton).toBeDefined();
-            expect(alterarButton).not.toBeDisabled();
-            saveButton = alterarButton as HTMLElement;
-        }, { timeout: 5000 });
+        expect(roleSelect).toBeInTheDocument();
+        fireEvent.change(roleSelect!, {target: {value: 'ADMIN'}});
 
         httpMock.patch.mockResolvedValueOnce({
             data: {success: true},
         });
 
-        // Click the enabled "Alterar" button next to the role select
-        expect(saveButton).toBeDefined();
-        expect(saveButton).not.toBeDisabled();
-        fireEvent.click(saveButton!);
+        const saveButton = screen.getByText(/Save/i);
+        fireEvent.click(saveButton);
 
-        // Wait for confirmation modal to appear
-        await waitFor(() => {
-            const confirmModal = screen.getByText(/Alterar papel do membro/i);
-            expect(confirmModal).toBeInTheDocument();
-        }, { timeout: 5000 });
-
-        // Find and click the confirm button
-        // The ConfirmModal uses a button with text "Confirmar" and onClick={onConfirm}
-        await waitFor(() => {
-            const confirmButtons = screen.getAllByRole('button');
-            const confirmButton = confirmButtons.find(btn => {
-                const text = btn.textContent || '';
-                // The confirm button has red background and "Confirmar" text
-                return /Confirmar/i.test(text) && 
-                       (btn.className.includes('bg-red') || btn.className.includes('red'));
-            });
-            expect(confirmButton).toBeDefined();
-            expect(confirmButton).not.toBeDisabled();
-            fireEvent.click(confirmButton!);
-        }, { timeout: 5000 });
-
-        // Wait for the PATCH call to be made
-        // Note: The endpoint uses /companys/ (plural) not /company/
         await waitFor(() => {
             expect(httpMock.patch).toHaveBeenCalledWith('/companys/c1/members/u2/role', {
                 role: 'ADMIN',

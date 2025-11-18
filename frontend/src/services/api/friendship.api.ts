@@ -100,7 +100,7 @@ export function useSendFriendNotification() {
         queryKey: queryKeys.notifications(),
       }).catch((error: any) => {
         if (error?.name !== 'CancelledError') {
-         // console.error('[useSendFriendNotification] Error invalidating queries:', error);
+          console.error('[useSendFriendNotification] Error invalidating queries:', error);
         }
       });
     },

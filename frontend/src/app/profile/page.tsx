@@ -739,9 +739,7 @@ export default function ProfilePage() {
                         Controle quais notificações você recebe do sistema.
                     </p>
 
-                    <div className="space-y-4 border border-gray-200
-                    dark:border-gray-800 rounded-lg p-4
-                    bg-white dark:bg-gray-900">
+                    <div className="space-y-4 border border-gray-200 dark:border-gray-800 rounded-lg p-4 bg-white dark:bg-gray-900">
                         <div className="border-b border-gray-200 dark:border-gray-800 pb-4 mb-4">
                             <h3 className="text-md font-semibold dark:text-white mb-2 flex items-center gap-2">
                                 <MdNotificationsActive className="text-xl text-blue-600 dark:text-blue-400" />
@@ -752,8 +750,7 @@ export default function ProfilePage() {
                                 Ao ativar, todas as categorias selecionadas passam a enviar alertas em tempo real.
                             </p>
                             
-                            <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50
-                            dark:hover:bg-gray-800/50 transition-colors">
+                            <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                                 <div className="flex-shrink-0 mt-1">
                                     <MdNotificationsActive className="text-xl text-blue-600 dark:text-blue-400" />
                                 </div>

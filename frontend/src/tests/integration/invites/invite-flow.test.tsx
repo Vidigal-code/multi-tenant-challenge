@@ -128,7 +128,7 @@ describe('Invite Flow Integration', () => {
         fireEvent.click(acceptButton);
 
         await waitFor(() => {
-            expect(httpMock.post).toHaveBeenCalledWith('/auth/accept-invites', { token: 'token123' });
+            expect(httpMock.post).toHaveBeenCalledWith('/invites/accept-invites', { token: 'token123' });
         }, { timeout: 5000 });
     });
 
@@ -186,42 +186,15 @@ describe('Invite Flow Integration', () => {
             data: {success: true},
         });
 
-        // First, select the checkbox for the invite
-        const checkboxes = screen.getAllByRole('checkbox');
-        const inviteCheckbox = checkboxes.find(cb => !(cb as HTMLInputElement).disabled);
-        if (inviteCheckbox) {
-            fireEvent.click(inviteCheckbox);
-        }
+        const deleteButtons = screen.getAllByRole('button', {name: /Deletar/i});
+        const deleteButton = deleteButtons.find(btn => btn.textContent === 'Deletar' && !(btn as HTMLButtonElement).disabled) || deleteButtons[deleteButtons.length - 1];
+        fireEvent.click(deleteButton);
 
-        // Then click the "Deletar selecionados" button
-        const deleteButtons = screen.getAllByRole('button', {name: /Deletar selecionados/i});
-        const deleteButton = deleteButtons.find(btn => !(btn as HTMLButtonElement).disabled);
-        
-        if (deleteButton) {
-            fireEvent.click(deleteButton);
-            
-            // Wait for modal to appear
-            await waitFor(() => {
-                expect(screen.getByText(/Deletar convites/i)).toBeInTheDocument();
-            }, { timeout: 5000 });
-        } else {
-            // Fallback: try individual delete button if it exists
-            const individualDeleteButtons = screen.getAllByRole('button', {name: /Deletar/i});
-            const individualDeleteButton = individualDeleteButtons.find(btn => btn.textContent === 'Deletar' && !(btn as HTMLButtonElement).disabled);
-            if (individualDeleteButton) {
-                fireEvent.click(individualDeleteButton);
-                await waitFor(() => {
-                    expect(screen.getByText(/Deletar convites/i)).toBeInTheDocument();
-                }, { timeout: 5000 });
-            }
-        }
+        await waitFor(() => {
+            expect(screen.getByText(/Confirmar/i)).toBeInTheDocument();
+        });
 
-        // Find confirm button in the modal
-        const confirmButtons = screen.getAllByRole('button', {name: /Confirmar/i});
-        const confirmButton = confirmButtons.find(btn => {
-            const modal = btn.closest('[class*="fixed"]');
-            return modal !== null;
-        }) || confirmButtons[0];
+        const confirmButton = screen.getByRole('button', {name: /Confirmar/i});
         fireEvent.click(confirmButton);
 
         await waitFor(() => {

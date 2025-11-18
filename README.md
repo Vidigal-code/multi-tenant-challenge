@@ -14,8 +14,6 @@
 - ✅ Sair da empresa e exclusão permanente de conta
 - ✅ Sistema de amizades com validação de notificações
 - ✅ Busca de usuários e gerenciamento de amizades
-- ✅ Links diretos para solicitações de amizade nas notificações (`friendshipId` no meta)
-- ✅ Refatorações SOLID aplicadas em todos os consumidores RabbitMQ
 - ✅ Preferências de notificação configuráveis por usuário (Company Invitations, Friend Requests, Company Messages, Membership Changes, Role Changes, Popups em Tempo Real)
 - ✅ Popups de notificações em tempo real (configurável) - aparecem em qualquer rota quando habilitado
 - ✅ Sistema de convites simplificado (apenas Created/Received) - rejeitados ficam ocultos para receptores mas visíveis para remetentes
@@ -96,7 +94,7 @@ Exposição de métricas de processo e HTTP em `/metrics` para observabilidade (
 
 | Serviço | Porta(s) | Função |
 |---------|----------|--------|
-| `api` | 4000 | NestJS + Prisma + Swagger (v1.5) + JWT (migrações automáticas no startup) |
+| `api` | 4000 | NestJS + Prisma + Swagger (v1.4) + JWT (migrações automáticas no startup) |
 | `worker-invites` | — | Consumer RabbitMQ resiliente (events.invites → notifications.realtime) |
 | `worker-members` | — | Consumer RabbitMQ resiliente (events.members → notifications.realtime) |
 | `web` | 3000 | Next.js App Router (SSR/CSR) |
@@ -256,19 +254,11 @@ frontend/
 - **Backend TDD**: Testes unitários e de integração atualizados para usar `ErrorCode` enum e `SuccessCode` enum.
   - Testes verificam `ApplicationError` instances e códigos específicos.
   - Cobertura completa de use cases: signup, invites, members, notifications, friendships.
-  - Testes de integração com repositórios em memória para isolamento completo.
 - **Frontend TDD**: Testes de componentes e páginas usando Jest + Testing Library.
-  - Mocks de HTTP e QueryClient isolados por teste.
+  - Mocks de HTTP e QueryClient isolados.
   - Testes de roles e permissões (OWNER/ADMIN/MEMBER).
-  - **Testes de integração** cobrindo fluxos completos:
-    - Company: CRUD completo, gestão de membros, alteração de papéis
-    - Friendships: Busca, solicitações, aceitação, mensagens, remoção
-    - Invites: Criação, aceitação, rejeição
-    - Notifications: Envio e leitura
-  - Padrões estabelecidos para testes de modais, formulários e operações assíncronas.
 - Todos testes anteriores continuam passando (estratégia de refatoração preservou interfaces e seletores).
 - Novas dependências (React Query / Redux) integradas sem alterar a API pública dos componentes.
-- **27 testes passando** (24 unitários + 3 de integração no frontend, todos backend unitários passando).
 
 ### Evolução Futura
 - Introdução de camadas `entities/`, `features/` e `widgets/` completas conforme escopo expandir.
@@ -384,18 +374,6 @@ Inbound (mensagens do cliente → servidor) já possui ganchos para futura expan
 Métrica de utilização relativa por emissão: `ws_events_rate_usage_ratio` (Summary) com percentis (p50, p90, p95, p99) para observar pressão nas janelas.
 
 ## Testes e Integridade
-
-### CI/CD Workflow
-O projeto utiliza GitHub Actions para CI/CD. O workflow (`.github/workflows/ci.yml`) executa:
-- **Lint** em backend e frontend
-- **Testes unitários apenas** (não executa testes de integração para velocidade)
-- **Build** de ambos os projetos
-
-Os testes de integração podem ser executados localmente com:
-- Backend: `pnpm test:integration`
-- Frontend: `pnpm test:integration`
-
-### Testes
 Suite de testes backend permanece 100% verde após introdução do realtime. Mudanças foram feitas de maneira aditiva (novos providers e arquivos) sem modificar contratos existentes.
 
 
@@ -434,34 +412,9 @@ Executar periodicamente `npm audit` e avaliar correções antes de aplicar `--fo
 ## Como Rodar (Windows PowerShell)
 
 ```powershell
-# IMPORTANTE: Configurar arquivos .env antes de iniciar
-# Backend possui dois arquivos de exemplo:
-#   - backend/.env.example-docker (71 linhas) - Para uso com Docker Compose
-#   - backend/.env-local.example (79 linhas) - Para uso local (sem Docker)
-# Frontend possui:
-#   - frontend/.env.example - Arquivo de exemplo
-
-# Copiar arquivo de exemplo para .env (se não existir)
-if (-not (Test-Path backend/.env)) {
-    if (Test-Path backend/.env.example-docker) {
-        Copy-Item backend/.env.example-docker backend/.env
-        Write-Host "Arquivo backend/.env criado a partir de .env.example-docker (Docker)"
-    } elseif (Test-Path backend/.env-local.example) {
-        Copy-Item backend/.env-local.example backend/.env
-        Write-Host "Arquivo backend/.env criado a partir de .env-local.example (Local)"
-    }
-}
-
-if (-not (Test-Path frontend/.env)) {
-    if (Test-Path frontend/.env.example) {
-        Copy-Item frontend/.env.example frontend/.env
-        Write-Host "Arquivo frontend/.env criado a partir de .env.example"
-    }
-}
-
-# Subir todos os serviços
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 docker compose up -d --build
-
 # Apply Prisma schema, generate client, then seed
 # If this is the first run (no tables yet), run dev with a name; otherwise, deploy existing migrations
 docker compose exec api npx prisma migrate deploy
@@ -469,33 +422,10 @@ docker compose exec api npx prisma generate
 docker compose exec api npm run seed
 ```
 
-**Configuração para acesso de outros PCs na rede:**
+Nota docker-compose (serviço web): o Dockerfile já define `CMD ["npm","run","start"]`. A linha `command: sh -c "npm run start"` é opcional; pode ser removida para usar a configuração padrão do container. Garanta que `frontend/.env` está configurado (por exemplo, `NEXT_PUBLIC_API_URL=http://api:4000` dentro da rede Docker) para evitar chamadas a `localhost` entre contêineres.
 
-O `docker-compose.yml` está configurado para permitir acesso de outros PCs na mesma rede:
-- Todas as portas estão bindadas em `0.0.0.0` (não apenas `localhost`)
-- Uma rede Docker `multitenant-network` conecta todos os serviços
-- Para acessar de outro PC, use o IP da máquina host:
-  - API: `http://<IP-DO-HOST>:4000` (Swagger em `/doc`)
-  - Frontend: `http://<IP-DO-HOST>:3000`
-  - RabbitMQ Management: `http://<IP-DO-HOST>:15672` (guest/guest)
-
-**Configuração de Variáveis de Ambiente:**
-
-O `docker-compose.yml` usa apenas `backend/.env` e `frontend/.env`. Antes de iniciar, copie os arquivos de exemplo:
-
-- **Backend**: 
-  - `backend/.env.example-docker` (71 linhas) - Use este para Docker Compose
-  - `backend/.env-local.example` (79 linhas) - Use este para desenvolvimento local sem Docker
-  - Copie o apropriado para `backend/.env`
-
-- **Frontend**: 
-  - `frontend/.env.example` - Copie para `frontend/.env`
-
-**Nota docker-compose (serviço web):** o Dockerfile já define `CMD ["npm","run","start"]`. A linha `command: sh -c "npm run start"` é opcional; pode ser removida para usar a configuração padrão do container. Garanta que `frontend/.env` está configurado (por exemplo, `NEXT_PUBLIC_API_URL=http://<IP-DO-HOST>:4000` para acesso externo ou `http://api:4000` dentro da rede Docker) para evitar chamadas a `localhost` entre contêineres.
-
-- API: `http://localhost:4000` (Swagger em `/doc`) - Acessível de outros PCs via `<IP-DO-HOST>:4000`
-- Frontend: `http://localhost:3000` - Acessível de outros PCs via `<IP-DO-HOST>:3000`
-- RabbitMQ Management: `http://localhost:15672` - Acessível de outros PCs via `<IP-DO-HOST>:15672`
+- API: `http://localhost:4000` (Swagger em `/doc`).
+- Frontend: `http://localhost:3000`.
 
 As migrações Prisma são aplicadas automaticamente no boot da API (`migrate deploy` com fallback `migrate dev --name init`). O seed é idempotente.
 
@@ -512,24 +442,13 @@ As migrações Prisma são aplicadas automaticamente no boot da API (`migrate de
 
 ## Variáveis de Ambiente
 
-**Arquivos de Exemplo:**
-
-- **Backend**: 
-  - `backend/.env.example-docker` (71 linhas) - Para Docker Compose (URLs: db, redis, rabbitmq)
-  - `backend/.env-local.example` (79 linhas) - Para desenvolvimento local (URLs: localhost)
-  - O `docker-compose.yml` usa apenas `backend/.env` - copie o arquivo apropriado
-
-- **Frontend**: 
-  - `frontend/.env.example` - Arquivo de exemplo
-  - O `docker-compose.yml` usa apenas `frontend/.env` - copie do exemplo
-
 ### Backend
 
 | Nome | Descrição | Exemplo |
 |------|-----------|---------|
 | PORT | Porta HTTP | 4000 |
 | NODE_ENV | Ambiente | development |
-| DATABASE_URL | PostgreSQL | postgresql://postgres:postgres@db:5432/multitenant?schema=public (Docker) ou postgresql://postgres:postgres@localhost:5432/multitenant?schema=public (local) |
+| DATABASE_URL | PostgreSQL | postgresql://postgres:postgres@db:5432/multitenant?schema=public |
 | JWT_SECRET | Segredo JWT | supersecretjwt |
 | JWT_EXPIRES_IN | Expiração | 7d |
 | COOKIE_NAME | Cookie de sessão | mt_session |
@@ -540,11 +459,11 @@ As migrações Prisma são aplicadas automaticamente no boot da API (`migrate de
 | BCRYPT_COST | Custo bcrypt | 10 |
 | REDIS_URL | Redis | redis://redis:6379 |
 | RABBITMQ_URL | RabbitMQ | amqp://guest:guest@rabbitmq:5672 |
-| FRONTEND_BASE_URL | Base para geração de links | http://localhost:3000 (local) ou http://<IP-DO-HOST>:3000 (rede) |
+| FRONTEND_BASE_URL | Base para geração de links | http://localhost:3000 |
 | RABBITMQ_PREFETCH | Prefetch de consumidores | 50 |
 | RABBITMQ_RETRY_MAX | Tentativas de retry | 5 |
 | WS_NAMESPACE | Namespace WebSocket | /rt |
-| WS_CORS_ORIGIN | Origem permitida CORS WS | http://localhost:3000 (local) ou http://<IP-DO-HOST>:3000 (rede) |
+| WS_CORS_ORIGIN | Origem permitida CORS WS | http://localhost:3000 |
 | USE_WS_REDIS_ADAPTER | Habilita adapter Redis | false |
 | WS_RATE_LIMIT_WINDOW_MS | Janela fixa rate limit WS | 1000 |
 | WS_RATE_LIMIT_MAX | Máx emits por janela (por chave) | 50 |
@@ -588,24 +507,16 @@ Testes cobrem convites, seleção de tenant, invariantes de OWNER e falhas de au
 - Rate limiting distribuído com Redis.
 - JWT leve e cookie SameSite=Lax.
 - Estrutura modular apta a sharding por tenant e múltiplos workers.
-- **Consumers resilientes e idempotentes** (prefetch, retry, DLQ, deduplicação Redis) seguindo princípios SOLID:
-	- `BaseResilientConsumer`: Classe base abstrata com retry automático, DLQ, deduplicação Redis e tratamento de erros
-	- `BaseDeliveryAwareConsumer`: Estende `BaseResilientConsumer` com confirmação de entrega via WebSocket
-	- `interfaces/consumers/events/invites.events.consumer.ts` (INVITE_* → realtime)
-	- `interfaces/consumers/events/members.events.consumer.ts` (USER_* → realtime)
-	- `interfaces/consumers/events/generic.events.consumer.ts` (eventos genéricos → realtime)
-	- `interfaces/consumers/events/realtime-notifications.consumer.ts` (processamento com confirmação de entrega)
-	- `interfaces/consumers/invite.consumer.ts` (legacy invite queue)
-- **Refatorações SOLID aplicadas**: Todos os consumidores seguem Single Responsibility Principle com métodos bem documentados em inglês e português
+- Consumers resilientes e idempotentes (prefetch, retry, DLQ, deduplicação Redis):
+	- `interfaces/consumers/invites.events.consumer.ts` (INVITE_* → realtime)
+	- `interfaces/consumers/members.events.consumer.ts` (USER_* → realtime)
 - Filas:
 	- `events.invites`: INVITE_CREATED / INVITE_ACCEPTED / INVITE_REJECTED
-	- `events.members`: USER_REMOVED / USER_STATUS_UPDATED / USER_JOINED
-	- `events`: Eventos genéricos (notificações, amizades)
-	- `notifications.realtimes`: Fila unificada para processamento em tempo real
-	- DLQs: `dlq.events.invites`, `dlq.events.members`, `dlq.events`, `dlq.notifications.realtimes`
-- Padrão de mensagens: `{ eventId: string, ...meta }` sem texto humano (frontend traduz via `src/lib/messages.ts`).
-- Relação de convite inclui `inviterId` (campo opcional) e relação inversa `User.invitesSent` para auditoria futura e métricas (quem convidou quem).
-- **Sistema de notificações**: Inclui `friendshipId` no meta das notificações de solicitação de amizade para links diretos
+	- `events.members`: USER_REMOVED / USER_STATUS_UPDATED
+	- `notifications.realtime`: payload bruto entregue ao gateway (SSE/WS)
+	- DLQs: `dlq.events.invites` e `dlq.events.members`
+- Padrão de mensagens: `{ eventId: string, ...meta }` sem texto humano (frontend traduz via `src/lib/error.ts#getEventMessage`).
+ - Relação de convite inclui `inviterId` (campo opcional) e relação inversa `User.invitesSent` para auditoria futura e métricas (quem convidou quem).
 - Métricas HTTP + sistema (Prometheus) expostas em `/metrics` para scraping (ex.: Prometheus/Grafana).
 - Endpoint `/health` para checagens básicas de disponibilidade.
 
@@ -841,69 +752,30 @@ curl -X PATCH http://localhost:4000/company/COMPANY_ID/members/USER_ID/role \
 
 ## Testes Adicionais
 
-**Backend (jest)**:
- - ✅ OWNER remove ADMIN/MEMBER (sucesso)
- - ✅ ADMIN remove MEMBER (sucesso)
- - ✅ ADMIN tenta remover ADMIN/OWNER (403)
- - ✅ OWNER altera qualquer papel (sucesso)
- - ✅ ADMIN tenta promover MEMBER a OWNER (403)
- - ✅ Publicação de eventos USER_REMOVED / USER_STATUS_UPDATED (mock DomainEventsService)
+Backend (jest):
+ - OWNER remove ADMIN/MEMBER (sucesso)
+ - ADMIN remove MEMBER (sucesso)
+ - ADMIN tenta remover ADMIN/OWNER (403)
+ - OWNER altera qualquer papel (sucesso)
+ - ADMIN tenta promover MEMBER a OWNER (403)
+ - Publicação de eventos USER_REMOVED / USER_STATUS_UPDATED (mock DomainEventsService)
 
-**Frontend (jest + RTL)**:
- - ✅ Botões de ação exibidos/ocultos conforme papel atual
- - ✅ Lista de membros revalida ao receber eventos (simular eventsClient.emit)
- - ✅ Mensagens traduzidas na página de convites ao receber eventos do usuário autenticado
- - ✅ **Testes de integração**:
-   - Fluxo completo de empresas: listar → selecionar → visualizar → editar → convidar
-   - Alteração de papel de membro com confirmação modal
-   - Fluxo completo de amizades: buscar → solicitar → aceitar → mensagem → remover
-   - Envio de mensagens seletivas e globais para amigos
-   - Gestão de convites: criar → aceitar → rejeitar
+Frontend (jest + RTL):
+ - Botões de ação exibidos/ocultos conforme papel atual
+ - Lista de membros revalida ao receber eventos (simular eventsClient.emit)
+ - Mensagens traduzidas na página de convites ao receber eventos do usuário autenticado
 
-**Status**: Todos os 27 testes passando (100% verde)
+## Swagger 
 
-## Swagger (OpenAPI)
-
-Documentação completa da API acessível em `http://localhost:4000/doc` (Swagger UI).
-
-### Cobertura da Documentação
-
-**Módulos Documentados**:
-- ✅ **Auth** - Signup, login, profile management, account deletion
-- ✅ **Companies** - CRUD completo, seleção de empresa ativa, informações públicas
-- ✅ **Memberships** - Listagem, remoção, alteração de papel, transferência de propriedade
-- ✅ **Invites** - Criação, listagem (criados/recebidos), aceitação, rejeição
-- ✅ **Friendships** - Busca de usuários, solicitações, aceitação, rejeição, remoção
-- ✅ **Notifications** - Envio, listagem, leitura, resposta, exclusão
-- ✅ **Users** - Busca de usuários, exclusão de conta
-- ✅ **Realtime** - Catálogo de eventos WebSocket e handshake
-
-### Recursos da Documentação
-
-- **Autenticação**: Cookie-based JWT (`mt_session`) documentado
-- **Error Responses**: Todos os erros 4xx/5xx documentados com formato padronizado `{ statusCode, code, message, timestamp, path }`
-- **Success Codes**: Respostas de sucesso incluem campo `code` do enum SuccessCode
-- **WebSocket Events**: Catálogo completo de eventos disponíveis no namespace `/rt`
-- **Exemplos**: Todos os endpoints incluem exemplos de request/response
-- **Schemas**: DTOs documentados com validações e tipos
-- **Versionamento**: API versão 1.5
-
-### Estrutura
-
-A documentação está organizada por tags (módulos):
-- `auth` - Autenticação e gerenciamento de conta
-- `company` - Gerenciamento de empresas
-- `membership` - Gerenciamento de membros e papéis
-- `invite` / `invites` - Sistema de convites
-- `friendships` - Sistema de amizades
-- `notifications` - Sistema de notificações
-- `users` - Busca e gerenciamento de usuários
-- `realtimes` - WebSocket e eventos em tempo real
-- `workers` - Status de workers (interno)
-
-### Idioma
-
-Todas as descrições, exemplos e documentação estão em **inglês** (100% English Swagger) para padronização internacional.
+Documentação atualizada acessível em `/doc` incluindo:
+- Endpoint PATCH /company/{id}/members/{userId}/role
+- Schemas de eventos (descrição em texto) USER_REMOVED / USER_STATUS_UPDATED
+- Respostas 403/404 padronizadas com campos `{ statusCode, code, message, timestamp, path }`
+- **ErrorCode e SuccessCode**: Documentação reflete uso de enums centralizados
+- **Friendships**: Endpoints de busca, solicitação, aceitação e remoção de amizades
+- **Notificações**: Endpoints de leitura e resposta a notificações
+- **Realtime**: Catálogo completo de eventos WebSocket incluindo eventos de amizades
+- Todas as descrições e exemplos em inglês (100% English Swagger)
 
 
 ## Checklist do Desafio
@@ -951,69 +823,10 @@ Foram adicionados recursos além do escopo original, com cobertura de testes:
 
 Como executar os testes:
 
-**Backend**:
-  - Todos os testes: `npm test`
-  - Apenas testes TDD (unitários): `npm run test:tdd`
-  - Apenas testes unitários: `npm run test:unit`
-  - Apenas testes de integração: `npm run test:integration`
-
-**Frontend**:
-  - Todos os testes: `npm test` (27 testes: 24 unitários + 3 integração)
-  - Apenas testes TDD (unitários): `npm run test:tdd`
-  - Apenas testes unitários: `npm run test:unit`
-  - Apenas testes de integração: `npm run test:integration`
-  - Teste específico: `npm test -- company-flow.test.tsx`
+- Backend: dentro de `backend/` execute `npm test`
+- Frontend: dentro de `frontend/` execute `npm test`
 
 Em Docker, use os serviços de profile de teste descritos acima para executar em contêineres sem instalar dependências locais.
-
-### Melhores Práticas de Teste
-
-**Para Testes de Integração Frontend**:
-1. Sempre aguardar modais fecharem antes de procurar novos elementos
-2. Usar `queryClient.removeQueries()` antes de `refetchQueries()` para garantir dados frescos
-3. Limpar inputs controlados antes de definir novos valores
-4. Verificar endpoints corretos (plural vs singular: `/companys/` vs `/company/`)
-5. Filtrar múltiplos elementos por contexto (ex: botões em `nav` vs botões em cards)
-6. Aguardar estados de query (`isFetching`) antes de verificar UI
-
-**Para Testes Unitários Backend**:
-1. Usar repositórios em memória para isolamento completo
-2. Mockar serviços de eventos de domínio
-3. Verificar códigos de erro específicos usando `ErrorCode` enum
-4. Validar invariantes de domínio em cada teste
-
-### Testes TDD
-
-O projeto segue **Test-Driven Development (TDD)** com testes unitários documentados em inglês e português:
-
-- **Padrão de documentação**: Todos os testes seguem o padrão JSDoc bilingue (`/** EN - PT - */`)
-- **Estrutura**: Testes unitários em `src/tests/unit/`, testes de integração em `src/tests/integration/`
-- **Cobertura**: Use cases, services, guards, controllers, components
-- **Execução rápida**: `npm run test:tdd` executa apenas testes unitários (sem integração)
-
-#### Cobertura de Testes de Integração
-
-**Frontend** (`frontend/src/tests/integration/`):
-- ✅ **Company Flow**: Listar → Selecionar → Visualizar → Editar → Convidar membros
-- ✅ **Company Flow**: Visualizar membros → Alterar papel (OWNER/ADMIN/MEMBER)
-- ✅ **Friendship Flow**: Buscar → Enviar solicitação → Aceitar → Enviar mensagem → Remover
-- ✅ **Invite Flow**: Criar convite → Aceitar → Rejeitar
-- ✅ **Notification Flow**: Enviar notificações → Marcar como lida
-- ✅ **Auth Flow**: Login → Logout → Proteção de rotas
-
-**Backend** (`backend/src/tests/integration/`):
-- ✅ Testes de controllers HTTP end-to-end
-- ✅ Integração com repositórios em memória
-- ✅ Verificação de eventos de domínio
-
-#### Padrões de Teste Aplicados
-
-1. **Isolamento de Testes**: Cada teste tem seu próprio QueryClient e mocks limpos
-2. **Aguardar Operações Assíncronas**: Uso consistente de `waitFor` com timeouts apropriados
-3. **Mock de HTTP**: Implementações dinâmicas baseadas em URL para diferentes cenários
-4. **Gerenciamento de Cache**: Invalidação e refetch explícitos do React Query quando necessário
-5. **Testes de UI**: Verificação de estados visuais (modais abertos/fechados, botões habilitados/desabilitados)
-6. **Seletores Robustos**: Uso de placeholders, labels e roles ao invés de classes CSS
 
 ---
 
@@ -1040,7 +853,7 @@ NEXT_PUBLIC_DEFAULT_COMPANY_LOGO=/logo-fallback.png
 ```
 
 **Para Docker:**
-A variável `NEXT_PUBLIC_DEFAULT_COMPANY_LOGO` precisa ser passada como build arg durante a construção da imagem. O `docker-compose.yml` já está configurado para ler do arquivo `frontend/.env` (copie de `frontend/.env.example`) ou usar um valor padrão. Para personalizar, você pode:
+A variável `NEXT_PUBLIC_DEFAULT_COMPANY_LOGO` precisa ser passada como build arg durante a construção da imagem. O `docker-compose.yml` já está configurado para ler do arquivo `.env` do frontend ou usar um valor padrão. Para personalizar, você pode:
 
 1. Definir a variável no arquivo `frontend/.env` (recomendado)
 2. Ou definir como variável de ambiente do sistema antes de executar `docker-compose build`

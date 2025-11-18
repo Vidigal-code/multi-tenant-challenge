@@ -40,11 +40,7 @@ API REST desenvolvida com NestJS seguindo arquitetura hexagonal (DDD) e princíp
 - **Prometheus** (prom-client) - Métricas
 
 ### Documentação
-- **Swagger (OpenAPI v1.5)** - Documentação completa da API acessível em `/doc`
-  - Todos os endpoints documentados com exemplos
-  - Autenticação cookie-based documentada
-  - Catálogo completo de eventos WebSocket
-  - Error codes e success codes documentados
+- **Swagger** - Documentação da API
 
 ## 🏗 Arquitetura
 
@@ -220,11 +216,6 @@ Gerencia observabilidade:
 - Métricas Prometheus
 - Logging estruturado
 - Request tracking
-- **Worker Status Monitoring**: Endpoints protegidos por JWS ES256 para monitorar status de workers
-  - `GET /workers/status` - Status de todos os workers
-  - `GET /workers/:workerType/status` - Status de worker específico
-  - `GET /workers/:workerType/overloaded` - Verifica se worker está sobrecarregado
-  - `GET /workers/:workerType/count` - Contagem de workers ativos
 
 ## 🎯 Use Cases (29)
 
@@ -275,29 +266,7 @@ Os use cases estão organizados por domínio em `src/application/use-cases/`:
 
 ### Variáveis de Ambiente
 
-**Arquivos de Configuração de Ambiente:**
-
-O backend possui dois arquivos de exemplo para diferentes cenários:
-
-1. **`backend/.env.example-docker`** (71 linhas) - Para uso com Docker Compose
-   - URLs configuradas para serviços Docker (db, redis, rabbitmq)
-   - Use este arquivo quando executar via `docker compose`
-
-2. **`backend/.env-local.example`** (79 linhas) - Para desenvolvimento local (sem Docker)
-   - URLs configuradas para localhost
-   - Use este arquivo quando executar localmente sem Docker
-
-**Importante:** O `docker-compose.yml` usa apenas `backend/.env`. Copie o arquivo de exemplo apropriado:
-
-```powershell
-# Para Docker Compose
-Copy-Item backend/.env.example-docker backend/.env
-
-# Para desenvolvimento local
-Copy-Item backend/.env-local.example backend/.env
-```
-
-Crie um arquivo `.env` na raiz do backend (copiando do exemplo apropriado):
+Crie um arquivo `.env` na raiz do backend:
 
 ```env
 # Database
@@ -325,18 +294,6 @@ RATE_LIMIT_MAX=100
 
 # CORS
 CORS_ORIGIN="http://localhost:3000"
-
-# Worker Configuration
-WORKER_CAPACITY_SHARING_FACTOR=256
-WORKER_OVERLOAD_THRESHOLD=1000
-
-# Worker JWT (JWS with ES256)
-WORKER_JWT_ALGORITHM=ES256
-WORKER_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
-WORKER_JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
-WORKER_JWT_SECRET=""  # Optional, fallback for HS256
-WORKER_JWT_EXPIRES_IN=7d
-WORKER_JWT_COOKIE_NAME=session
 ```
 
 ## 📜 Scripts
@@ -395,20 +352,9 @@ npx prisma migrate reset
 
 ## 🧪 Testes
 
-### CI/CD
-O workflow de CI (`/.github/workflows/ci.yml`) executa apenas testes unitários para velocidade:
-- `pnpm test:unit` - Executa apenas testes unitários (exclui integração)
-
-Testes de integração devem ser executados localmente antes de fazer commit.
-
 ### Estrutura
 
-- **Unit Tests (TDD)** (`src/tests/unit/`) - Testes unitários seguindo TDD
-  - Use cases
-  - Services
-  - Guards
-  - Controllers
-  - Todos documentados com padrão EN/PT
+- **Unit Tests** (`src/tests/unit/`) - Testes unitários de use cases e controllers
 - **Integration Tests** (`src/tests/integration/`) - Testes de integração de fluxos completos
 
 ### Executar
@@ -417,15 +363,6 @@ Testes de integração devem ser executados localmente antes de fazer commit.
 # Todos os testes
 npm test
 
-# Apenas testes TDD (unitários, não integrados)
-npm run test:tdd
-
-# Apenas testes unitários
-npm run test:unit
-
-# Apenas testes de integração
-npm run test:integration
-
 # Watch mode
 npm run test:watch
 
@@ -433,82 +370,12 @@ npm run test:watch
 npm test -- invites.controller.spec.ts
 ```
 
-### Padrão de Documentação TDD
-
-Todos os testes seguem o padrão JSDoc bilingue:
-
-```typescript
-/**
- * EN -
- * Description of what the test suite covers in English.
- * 
- * PT -
- * Descrição do que a suíte de testes cobre em português.
- */
-describe("ClassName", () => {
-    /**
-     * EN -
-     * Description of individual test case in English.
-     * 
-     * PT -
-     * Descrição do caso de teste individual em português.
-     */
-    it("should do something", () => {
-        // Test implementation
-    });
-});
-```
-
-### Padrões de Teste
-
-#### Testes Unitários (TDD)
-
-Os testes unitários (`src/tests/unit/`) seguem TDD puro:
-
-1. **Red**: Escrever teste que falha
-2. **Green**: Implementar código mínimo para passar
-3. **Refactor**: Melhorar código mantendo testes verdes
-
-**Exemplo de estrutura**:
-```typescript
-describe('UpdateCompanyUseCase', () => {
-  it('should update company name', async () => {
-    // Arrange
-    const company = createMockCompany();
-    const repository = createMockRepository();
-    
-    // Act
-    const result = await useCase.execute({ name: 'New Name' });
-    
-    // Assert
-    expect(result.name).toBe('New Name');
-    expect(repository.update).toHaveBeenCalledWith(...);
-  });
-});
-```
-
-#### Testes de Integração
-
-Os testes de integração (`src/tests/integration/`) verificam fluxos completos:
-
-- **Controllers**: Testes HTTP end-to-end com Supertest
-- **Use Cases**: Integração com repositórios reais (em memória)
-- **Eventos**: Verificação de publicação de eventos de domínio
-
-**Padrões**:
-- Usar repositórios em memória para isolamento
-- Mockar serviços externos (ex: DomainEventsService)
-- Verificar códigos de erro específicos (`ErrorCode` enum)
-- Validar invariantes de domínio (ex: empresa sempre tem OWNER)
-
 ### Cobertura
 
 Os testes utilizam:
 - **Jest** - Framework de testes
 - **Supertest** - Testes HTTP
 - **In-memory repositories** - Mocks de repositórios
-- **Mock factories** - Para criar dados de teste
-- **TDD Principles** - Test-Driven Development
 
 ## 🐳 Docker
 
@@ -528,14 +395,8 @@ docker build -t backend:latest .
 ### Executar
 
 ```bash
-# Certifique-se de ter copiado backend/.env.example-docker para backend/.env
 docker run -p 4000:4000 --env-file .env backend:latest
 ```
-
-**Nota sobre arquivos .env:**
-- O `docker-compose.yml` usa apenas `backend/.env` (não os arquivos de exemplo)
-- Para Docker Compose: copie `backend/.env.example-docker` para `backend/.env`
-- Para desenvolvimento local: copie `backend/.env-local.example` para `backend/.env`
 
 ## 🔌 API Endpoints
 
@@ -593,13 +454,6 @@ docker run -p 4000:4000 --env-file .env backend:latest
 - `GET /realtime/events` - Listar eventos disponíveis
 - WebSocket: `/` - Conexão WebSocket
 
-### Workers (Protegido por JWS ES256)
-- `GET /workers/status` - Status de todos os workers
-- `GET /workers/:workerType/status` - Status de worker específico (realtime, invites, members, generic)
-- `GET /workers/:workerType/overloaded` - Verifica se worker está sobrecarregado
-- `GET /workers/:workerType/count` - Contagem de workers ativos
-  - Query params: `method` (pending, load, combined)
-
 ## 🔐 Segurança
 
 - **JWT** em cookies httpOnly
@@ -609,55 +463,6 @@ docker run -p 4000:4000 --env-file .env backend:latest
 - **Validação** de inputs com class-validator
 - **RBAC** (Role-Based Access Control)
 - **Tenant Guard** para isolamento multi-tenant
-- **Worker Endpoints**: Protegidos por **JWS (JSON Web Signature) com ES256**
-  - Algoritmo ES256 (ECDSA P-256 + SHA-256) para segurança assimétrica
-  - Configuração separada via variáveis `WORKER_JWT_*`
-  - Suporte a chaves públicas/privadas em formato PEM
-
-## 🏗️ Arquitetura de Consumidores
-
-O projeto utiliza uma arquitetura de consumidores RabbitMQ resiliente e escalável:
-
-### Classes Base
-
-- **`BaseResilientConsumer`**: Classe base abstrata para todos os consumidores
-  - Retry automático com backoff exponencial
-  - Dead Letter Queue (DLQ) para mensagens falhadas
-  - Desduplicação usando Redis
-  - Controle de prefetch para processamento paralelo
-  - **Refatorado seguindo SOLID**: Métodos separados por responsabilidade única
-  - **Documentação completa**: Todos os métodos documentados em inglês e português
-
-- **`BaseDeliveryAwareConsumer`**: Estende `BaseResilientConsumer` para consumidores que aguardam confirmação de entrega
-  - Confirmação de entrega via WebSocket
-  - Rastreamento de entregas pendentes no Redis
-  - Tratamento de timeout
-  - **Documentação completa**: Todos os métodos protegidos documentados
-
-### Consumidores Específicos
-
-Todos os consumidores seguem princípios SOLID e estão completamente documentados:
-
-- **`RealtimeNotificationsConsumer`**: Processa notificações em tempo real com confirmação de entrega
-- **`MembersEventsConsumer`**: Encaminha eventos de membros para fila realtime
-- **`InvitesEventsConsumer`**: Encaminha eventos de convites para fila realtime
-- **`GenericEventsConsumer`**: Encaminha eventos genéricos (amizades, notificações) para fila realtime
-- **`InviteConsumer`**: Consumer legacy para fila de convites (monitoramento)
-
-### Padrão de Documentação
-
-Todos os métodos seguem o padrão JSDoc:
-```typescript
-/**
- * EN -
- * English description of the method
- * 
- * PT -
- * Descrição em português do método
- * 
- * @param param - Parameter description
- */
-```
 
 ## ⚠️ Tratamento de Erros
 
@@ -679,40 +484,6 @@ O filtro de exceções (`all-exceptions.filter.ts`) converte automaticamente par
 - **Logging** estruturado com Pino
 - **Métricas** Prometheus em `/metrics`
 - **Request tracking** com interceptors
-
-## 🎯 Princípios SOLID Aplicados
-
-O projeto segue rigorosamente os princípios SOLID, especialmente nos consumidores RabbitMQ:
-
-- **Single Responsibility**: Cada método tem uma única responsabilidade clara
-- **Open/Closed**: Classes base extensíveis sem modificação
-- **Liskov Substitution**: Subclasses podem substituir classes base
-- **Interface Segregation**: Interfaces específicas e focadas
-- **Dependency Inversion**: Dependências injetadas via construtor
-
-### Exemplo de Refatoração
-
-**Antes:**
-```typescript
-async start() {
-    // 100+ linhas de código misturando responsabilidades
-}
-```
-
-**Depois:**
-```typescript
-async start(): Promise<void> {
-    await this.initializeQueues(channel);
-    await this.setupPrefetch();
-    await this.beginConsumption(channel);
-}
-
-private async initializeQueues(channel: any): Promise<void> { /* ... */ }
-private async setupPrefetch(): Promise<void> { /* ... */ }
-private async beginConsumption(channel: any): Promise<void> { /* ... */ }
-```
-
-Cada método é pequeno, testável e documentado em inglês e português.
 
 ## 🚀 Deploy
 

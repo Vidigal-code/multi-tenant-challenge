@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from 'react';
-import { useProfile } from '../services/api';
+import { useProfile } from '../services/api/auth.api';
 
 export interface NotificationPreferences {
     realtimeEnabled?: boolean;
@@ -14,7 +14,10 @@ export interface NotificationPreferences {
     roleChanges?: boolean;
 }
 
-
+/**
+ * Hook to get and derive notification preferences from user profile
+ * Defaults to true for all preferences (backwards compatibility)
+ */
 export function useNotificationPreferences() {
     const { data: profile } = useProfile();
 
@@ -22,6 +25,7 @@ export function useNotificationPreferences() {
         return profile?.notificationPreferences || {};
     }, [profile?.notificationPreferences]);
 
+    // Derive computed values with defaults
     const derived = useMemo(() => {
         return {
             realtimeEnabled: preferences.realtimeEnabled !== false,

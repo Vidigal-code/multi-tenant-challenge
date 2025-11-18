@@ -12,12 +12,10 @@ const COLORS: Record<string, string> = {
 export function ToastContainer() {
     const {toasts, dismiss} = useToast();
     return (
-        <div className="fixed top-4 right-4 z-[10002] space-y-2 w-full
-        sm:w-72 max-w-sm px-4 sm:px-0">
+        <div className="fixed top-4 right-4 z-[10002] space-y-2 w-full sm:w-72 max-w-sm px-4 sm:px-0">
             {toasts.map(t => (
                 <div key={t.id}
-                     className={`rounded-lg shadow-xl border border-white/20 
-                     dark:border-white/20 px-4 py-3 text-sm flex flex-col gap-1 transition-opacity animate-slide-up ${COLORS[t.type || 'info']}`}>
+                     className={`rounded-lg shadow-xl border border-white/20 dark:border-white/20 px-4 py-3 text-sm flex flex-col gap-1 transition-opacity animate-slide-up ${COLORS[t.type || 'info']}`}>
                     {t.title && <p className="font-semibold">{t.title}</p>}
                     <p>{t.message}</p>
                     <button aria-label="close" onClick={() => dismiss(t.id)}
