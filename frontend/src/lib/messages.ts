@@ -241,64 +241,40 @@ export function isNotificationCode(code: string): boolean {
 
 const genericMessageTranslations: Record<string, string> = {
     // Friend request sent
-    'friend_request_sent:[a_friend_request_has_been_sent_to_you.]': 'Você recebeu uma nova solicitação de amizade',
     '[a_friend_request_has_been_sent_to_you.]': 'Você recebeu uma nova solicitação de amizade',
-    'a_friend_request_has_been_sent_to_you.': 'Você recebeu uma nova solicitação de amizade',
 
     // Friend request accepted
-    'accepted_friend:[your_friend_request_has_been_accepted.]': 'Sua solicitação de amizade foi aceita',
     '[your_friend_request_has_been_accepted.]': 'Sua solicitação de amizade foi aceita',
-    'your_friend_request_has_been_accepted.': 'Sua solicitação de amizade foi aceita',
 
     // Friend request rejected
-    'rejected_friend:[your_friend_request_has_been_rejected.]': 'Sua solicitação de amizade foi rejeitada',
     '[your_friend_request_has_been_rejected.]': 'Sua solicitação de amizade foi rejeitada',
-    'your_friend_request_has_been_rejected.': 'Sua solicitação de amizade foi rejeitada',
 
     // Friend removed
-    'friend_removed:[you_have_been_removed_as_a_friend.]': 'Você foi removido da lista de amigos',
     '[you_have_been_removed_as_a_friend.]': 'Você foi removido da lista de amigos',
-    'you_have_been_removed_as_a_friend.': 'Você foi removido da lista de amigos',
 
     // Invite created
-    'invite_created:[you_have_received_an_invitation_to_join_a_company.]': 'Você recebeu um convite para entrar em uma empresa',
     '[you_have_received_an_invitation_to_join_a_company.]': 'Você recebeu um convite para entrar em uma empresa',
-    'you_have_received_an_invitation_to_join_a_company.': 'Você recebeu um convite para entrar em uma empresa',
 
     // Invite accepted
-    'invite_accepted:[your_company_invitation_has_been_accepted.]': 'Seu convite foi aceito',
     '[your_company_invitation_has_been_accepted.]': 'Seu convite foi aceito',
-    'your_company_invitation_has_been_accepted.': 'Seu convite foi aceito',
 
     // Invite rejected
-    'reject_company_invite:[your_company_invitation_has_been_rejected.]': 'Seu convite foi rejeitado',
     '[your_company_invitation_has_been_rejected.]': 'Seu convite foi rejeitado',
-    'your_company_invitation_has_been_rejected.': 'Seu convite foi rejeitado',
 
     // Member added
-    'member_added:[you_have_joined_a_company.]': 'Você foi adicionado a uma empresa',
     '[you_have_joined_a_company.]': 'Você foi adicionado a uma empresa',
-    'you_have_joined_a_company.': 'Você foi adicionado a uma empresa',
 
     // Member removed
-    'member_removed:[you_have_been_removed_from_a_company.]': 'Você foi removido de uma empresa',
     '[you_have_been_removed_from_a_company.]': 'Você foi removido de uma empresa',
-    'you_have_been_removed_from_a_company.': 'Você foi removido de uma empresa',
 
     // Role changed
-    'role_changed:[your_role_in_the_company_has_been_changed.]': 'Seu cargo na empresa foi alterado',
     '[your_role_in_the_company_has_been_changed.]': 'Seu cargo na empresa foi alterado',
-    'your_role_in_the_company_has_been_changed.': 'Seu cargo na empresa foi alterado',
 
     // Company created
-    'company_created:[a_company_has_been_created.]': 'Uma empresa foi criada',
     '[a_company_has_been_created.]': 'Uma empresa foi criada',
-    'a_company_has_been_created.': 'Uma empresa foi criada',
 
     // Notification sent
-    'notification_sent:[you_have_received_a_new_notification.]': 'Você recebeu uma nova notificação',
     '[you_have_received_a_new_notification.]': 'Você recebeu uma nova notificação',
-    'you_have_received_a_new_notification.': 'Você recebeu uma nova notificação',
 };
 
 export function translateGenericMessage(message: string): string {
