@@ -4,6 +4,7 @@ import {SignupUseCase} from "@application/use-cases/auths/signup.usecase";
 import {LoginUseCase} from "@application/use-cases/auths/login.usecase";
 import {DeleteAccountUseCase} from "@application/use-cases/users/delete-account.usecase";
 import {ListPrimaryOwnerCompaniesUseCase} from "@application/use-cases/companys/list-primary-owner-companies.usecase";
+import {ListMemberCompaniesUseCase} from "@application/use-cases/companys/list-member-companies.usecase";
 import {JwtService} from "@nestjs/jwt";
 import {ConfigService} from "@nestjs/config";
 import {UserRepository} from "@domain/repositories/users/user.repository";
@@ -40,13 +41,25 @@ describe("AuthController extra endpoints", () => {
     } as any;
     const deleteAccount = {execute: jest.fn()} as any as DeleteAccountUseCase;
     const listPrimaryOwnerCompanies = {execute: jest.fn()} as any as ListPrimaryOwnerCompaniesUseCase;
+    const listMemberCompanies = {execute: jest.fn()} as any as ListMemberCompaniesUseCase;
 
-    const controller = new AuthController(signup, login, accept, deleteAccount, listPrimaryOwnerCompanies, jwt, cfg, userRepo, hashing);
+    const controller = new AuthController(
+        signup,
+        login,
+        accept,
+        deleteAccount,
+        listPrimaryOwnerCompanies,
+        listMemberCompanies,
+        jwt,
+        cfg,
+        userRepo,
+        hashing,
+    );
     const currentUser = {sub: "u1", email: "u@example.com", activeCompanyId: null};
 
     it("GET /invites/profile returns minimal users payload", async () => {
         const result = await (controller as any).profile(currentUser);
-        expect(result).toEqual({id: "u1", email: "u@example.com", activeCompanyId: null});
+        expect(result).toEqual({id: "u1", email: "u@example.com", activeCompanyId: null, notificationPreferences: {}});
     });
 
     it("POST /invites/profile rejects when no fields", async () => {
@@ -99,8 +112,8 @@ describe("AuthController extra endpoints", () => {
 
     it("DELETE /invites/account calls use case and clears cookie", async () => {
         const res = resStub();
-        const out = await (controller as any).deleteAccount(currentUser, {}, res);
-        expect(deleteAccount.execute).toHaveBeenCalledWith({userId: "u1", deleteCompanyIds: undefined});
+        const out = await (controller as any).deleteAccount(currentUser, res);
+        expect(deleteAccount.execute).toHaveBeenCalledWith({userId: "u1"});
         expect(out).toEqual({success: true});
         expect(res._cookies["mt_session"].value).toBe("");
     });

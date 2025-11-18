@@ -3,6 +3,7 @@ import {
     InMemoryCompanyRepository,
     InMemoryMembershipRepository,
     InMemoryUserRepository,
+    FakeEventPayloadBuilderService,
 } from "../../support/in-memory-repositories";
 import {Role} from "@domain/enums/role.enum";
 import {DomainEvent, DomainEventsService} from "@domain/services/domain-events.service";
@@ -101,7 +102,7 @@ describe("RemoveMemberUseCase", () => {
             targetUserId: owner.id,
         }).catch(e => e);
         expect(error).toBeInstanceOf(ApplicationError);
-        expect(error.code).toBe(ErrorCode.LAST_OWNER_CANNOT_BE_REMOVED);
+        expect(error.code).toBe(ErrorCode.FORBIDDEN_ACTION);
     });
 
     it("emits removal event with notified owners and admins", async () => {
@@ -136,11 +137,13 @@ describe("RemoveMemberUseCase", () => {
         await memberships.create({userId: admin.id, companyId: company.id, role: Role.ADMIN});
         await memberships.create({userId: member.id, companyId: company.id, role: Role.MEMBER});
 
+        const builder = new FakeEventPayloadBuilderService();
         const usecase = new RemoveMemberUseCase(
             memberships as any,
             companies as any,
             users as any,
             events,
+            builder as any,
         );
 
         await usecase.execute({
@@ -158,6 +161,6 @@ describe("RemoveMemberUseCase", () => {
             initiatorId: owner.id,
             role: Role.MEMBER,
         });
-        expect(payload.notifiedUserIds.sort()).toEqual([admin.id, owner.id]);
+        expect(payload.notifiedUserIds.sort()).toEqual([admin.id, owner.id].sort());
     });
 });

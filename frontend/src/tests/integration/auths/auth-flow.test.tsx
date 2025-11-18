@@ -86,7 +86,7 @@ describe('Auth Flow Integration', () => {
         fireEvent.submit(signupForm!);
 
         await waitFor(() => {
-            expect(httpMock.post).toHaveBeenCalledWith('/invites/signup', {
+            expect(httpMock.post).toHaveBeenCalledWith('/auth/signup', {
                 email: 'users@test.com',
                 name: 'Test User',
                 password: 'password123',
@@ -128,7 +128,7 @@ describe('Auth Flow Integration', () => {
         fireEvent.submit(loginForm!);
 
         await waitFor(() => {
-            expect(httpMock.post).toHaveBeenCalledWith('/invites/login', {
+            expect(httpMock.post).toHaveBeenCalledWith('/auth/login', {
                 email: 'users@test.com',
                 password: 'password123',
             });
@@ -142,8 +142,8 @@ describe('Auth Flow Integration', () => {
             },
         });
 
-        httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/companies')) {
+        httpMock.get.mockImplementation((url: string, config?: any) => {
+            if (url.includes('/auth/account/primary-owner-companies')) {
                 return Promise.resolve({
                     data: {
                         data: [
@@ -154,6 +154,18 @@ describe('Auth Flow Integration', () => {
                             },
                         ],
                         total: 1,
+                        page: config?.params?.page ?? 1,
+                        pageSize: config?.params?.pageSize ?? 10,
+                    },
+                });
+            }
+            if (url.includes('/auth/account/member-companies')) {
+                return Promise.resolve({
+                    data: {
+                        data: [],
+                        total: 0,
+                        page: config?.params?.page ?? 1,
+                        pageSize: config?.params?.pageSize ?? 10,
                     },
                 });
             }
@@ -163,7 +175,7 @@ describe('Auth Flow Integration', () => {
         renderWithProviders(<DashboardPage />);
 
         await waitFor(() => {
-            expect(httpMock.get).toHaveBeenCalledWith('/companies', {
+            expect(httpMock.get).toHaveBeenCalledWith('/auth/account/primary-owner-companies', {
                 params: {page: 1, pageSize: 10},
             });
         });
@@ -204,7 +216,7 @@ describe('Auth Flow Integration', () => {
         fireEvent.submit(loginForm2!);
 
         await waitFor(() => {
-            expect(httpMock.post).toHaveBeenCalledWith('/invites/login', {
+            expect(httpMock.post).toHaveBeenCalledWith('/auth/login', {
                 email: 'wrong@test.com',
                 password: 'wrongpassword',
             });

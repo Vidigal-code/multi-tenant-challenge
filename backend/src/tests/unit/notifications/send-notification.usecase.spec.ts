@@ -1,6 +1,6 @@
 import {SendNotificationUseCase} from "@application/use-cases/notifications/send-notification.usecase";
 import {SuccessCode} from "@application/success/success-code";
-import {InMemoryMembershipRepository, InMemoryUserRepository,} from "../../support/in-memory-repositories";
+import {InMemoryMembershipRepository, InMemoryUserRepository, FakeEventPayloadBuilderService,} from "../../support/in-memory-repositories";
 import {Role} from "@domain/enums/role.enum";
 import {
     ListNotificationsFilters,
@@ -106,6 +106,7 @@ describe("SendNotificationUseCase", () => {
         const users = new InMemoryUserRepository();
         const friendships = new StubFriendshipRepository();
         const events = new RecordingDomainEventsService();
+        const builder = new FakeEventPayloadBuilderService();
 
         const owner = await users.create({email: "owner@test.com", name: "Owner", passwordHash: "x"});
         const admin = await users.create({email: "admin@test.com", name: "Admin", passwordHash: "x"});
@@ -121,6 +122,7 @@ describe("SendNotificationUseCase", () => {
             users as any,
             friendships as any,
             events,
+            builder as any,
         );
 
         const result = await useCase.execute({
@@ -154,6 +156,7 @@ describe("SendNotificationUseCase", () => {
         const users = new InMemoryUserRepository();
         const friendships = new StubFriendshipRepository();
         const events = new RecordingDomainEventsService();
+        const builder = new FakeEventPayloadBuilderService();
 
         const owner = await users.create({email: "owner@test.com", name: "Owner", passwordHash: "x"});
         const admin = await users.create({email: "admin@test.com", name: "Admin", passwordHash: "x"});
@@ -174,6 +177,7 @@ describe("SendNotificationUseCase", () => {
             users as any,
             friendships as any,
             events,
+            builder as any,
         );
 
         const result = await useCase.execute({

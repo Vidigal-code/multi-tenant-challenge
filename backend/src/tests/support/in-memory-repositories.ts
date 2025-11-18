@@ -16,6 +16,7 @@ import {Role} from "@domain/enums/role.enum";
 import {InviteStatus} from "@domain/enums/invite-status.enum";
 import {Email} from "@domain/value-objects/email.vo";
 import {EmailValidationService} from "@application/ports/email-validation.service";
+import {EventPayloadBuilderInput, StandardizedEventPayload} from "@application/services/event-payload-builder.service";
 
 function randomId() {
     return Math.random().toString(36).slice(2);
@@ -334,5 +335,34 @@ export class AlwaysTrueEmailValidationService
     implements EmailValidationService {
     async exists(_email: string): Promise<boolean> {
         return true;
+    }
+}
+
+export class FakeEventPayloadBuilderService {
+    async build(input: EventPayloadBuilderInput): Promise<StandardizedEventPayload> {
+        return {
+            eventId: input.eventId,
+            timestamp: new Date().toISOString(),
+            senderId: input.senderId ?? null,
+            receiverId: input.receiverId ?? null,
+            receiverEmail: input.receiverEmail ?? null,
+            companyId: input.companyId ?? null,
+            sender: input.senderId
+                ? {id: input.senderId, name: "Sender", email: "sender@example.com"}
+                : null,
+            receiver: input.receiverId
+                ? {id: input.receiverId, name: "Receiver", email: "receiver@example.com"}
+                : null,
+            company: input.companyId
+                ? {
+                    id: input.companyId,
+                    name: "Company",
+                    description: null,
+                    logoUrl: null,
+                    createdAt: new Date().toISOString(),
+                }
+                : null,
+            ...input.additionalData,
+        };
     }
 }

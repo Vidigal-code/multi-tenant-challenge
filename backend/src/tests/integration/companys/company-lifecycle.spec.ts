@@ -15,6 +15,7 @@ import {
     FixedInviteTokenService,
     FakeDomainEventsService,
     AlwaysTrueEmailValidationService,
+    FakeEventPayloadBuilderService,
 } from "../../support/in-memory-repositories";
 import {Role} from "@domain/enums/role.enum";
 import {ApplicationError} from "@application/errors/application-error";
@@ -29,6 +30,7 @@ describe("Company Lifecycle Integration", () => {
     let tokenService: FixedInviteTokenService;
     let domainEvents: FakeDomainEventsService;
     let emailValidation: AlwaysTrueEmailValidationService;
+    let eventBuilder: FakeEventPayloadBuilderService;
 
     beforeEach(() => {
         userRepo = new InMemoryUserRepository();
@@ -40,6 +42,7 @@ describe("Company Lifecycle Integration", () => {
         tokenService = new FixedInviteTokenService();
         domainEvents = new FakeDomainEventsService();
         emailValidation = new AlwaysTrueEmailValidationService();
+        eventBuilder = new FakeEventPayloadBuilderService();
     });
 
     it("complete flow: create companys -> invites member -> accept -> manage", async () => {
@@ -136,6 +139,7 @@ describe("Company Lifecycle Integration", () => {
         const changeRole = new ChangeMemberRoleUseCase(
             membershipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         await changeRole.execute({
@@ -198,7 +202,7 @@ describe("Company Lifecycle Integration", () => {
             .catch((e) => e);
 
         expect(error).toBeInstanceOf(ApplicationError);
-        expect(error.code).toBe(ErrorCode.LAST_OWNER_CANNOT_BE_REMOVED);
+        expect(error.code).toBe(ErrorCode.FORBIDDEN_ACTION);
     });
 });
 

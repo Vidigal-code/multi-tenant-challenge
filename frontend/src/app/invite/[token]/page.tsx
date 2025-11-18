@@ -121,7 +121,6 @@ export default function InviteByCodePage() {
         return (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Erro</h1>
                     <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-center">{getErrorMessage(inviteQuery.error, 'Convite inválido ou expirado')}</div>
                 </div>
             </div>

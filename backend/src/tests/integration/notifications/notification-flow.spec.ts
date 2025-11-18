@@ -10,6 +10,7 @@ import {
     InMemoryMembershipRepository,
     FakeHashingService,
     FakeDomainEventsService,
+    FakeEventPayloadBuilderService,
 } from "../../support/in-memory-repositories";
 import {Role} from "@domain/enums/role.enum";
 
@@ -96,6 +97,7 @@ describe("Notification Flow Integration", () => {
     let friendshipRepo: InMemoryFriendshipRepositoryFull;
     let hashing: FakeHashingService;
     let domainEvents: FakeDomainEventsService;
+    let eventBuilder: FakeEventPayloadBuilderService;
 
     beforeEach(() => {
         userRepo = new InMemoryUserRepository();
@@ -105,6 +107,7 @@ describe("Notification Flow Integration", () => {
         friendshipRepo = new InMemoryFriendshipRepositoryFull();
         hashing = new FakeHashingService();
         domainEvents = new FakeDomainEventsService();
+        eventBuilder = new FakeEventPayloadBuilderService();
     });
 
     it("complete flow: create companys -> send notifications -> list -> read -> reply -> delete", async () => {
@@ -146,6 +149,7 @@ describe("Notification Flow Integration", () => {
             userRepo as any,
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         const result = await sendNotification.execute({
@@ -266,6 +270,7 @@ describe("Notification Flow Integration", () => {
             userRepo as any,
             friendshipRepo as any,
             domainEvents as any,
+            eventBuilder as any,
         );
 
         const result = await sendNotification.execute({

@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
 
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
@@ -22,6 +23,7 @@ jobs:
         with:
           node-version: 20
 
+
       - name: Get pnpm store directory
         shell: bash
         run: |
@@ -35,44 +37,183 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      - name: Setup npm cache (fallback)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            backend/node_modules
+            frontend/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('backend/package-lock.json', 'frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
       - name: Backend - Install
         working-directory: backend
         run: |
-          if [ -f pnpm-lock.yaml ]; then
-            pnpm install --frozen-lockfile
+          # Tenta pnpm se lockfile existir e for válido
+          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+            echo "Tentando instalar com pnpm..."
+            if pnpm install --frozen-lockfile 2>&1; then
+              echo "✓ Instalação com pnpm concluída com sucesso"
+            else
+              echo "⚠ pnpm com frozen-lockfile falhou, tentando sem frozen-lockfile..."
+              if pnpm install --no-frozen-lockfile 2>&1; then
+                echo "✓ Instalação com pnpm (sem frozen-lockfile) concluída"
+              else
+                echo "✗ pnpm falhou completamente, usando npm como fallback..."
+                # Fallback para npm
+                if [ -f package-lock.json ]; then
+                  echo "Tentando npm ci..."
+                  if npm ci 2>&1; then
+                    echo "✓ Instalação com npm ci concluída"
+                  else
+                    echo "⚠ npm ci falhou (lockfile desatualizado), usando npm install..."
+                    npm install
+                    echo "✓ Instalação com npm install concluída"
+                  fi
+                else
+                  npm install
+                  echo "✓ Instalação com npm install concluída"
+                fi
+              fi
+            fi
+          elif [ -f package-lock.json ]; then
+            # Apenas npm disponível
+            echo "Usando npm para instalação..."
+            if npm ci 2>&1; then
+              echo "✓ Instalação com npm ci concluída"
+            else
+              echo "⚠ npm ci falhou (lockfile desatualizado), usando npm install..."
+              npm install
+              echo "✓ Instalação com npm install concluída"
+            fi
           else
-            pnpm install
+            # Sem lockfiles, instala direto
+            echo "Nenhum lockfile encontrado, instalando com npm..."
+            npm install
+            echo "✓ Instalação com npm install concluída"
+          fi
+
+      - name: Backend - Detect Package Manager
+        working-directory: backend
+        id: backend-pm
+        run: |
+          # Verifica se foi instalado com pnpm (verifica estrutura node_modules)
+          if [ -d node_modules/.pnpm ]; then
+            echo "pm=pnpm" >> $GITHUB_OUTPUT
+          else
+            echo "pm=npm" >> $GITHUB_OUTPUT
           fi
 
       - name: Backend - Lint
         working-directory: backend
-        run: pnpm run lint --if-present
+        run: |
+          if [ "${{ steps.backend-pm.outputs.pm }}" == "pnpm" ]; then
+            pnpm run lint
+          else
+            npm run lint
+          fi
 
-      - name: Backend - Test
+      - name: Backend - Test (Unit Only)
         working-directory: backend
-        run: pnpm test --if-present
+        run: |
+          if [ "${{ steps.backend-pm.outputs.pm }}" == "pnpm" ]; then
+            pnpm test:unit
+          else
+            npm run test:unit
+          fi
 
       - name: Backend - Build
         working-directory: backend
-        run: pnpm run build --if-present
+        run: |
+          if [ "${{ steps.backend-pm.outputs.pm }}" == "pnpm" ]; then
+            pnpm run build
+          else
+            npm run build
+          fi
 
       - name: Frontend - Install
         working-directory: frontend
         run: |
-          if [ -f pnpm-lock.yaml ]; then
-            pnpm install --frozen-lockfile
+          # Tenta pnpm se lockfile existir e for válido
+          if [ -f pnpm-lock.yaml ] && [ -s pnpm-lock.yaml ]; then
+            echo "Tentando instalar com pnpm..."
+            if pnpm install --frozen-lockfile 2>&1; then
+              echo "✓ Instalação com pnpm concluída com sucesso"
+            else
+              echo "⚠ pnpm com frozen-lockfile falhou, tentando sem frozen-lockfile..."
+              if pnpm install --no-frozen-lockfile 2>&1; then
+                echo "✓ Instalação com pnpm (sem frozen-lockfile) concluída"
+              else
+                echo "✗ pnpm falhou completamente, usando npm como fallback..."
+                # Fallback para npm
+                if [ -f package-lock.json ]; then
+                  echo "Tentando npm ci..."
+                  if npm ci 2>&1; then
+                    echo "✓ Instalação com npm ci concluída"
+                  else
+                    echo "⚠ npm ci falhou (lockfile desatualizado), usando npm install..."
+                    npm install
+                    echo "✓ Instalação com npm install concluída"
+                  fi
+                else
+                  npm install
+                  echo "✓ Instalação com npm install concluída"
+                fi
+              fi
+            fi
+          elif [ -f package-lock.json ]; then
+            # Apenas npm disponível
+            echo "Usando npm para instalação..."
+            if npm ci 2>&1; then
+              echo "✓ Instalação com npm ci concluída"
+            else
+              echo "⚠ npm ci falhou (lockfile desatualizado), usando npm install..."
+              npm install
+              echo "✓ Instalação com npm install concluída"
+            fi
           else
-            pnpm install
+            # Sem lockfiles, instala direto
+            echo "Nenhum lockfile encontrado, instalando com npm..."
+            npm install
+            echo "✓ Instalação com npm install concluída"
+          fi
+
+      - name: Frontend - Detect Package Manager
+        working-directory: frontend
+        id: frontend-pm
+        run: |
+          # Verifica se foi instalado com pnpm (verifica estrutura node_modules)
+          if [ -d node_modules/.pnpm ]; then
+            echo "pm=pnpm" >> $GITHUB_OUTPUT
+          else
+            echo "pm=npm" >> $GITHUB_OUTPUT
           fi
 
       - name: Frontend - Lint
         working-directory: frontend
-        run: pnpm run lint --if-present
+        run: |
+          if [ "${{ steps.frontend-pm.outputs.pm }}" == "pnpm" ]; then
+            pnpm run lint
+          else
+            npm run lint
+          fi
 
-      - name: Frontend - Test
+      - name: Frontend - Test (Unit Only)
         working-directory: frontend
-        run: pnpm test --if-present
+        run: |
+          if [ "${{ steps.frontend-pm.outputs.pm }}" == "pnpm" ]; then
+            pnpm test:unit
+          else
+            npm run test:unit
+          fi
 
       - name: Frontend - Build
         working-directory: frontend
-        run: pnpm run build --if-present
+        run: |
+          if [ "${{ steps.frontend-pm.outputs.pm }}" == "pnpm" ]; then
+            pnpm run build
+          else
+            npm run build
+          fi

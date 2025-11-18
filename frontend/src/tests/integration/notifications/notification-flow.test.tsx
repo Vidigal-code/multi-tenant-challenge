@@ -1,5 +1,5 @@
 import React from 'react';
-import {render, screen, fireEvent, waitFor} from '@testing-library/react';
+import {render, screen, fireEvent, waitFor, within} from '@testing-library/react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {Provider as ReduxProvider} from 'react-redux';
 import {store} from '../../../store';
@@ -117,7 +117,7 @@ describe('Notification Flow Integration', () => {
             expect(elements.length).toBeGreaterThan(0);
         }, { timeout: 10000 });
 
-        const markReadButton = screen.getAllByText(/Mark as read/i)[0];
+        const markReadButton = screen.getAllByText(/Marcar como lida/i)[0];
         fireEvent.click(markReadButton);
 
         httpMock.patch.mockResolvedValueOnce({
@@ -128,14 +128,16 @@ describe('Notification Flow Integration', () => {
             expect(httpMock.patch).toHaveBeenCalledWith('/notifications/n1/read');
         });
 
-        const replyButton = screen.getAllByText(/Reply/i)[0];
+        const firstNotificationTitle = screen.getAllByText(/Welcome to the companys/i)[0];
+        const firstNotificationCard = firstNotificationTitle.closest('.border') as HTMLElement;
+        const replyButton = within(firstNotificationCard).getByRole('button', { name: /Responder/i });
         fireEvent.click(replyButton);
 
         await waitFor(() => {
-            expect(screen.getByPlaceholderText(/Type your reply/i)).toBeInTheDocument();
+            expect(screen.getByPlaceholderText(/Digite sua resposta/i)).toBeInTheDocument();
         });
 
-        fireEvent.change(screen.getByPlaceholderText(/Type your reply/i), {
+        fireEvent.change(screen.getByPlaceholderText(/Digite sua resposta/i), {
             target: {value: 'Thank you!'},
         });
 
@@ -149,7 +151,7 @@ describe('Notification Flow Integration', () => {
             },
         });
 
-        const sendReplyButton = screen.getByText(/Send Reply/i);
+        const sendReplyButton = screen.getByText(/Enviar Resposta/i);
         fireEvent.click(sendReplyButton);
 
         await waitFor(() => {
@@ -162,7 +164,7 @@ describe('Notification Flow Integration', () => {
             data: {success: true},
         });
 
-        const deleteButton = screen.getAllByText(/Delete/i)[0];
+        const deleteButton = within(firstNotificationCard).getByRole('button', {name: /Excluir/i});
         fireEvent.click(deleteButton);
 
         await waitFor(() => {
@@ -211,16 +213,16 @@ describe('Notification Flow Integration', () => {
         renderWithProviders(<NotificationsPage />);
 
         await waitFor(() => {
-            const unreadElements = screen.getAllByText(/Unread notification/i);
+            const unreadElements = screen.getAllByText(/Unread notifications?/i);
             expect(unreadElements.length).toBeGreaterThan(0);
-            const readElements = screen.getAllByText(/Read notification/i);
+            const readElements = screen.getAllByText(/Read notifications?/i);
             expect(readElements.length).toBeGreaterThan(0);
         }, { timeout: 5000 });
 
-        const markReadButtons = screen.getAllByText(/Mark as read/i);
+        const markReadButtons = screen.getAllByText(/Marcar como lida/i);
         expect(markReadButtons.length).toBeGreaterThan(0);
 
-        const readNotificationElements = screen.getAllByText(/Read notification/i);
+        const readNotificationElements = screen.getAllByText(/Read notifications?/i);
         expect(readNotificationElements.length).toBeGreaterThan(0);
         
         const readNotificationCard = readNotificationElements.find(el => {
@@ -232,7 +234,7 @@ describe('Notification Flow Integration', () => {
             const card = readNotificationCard.closest('.border');
             if (card) {
                 const cardButtons = Array.from(card.querySelectorAll('button'));
-                const hasMarkAsRead = cardButtons.some(btn => btn.textContent?.includes('Mark as read'));
+                const hasMarkAsRead = cardButtons.some(btn => btn.textContent?.includes('Marcar como lida'));
                 expect(hasMarkAsRead).toBe(false);
             }
         }

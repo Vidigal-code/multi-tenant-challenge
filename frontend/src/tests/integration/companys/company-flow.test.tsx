@@ -65,8 +65,8 @@ describe('Company Flow Integration', () => {
     };
 
     it('complete flow: list companies -> select -> view -> edit -> invites', async () => {
-        httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/invites/profile')) {
+        httpMock.get.mockImplementation((url: string, config?: any) => {
+            if (url.includes('/auth/profile')) {
                 return Promise.resolve({
                     data: {
                         id: 'u1',
@@ -75,22 +75,29 @@ describe('Company Flow Integration', () => {
                     },
                 });
             }
-            if (url.includes('/companies')) {
+            if (url.includes('/auth/account/primary-owner-companies')) {
                 return Promise.resolve({
                     data: {
                         data: [
                             {
                                 id: 'c1',
-                                props: {
-                                    id: 'c1',
-                                    name: 'Test Company',
-                                    logoUrl: 'https://example.com/logo.png',
-                                },
                                 name: 'Test Company',
                                 logoUrl: 'https://example.com/logo.png',
                             },
                         ],
                         total: 1,
+                        page: config?.params?.page ?? 1,
+                        pageSize: config?.params?.pageSize ?? 10,
+                    },
+                });
+            }
+            if (url.includes('/auth/account/member-companies')) {
+                return Promise.resolve({
+                    data: {
+                        data: [],
+                        total: 0,
+                        page: config?.params?.page ?? 1,
+                        pageSize: config?.params?.pageSize ?? 10,
                     },
                 });
             }
@@ -105,17 +112,17 @@ describe('Company Flow Integration', () => {
 
         httpMock.post.mockResolvedValueOnce({data: {success: true}});
 
-        const selectButton = screen.getByText(/Select/i);
+        const selectButton = screen.getByText(/Ver empresa/i);
         fireEvent.click(selectButton);
 
         await waitFor(() => {
-            expect(httpMock.post).toHaveBeenCalledWith('/companys/c1/select');
+            expect(httpMock.post).toHaveBeenCalledWith('/company/c1/select');
         });
 
         // Reset mocks and set up new implementation for CompanyPage
         jest.clearAllMocks();
         httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/invites/profile')) {
+            if (url.includes('/auth/profile')) {
                 return Promise.resolve({
                     data: {
                         id: 'u1',
@@ -158,7 +165,7 @@ describe('Company Flow Integration', () => {
                     },
                 });
             }
-            if (url.includes('/companys/c1') && !url.includes('/members') && !url.includes('/public-info')) {
+            if (url.includes('/company/c1') && !url.includes('/members') && !url.includes('/public-info')) {
                 return Promise.resolve({
                     data: {
                         id: 'c1',
@@ -167,6 +174,13 @@ describe('Company Flow Integration', () => {
                         description: 'Test Description',
                         is_public: false,
                         createdAt: new Date().toISOString(),
+                    },
+                });
+            }
+            if (url.includes('/friendships?status=ACCEPTED')) {
+                return Promise.resolve({
+                    data: {
+                        data: [],
                     },
                 });
             }
@@ -189,10 +203,11 @@ describe('Company Flow Integration', () => {
         }, { timeout: 10000 });
 
         await waitFor(() => {
-            expect(screen.getByText(/editar empresa/i)).toBeInTheDocument();
+            expect(screen.getAllByRole('button', { name: /editar empresa/i }).length).toBeGreaterThan(0);
         }, { timeout: 10000 });
 
-        const editButton = screen.getByText(/editar empresa/i);
+        const editButtons = screen.getAllByRole('button', { name: /editar empresa/i });
+        const editButton = editButtons[editButtons.length - 1];
         fireEvent.click(editButton);
 
         await waitFor(() => {
@@ -213,16 +228,16 @@ describe('Company Flow Integration', () => {
         fireEvent.submit(screen.getByText(/salvar/i).closest('form')!);
 
         await waitFor(() => {
-            expect(httpMock.patch).toHaveBeenCalledWith('/companys/c1', expect.objectContaining({
+            expect(httpMock.patch).toHaveBeenCalledWith('/company/c1', expect.objectContaining({
                 name: 'Updated Company',
             }));
         });
 
         await waitFor(() => {
-            expect(screen.getByText(/Invite/i)).toBeInTheDocument();
+            expect(screen.getByText(/formulário de convite/i)).toBeInTheDocument();
         });
 
-        const inviteForm = screen.getByPlaceholderText(/Email/i);
+        const inviteForm = screen.getByPlaceholderText(/Email ou ID do usuário/i);
         fireEvent.change(inviteForm, {
             target: {value: 'member@test.com'},
         });
@@ -249,7 +264,7 @@ describe('Company Flow Integration', () => {
 
     it('view companys -> view members -> change role', async () => {
         httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/invites/profile')) {
+            if (url.includes('/auth/profile')) {
                 return Promise.resolve({
                     data: {
                         id: 'u1',
@@ -298,7 +313,7 @@ describe('Company Flow Integration', () => {
                     },
                 });
             }
-            if (url.includes('/companys/c1') && !url.includes('/members') && !url.includes('/public-info')) {
+            if (url.includes('/company/c1') && !url.includes('/members') && !url.includes('/public-info')) {
                 return Promise.resolve({
                     data: {
                         id: 'c1',
@@ -307,6 +322,13 @@ describe('Company Flow Integration', () => {
                         description: 'Test Description',
                         is_public: false,
                         createdAt: new Date().toISOString(),
+                    },
+                });
+            }
+            if (url.includes('/friendships?status=ACCEPTED')) {
+                return Promise.resolve({
+                    data: {
+                        data: [],
                     },
                 });
             }
@@ -334,34 +356,25 @@ describe('Company Flow Integration', () => {
             expect(memberElements.length).toBeGreaterThan(0);
         }, { timeout: 10000 });
 
-        const editButtons = screen.getAllByText(/Edit/i);
-        const memberEditButton = editButtons.find(btn => {
-            const row = btn.closest('tr');
-            return row && row.textContent?.includes('member@test.com');
-        });
-        
-        expect(memberEditButton).toBeInTheDocument();
-        fireEvent.click(memberEditButton!);
+        const memberEmailCell = screen.getAllByText(/member@test.com/i)[0];
+        const memberRow = memberEmailCell.closest('tr') || memberEmailCell.closest('button') || memberEmailCell;
+        fireEvent.click(memberRow!);
 
-        await waitFor(() => {
-            const selects = screen.getAllByRole('combobox');
-            expect(selects.length).toBeGreaterThan(0);
-        });
+        await screen.findByText(/Alterar Papel/i);
 
-        const roleSelect = screen.getAllByRole('combobox').find(select => {
-            const row = select.closest('tr');
-            return row && row.textContent?.includes('member@test.com');
-        });
-        
-        expect(roleSelect).toBeInTheDocument();
+        const roleSelect = screen.getAllByRole('combobox').pop();
+        expect(roleSelect).toBeDefined();
         fireEvent.change(roleSelect!, {target: {value: 'ADMIN'}});
 
         httpMock.patch.mockResolvedValueOnce({
             data: {success: true},
         });
 
-        const saveButton = screen.getByText(/Save/i);
-        fireEvent.click(saveButton);
+        const alterButton = screen.getByRole('button', { name: /Alterar/i });
+        fireEvent.click(alterButton);
+
+        const confirmButton = await screen.findByRole('button', { name: /Confirmar/i });
+        fireEvent.click(confirmButton);
 
         await waitFor(() => {
             expect(httpMock.patch).toHaveBeenCalledWith('/companys/c1/members/u2/role', {

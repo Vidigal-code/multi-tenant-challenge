@@ -36,13 +36,23 @@ class RedisMock {
 
 describe('EventsGateway Rate Limiting', () => {
     let gateway: EventsGateway;
+    let deliveryConfirmation: {confirmDelivery: jest.Mock; removePendingDelivery: jest.Mock};
 
     beforeEach(() => {
         process.env.WS_RATE_LIMIT_WINDOW_MS = '1000';
         process.env.WS_RATE_LIMIT_MAX = '3';
-        process.env.WS_RATE_LIMIT_MAX_NOTIFICATION_CREATED = '5';
+        process.env.WS_RATE_LIMIT_MAX_NOTIFICATIONS_CREATED = '5';
         delete (process.env as any).REDIS_URL;
-        gateway = new EventsGateway(new JwtService({}), new ConfigService(), {listByUser: async () => []} as any);
+        deliveryConfirmation = {
+            confirmDelivery: jest.fn(),
+            removePendingDelivery: jest.fn(),
+        };
+        gateway = new EventsGateway(
+            new JwtService({}),
+            new ConfigService(),
+            {listByUser: async () => []} as any,
+            deliveryConfirmation as any,
+        );
         (gateway as any).redisClient = new RedisMock('redis://mock');
     });
 

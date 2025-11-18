@@ -1,27 +1,36 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import RootLayout from '../../app/layout';
+import { Provider as ReduxProvider } from 'react-redux';
+import NavAuthMenu from '../../components/nav/NavAuthMenu';
+import { store } from '../../store';
 
-jest.mock('next/headers', () => ({
-  cookies: () => ({ get: () => ({ value: 'jwt' }) })
+jest.mock('../../components/themes/ThemeToggle', () => ({
+  ThemeToggle: () => <div data-testid="theme-toggle" />,
 }));
 
-jest.mock('next/link', () => ({
-  __esModule: true,
-  default: (props: any) => React.createElement('a', { href: props.href }, props.children),
-}));
-
-describe('RootLayout logout button', () => {
-  const originalError = console.error;
+describe('NavAuthMenu logout button', () => {
   beforeAll(() => {
-    console.error = (...args: any[]) => {
-      if (typeof args[0] === 'string' && args[0].includes('validateDOMNesting')) return;
-      originalError(...args);
-    };
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: jest.fn().mockImplementation((query) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+      })),
+    });
   });
-  afterAll(() => { console.error = originalError; });
+
   it('shows logout button when authenticated', async () => {
-    render(<RootLayout><div>content</div></RootLayout>);
+    render(
+      <ReduxProvider store={store}>
+        <NavAuthMenu initialAuth={true} />
+      </ReduxProvider>
+    );
     expect(await screen.findByRole('button', { name: /Sair/i })).toBeInTheDocument();
   });
 });

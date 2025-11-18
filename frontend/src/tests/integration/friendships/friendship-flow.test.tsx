@@ -19,6 +19,7 @@ jest.mock('next/navigation', () => ({
         push: jest.fn(),
         replace: jest.fn(),
     }),
+    useParams: () => ({}),
 }));
 
 jest.mock('../../../lib/realtime', () => ({
@@ -57,8 +58,11 @@ describe('Friendship Flow Integration', () => {
     };
 
     it('complete flow: search -> send request -> accept -> send message -> remove', async () => {
+        let pendingRequests: any[] = [];
+        let acceptedFriendships: any[] = [];
+
         httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/invites/profile')) {
+            if (url.includes('/auth/profile')) {
                 return Promise.resolve({
                     data: {
                         id: 'u1',
@@ -70,18 +74,18 @@ describe('Friendship Flow Integration', () => {
             if (url.includes('/friendships?status=ACCEPTED')) {
                 return Promise.resolve({
                     data: {
-                        data: [],
+                        data: acceptedFriendships,
                     },
                 });
             }
             if (url.includes('/friendships?status=PENDING')) {
                 return Promise.resolve({
                     data: {
-                        data: [],
+                        data: pendingRequests,
                     },
                 });
             }
-            if (url.includes('/friendships/search')) {
+            if (url.includes('/users/search')) {
                 return Promise.resolve({
                     data: [
                         {
@@ -93,6 +97,44 @@ describe('Friendship Flow Integration', () => {
                 });
             }
             return Promise.resolve({ data: {} });
+        });
+
+        httpMock.post.mockImplementation((url: string) => {
+            if (url === '/friendships/request') {
+                pendingRequests = [
+                    {
+                        id: 'f1',
+                        requester: {id: 'u2', name: 'User 2', email: 'user2@test.com'},
+                        addressee: {id: 'u1', name: 'User 1', email: 'user1@test.com'},
+                        status: 'PENDING',
+                        createdAt: new Date().toISOString(),
+                    },
+                ];
+                return Promise.resolve({
+                    data: {
+                        friendship: {
+                            id: 'f1',
+                            requester: {id: 'u1', name: 'User 1'},
+                            addressee: {id: 'u2', name: 'User 2'},
+                            status: 'PENDING',
+                        },
+                    },
+                });
+            }
+            if (url === '/friendships/f1/accept') {
+                acceptedFriendships = [
+                    {
+                        id: 'f1',
+                        requester: {id: 'u1', name: 'User 1', email: 'user1@test.com'},
+                        addressee: {id: 'u2', name: 'User 2', email: 'user2@test.com'},
+                        status: 'ACCEPTED',
+                        createdAt: new Date().toISOString(),
+                    },
+                ];
+                pendingRequests = [];
+                return Promise.resolve({ data: { success: true } });
+            }
+            return Promise.resolve({ data: { success: true } });
         });
 
         renderWithProviders(<FriendsPage />);
@@ -110,20 +152,9 @@ describe('Friendship Flow Integration', () => {
 
         await waitFor(() => {
             expect(httpMock.get).toHaveBeenCalledWith(
-                '/friendships/search?q=user2',
+                '/users/search?q=user2',
             );
         }, { timeout: 5000 });
-
-        httpMock.post.mockResolvedValueOnce({
-            data: {
-                friendship: {
-                    id: 'f1',
-                    requester: {id: 'u1', name: 'User 1'},
-                    addressee: {id: 'u2', name: 'User 2'},
-                    status: 'PENDING',
-                },
-            },
-        });
 
         const sendRequestButton = screen.getByRole('button', {name: /enviar solicitação/i});
         fireEvent.click(sendRequestButton);
@@ -134,53 +165,7 @@ describe('Friendship Flow Integration', () => {
             });
         });
 
-        httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/friendships?status=PENDING')) {
-                return Promise.resolve({
-                    data: {
-                        data: [
-                            {
-                                id: 'f1',
-                                requester: {id: 'u2', name: 'User 2', email: 'user2@test.com'},
-                                addressee: {id: 'u1', name: 'User 1', email: 'user1@test.com'},
-                                status: 'PENDING',
-                                createdAt: new Date().toISOString(),
-                            },
-                        ],
-                    },
-                });
-            }
-            if (url.includes('/friendships?status=ACCEPTED')) {
-                return Promise.resolve({
-                    data: {
-                        data: [],
-                    },
-                });
-            }
-            if (url.includes('/invites/profile')) {
-                return Promise.resolve({
-                    data: {
-                        id: 'u1',
-                        email: 'user1@test.com',
-                        name: 'User 1',
-                    },
-                });
-            }
-            if (url.includes('/friendships/search')) {
-                return Promise.resolve({
-                    data: [
-                        {
-                            id: 'u2',
-                            email: 'user2@test.com',
-                            name: 'User 2',
-                        },
-                    ],
-                });
-            }
-            return Promise.resolve({ data: {} });
-        });
-
-        const requestsTab = screen.getByText(/Solicitações/i);
+        const requestsTab = screen.getAllByRole('button', { name: /Solicitações/i })[0];
         fireEvent.click(requestsTab);
 
         await waitFor(() => {
@@ -191,10 +176,6 @@ describe('Friendship Flow Integration', () => {
             expect(screen.getByText(/User 2/i)).toBeInTheDocument();
         }, { timeout: 10000 });
 
-        httpMock.post.mockResolvedValueOnce({
-            data: {success: true},
-        });
-
         const acceptButton = screen.getByRole('button', {name: /aceitar/i});
         fireEvent.click(acceptButton);
 
@@ -202,28 +183,14 @@ describe('Friendship Flow Integration', () => {
             expect(httpMock.post).toHaveBeenCalledWith('/friendships/f1/accept');
         });
 
-        const friendsTab = screen.getByText(/Amigos/i);
+        const friendsTab = screen.getAllByRole('button', { name: /Amigos/i })[0];
         fireEvent.click(friendsTab);
-
-        httpMock.get.mockResolvedValueOnce({
-            data: {
-                data: [
-                    {
-                        id: 'f1',
-                        requester: {id: 'u1', name: 'User 1', email: 'user1@test.com'},
-                        addressee: {id: 'u2', name: 'User 2', email: 'user2@test.com'},
-                        status: 'ACCEPTED',
-                        createdAt: new Date().toISOString(),
-                    },
-                ],
-            },
-        });
 
         await waitFor(() => {
             expect(screen.getByText(/User 2/i)).toBeInTheDocument();
         });
 
-        const messagesTab = screen.getByText(/Enviar Mensagem/i);
+        const messagesTab = screen.getAllByRole('button', { name: /Enviar Mensagem/i }).find(btn => btn.closest('nav'))!;
         fireEvent.click(messagesTab);
 
         await waitFor(() => {
@@ -233,10 +200,13 @@ describe('Friendship Flow Integration', () => {
         const friendCheckbox = screen.getByLabelText(/User 2/i);
         fireEvent.click(friendCheckbox);
 
-        fireEvent.change(screen.getByPlaceholderText(/título/i), {
+        const openMessageButton = screen.getByText(/Enviar Mensagem Seletiva/i);
+        fireEvent.click(openMessageButton);
+
+        fireEvent.change(screen.getByPlaceholderText(/Assunto/i), {
             target: {value: 'Hello'},
         });
-        fireEvent.change(screen.getByPlaceholderText(/mensagem/i), {
+        fireEvent.change(screen.getByPlaceholderText(/^Mensagem$/i), {
             target: {value: 'How are you?'},
         });
 
@@ -244,7 +214,7 @@ describe('Friendship Flow Integration', () => {
             data: {success: true},
         });
 
-        const sendButton = screen.getByRole('button', {name: /enviar/i});
+        const sendButton = screen.getAllByRole('button', {name: /enviar/i}).find(btn => btn.getAttribute('type') === 'submit')!;
         fireEvent.click(sendButton);
 
         await waitFor(() => {
@@ -255,7 +225,10 @@ describe('Friendship Flow Integration', () => {
             });
         });
 
-        const removeButton = screen.getByRole('button', {name: /remover/i});
+        const friendsTabAgain = screen.getAllByRole('button', { name: /Amigos/i })[0];
+        fireEvent.click(friendsTabAgain);
+
+        const removeButton = await screen.findByRole('button', {name: /remover/i});
         fireEvent.click(removeButton);
 
         await waitFor(() => {
@@ -276,7 +249,7 @@ describe('Friendship Flow Integration', () => {
 
     it('send global message to all friends', async () => {
         httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/invites/profile')) {
+            if (url.includes('/auth/profile')) {
                 return Promise.resolve({
                     data: {
                         id: 'u1',

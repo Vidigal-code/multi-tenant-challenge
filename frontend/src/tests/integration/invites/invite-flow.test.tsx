@@ -60,7 +60,7 @@ describe('Invite Flow Integration', () => {
 
     it('complete flow: view invites -> accept -> verify', async () => {
         httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/invites/profile')) {
+            if (url.includes('/auth/profile')) {
                 return Promise.resolve({
                     data: {
                         id: 'u1',
@@ -128,13 +128,13 @@ describe('Invite Flow Integration', () => {
         fireEvent.click(acceptButton);
 
         await waitFor(() => {
-            expect(httpMock.post).toHaveBeenCalledWith('/invites/accept-invites', { token: 'token123' });
+            expect(httpMock.post).toHaveBeenCalledWith('/auth/accept-invites', { token: 'token123' });
         }, { timeout: 5000 });
     });
 
     it('view created invites -> delete invites', async () => {
         httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/invites/profile')) {
+            if (url.includes('/auth/profile')) {
                 return Promise.resolve({
                     data: {
                         id: 'u1',
@@ -204,7 +204,7 @@ describe('Invite Flow Integration', () => {
 
     it('accept invites via link', async () => {
         httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/invites/profile')) {
+            if (url.includes('/auth/profile')) {
                 return Promise.resolve({
                     data: {
                         id: 'u1',
@@ -271,7 +271,7 @@ describe('Invite Flow Integration', () => {
 
     it('reject invites via link', async () => {
         httpMock.get.mockImplementation((url: string) => {
-            if (url.includes('/invites/profile')) {
+            if (url.includes('/auth/profile')) {
                 return Promise.resolve({
                     data: {
                         id: 'u1',
