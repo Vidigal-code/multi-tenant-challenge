@@ -2,16 +2,16 @@ services:
   db:
     image: postgres:16-alpine
     pull_policy: missing
-    # environment:
-    #   POSTGRES_PASSWORD: postgres
-    #   POSTGRES_USER: postgres
-    #   POSTGRES_DB: multitenant
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: multitenant
     ports:
       - "0.0.0.0:5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d multitenant"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d multitenant" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -25,7 +25,7 @@ services:
     ports:
       - "0.0.0.0:6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -43,7 +43,7 @@ services:
       - "0.0.0.0:5672:5672"
       - "0.0.0.0:15672:15672"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,7 +56,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     pull_policy: build
-    env_file: 
+    env_file:
       - ./backend/.env
     ports:
       - "0.0.0.0:4000:4000"
@@ -86,7 +86,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     pull_policy: build
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -108,7 +108,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     pull_policy: build
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -130,7 +130,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     pull_policy: build
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -152,7 +152,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     pull_policy: build
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -174,7 +174,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     pull_policy: build
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -197,7 +197,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     pull_policy: build
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -220,7 +220,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     pull_policy: build
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -243,7 +243,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     pull_policy: build
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -266,7 +266,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     pull_policy: build
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -291,7 +291,7 @@ services:
       args:
         NEXT_PUBLIC_DEFAULT_COMPANY_LOGO: ${NEXT_PUBLIC_DEFAULT_COMPANY_LOGO:-https://example.com/default-companys.png}
     pull_policy: build
-    env_file: 
+    env_file:
       - ./frontend/.env
     ports:
       - "0.0.0.0:3000:3000"
@@ -312,7 +312,7 @@ services:
     volumes:
       - ./backend:/app
     command: sh -c "npm ci && npm test"
-    profiles: ["test"]
+    profiles: [ "test" ]
 
   web-test:
     image: node:20-alpine
@@ -320,11 +320,11 @@ services:
     volumes:
       - ./frontend:/app
     command: sh -c "npm ci && npm test"
-    profiles: ["test"]
+    profiles: [ "test" ]
 
   prisma-migrate:
     build: ./backend
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -337,11 +337,11 @@ services:
       - /app/node_modules
     networks:
       - multitenant-network
-    profiles: ["tools"]
+    profiles: [ "tools" ]
 
   prisma-reset:
     build: ./backend
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -354,11 +354,11 @@ services:
       - /app/node_modules
     networks:
       - multitenant-network
-    profiles: ["tools"]
+    profiles: [ "tools" ]
 
   prisma-generate:
     build: ./backend
-    env_file: 
+    env_file:
       - ./backend/.env
     command: sh -c "npm run prisma:generate"
     volumes:
@@ -366,11 +366,11 @@ services:
       - /app/node_modules
     networks:
       - multitenant-network
-    profiles: ["tools"]
+    profiles: [ "tools" ]
 
   seed:
     build: ./backend
-    env_file: 
+    env_file:
       - ./backend/.env
     # environment:
     #   - DATABASE_URL=postgresql://postgres:postgres@db:5432/multitenant?schema=public
@@ -385,22 +385,22 @@ services:
       - /app/node_modules
     networks:
       - multitenant-network
-    profiles: ["tools"]
+    profiles: [ "tools" ]
 
   clean-queues:
     image: rabbitmq:3-management
-    command: ["sh", "-c", "echo 'Use: docker compose exec rabbitmq rabbitmqctl purge_queue <queue-name>'"]
-    profiles: ["tools"]
+    command: [ "sh", "-c", "echo 'Use: docker compose exec rabbitmq rabbitmqctl purge_queue <queue-name>'" ]
+    profiles: [ "tools" ]
 
   clear-dedup:
     image: redis:7-alpine
-    command: ["sh", "-c", "redis-cli -h redis --scan --pattern 'evt:*' | xargs -I {} redis-cli -h redis DEL {} || redis-cli -h redis FLUSHDB"]
+    command: [ "sh", "-c", "redis-cli -h redis --scan --pattern 'evt:*' | xargs -I {} redis-cli -h redis DEL {} || redis-cli -h redis FLUSHDB" ]
     depends_on:
       redis:
         condition: service_started
     networks:
       - multitenant-network
-    profiles: ["tools"]
+    profiles: [ "tools" ]
 
 volumes:
   db_data:
