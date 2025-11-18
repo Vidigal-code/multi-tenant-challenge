@@ -195,8 +195,6 @@ jobs:
 
       - name: Frontend - Lint
         working-directory: frontend
-        env:
-          ESLINT_USE_FLAT_CONFIG: "false"
         run: |
           if [ "${{ steps.frontend-pm.outputs.pm }}" == "pnpm" ]; then
             pnpm run lint

@@ -183,6 +183,10 @@ export default function CompanyPage() {
         };
     }, [id, qc]);
 
+    useEffect(() => {
+        setMembersPage(1);
+    }, [membersQuery.data?.members?.length]);
+
     if (!id || id === 'undefined') {
         return (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full min-w-0">
@@ -192,10 +196,6 @@ export default function CompanyPage() {
             </div>
         );
     }
-
-    useEffect(() => {
-        setMembersPage(1);
-    }, [membersQuery.data?.members?.length]);
 
     if (companyQuery.isLoading || roleQuery.isLoading) {
         return <Skeleton className="h-32" />;

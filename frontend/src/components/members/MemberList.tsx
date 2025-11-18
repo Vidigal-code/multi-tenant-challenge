@@ -50,10 +50,6 @@ export const MemberList = React.memo(function MemberList({
         }
     }
 
-    if (!members.length) {
-        return <p className="text-sm text-gray-600 dark:text-gray-400">Ainda não há membros.</p>;
-    }
-
     const showDetails = currentRole === 'OWNER' || currentRole === 'ADMIN';
     const isPrimaryOwner = (userId: string) => primaryOwnerUserId === userId;
     const canClickMember = true;
@@ -64,6 +60,10 @@ export const MemberList = React.memo(function MemberList({
     const startIndex = (safePage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const pageMembers = useMemo(() => members.slice(startIndex, endIndex), [members, startIndex, endIndex]);
+
+    if (!members.length) {
+        return <p className="text-sm text-gray-600 dark:text-gray-400">Ainda não há membros.</p>;
+    }
 
     const handlePreviousPage = () => {
         setCurrentPage(prev => Math.max(1, prev - 1));
