@@ -205,11 +205,12 @@ async function bootstrap() {
     swaggerSetup(app);
 
     const port = Number(process.env.PORT) || 4000;
+    const host = process.env.LOCAL || "0.0.0.0";
     
     try {
-        await app.listen(port, "0.0.0.0");
-        console.log(`Application is running on: http://0.0.0.0:${port}`);
-        console.log(` Swagger documentation: http://0.0.0.0:${port}/api`);
+        await app.listen(port, host);
+        console.log(`Application is running on: http://${host}:${port}`);
+        console.log(` Swagger documentation: http://${host}:${port}/api`);
     } catch (error) {
         console.error("Failed to start application:", error);
         process.exit(1);
