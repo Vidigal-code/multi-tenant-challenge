@@ -85,7 +85,6 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
       return `realtime:msg:${payload.messageId || payload.id}`;
     }
 
-    // Fallback to a key that includes the queue name to avoid conflicts with upstream workers
     const baseKey = super.dedupKey(payload);
     if (baseKey) {
       return `realtime:${baseKey}`;
@@ -262,7 +261,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
           friendshipId: payload?.friendshipId,
         };
         this.logger.rabbitmq(
-          `Creating notification without user IDs: eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`,
+          `Creating notification without user IDs: eventName=${eventName},
+           inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`,
         );
         await this.notificationCreator.createNotificationForEvent(
           eventName,
@@ -288,7 +288,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
 
         if (prefs.realtimeEnabled === false) {
           this.logger.rabbitmq(
-            `WebSocket emit skipped for user ${userId}: realtimeEnabled is false, creating notification without delivery confirmation`,
+            `WebSocket emit skipped for user ${userId}: 
+            realtimeEnabled is false, creating notification without delivery confirmation`,
           );
           const notificationPayload = {
             ...payload,
@@ -307,7 +308,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
             friendshipId: payload?.friendshipId,
           };
           this.logger.rabbitmq(
-            `Creating notification without WebSocket for user ${userId}: eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`,
+            `Creating notification without WebSocket for user ${userId}: 
+            eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`,
           );
           await this.notificationCreator.createNotificationForEvent(
             eventName,
@@ -344,7 +346,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
           notificationPayload,
         );
         this.logger.websocket(
-          `WebSocket event emitted to user: ${userId}, event: ${this.RT_EVENT.NOTIFICATION_CREATED}, messageId: ${userMessageId}`,
+          `WebSocket event emitted to user: ${userId}, event: 
+          ${this.RT_EVENT.NOTIFICATION_CREATED}, messageId: ${userMessageId}`,
         );
       }
 
@@ -371,7 +374,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
       const pollIntervalMs = 500;
 
       this.logger.rabbitmq(
-        `Waiting for delivery confirmation: messageId=${messageId}, users=${Array.from(userMessageIds.keys()).join(", ")}, timeout=${timeoutMs}ms`,
+        `Waiting for delivery confirmation: messageId=${messageId}, 
+        users=${Array.from(userMessageIds.keys()).join(", ")}, timeout=${timeoutMs}ms`,
       );
 
       while (
@@ -422,7 +426,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
                     payload?.friendshipId || storedPayload?.friendshipId,
                 };
                 this.logger.rabbitmq(
-                  `Creating notification for user ${userId}: eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`,
+                  `Creating notification for user ${userId}: eventName=${eventName}, 
+                  inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`,
                 );
                 this.logger.rabbitmq(
                   `Notification payload keys: ${Object.keys(notificationPayload).join(", ")}`,
@@ -448,7 +453,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
               }
             } else {
               this.logger.rabbitmq(
-                `Delivery already confirmed or expired for user ${userId}: messageId=${userMessageId}, attempting to save notification from original payload`,
+                `Delivery already confirmed or expired for user ${userId}: messageId=${userMessageId}, 
+                attempting to save notification from original payload`,
               );
               try {
                 const additionalData = payload?.additionalData || {};
@@ -471,7 +477,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
                     payload?.friendshipId || additionalData?.friendshipId,
                 };
                 this.logger.rabbitmq(
-                  `Creating notification from original payload for user ${userId}: eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`,
+                  `Creating notification from original payload for user ${userId}: eventName=${eventName}, 
+                  inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`,
                 );
                 this.logger.rabbitmq(
                   `Notification payload keys: ${Object.keys(notificationPayload).join(", ")}`,
@@ -510,7 +517,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
       for (const [userId, userMessageId] of userMessageIds.entries()) {
         if (!confirmedUserIds.includes(userId)) {
           this.logger.rabbitmq(
-            `Delivery timeout for user ${userId}: messageId=${userMessageId}, saving notification without confirmation`,
+            `Delivery timeout for user ${userId}: messageId=${userMessageId}, 
+            saving notification without confirmation`,
           );
           try {
             const notificationPayload = {
@@ -530,7 +538,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
               friendshipId: payload?.friendshipId,
             };
             this.logger.rabbitmq(
-              `Creating notification after timeout for user ${userId}: eventName=${eventName}, inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`,
+              `Creating notification after timeout for user ${userId}: eventName=${eventName}, 
+              inviteId=${notificationPayload.inviteId}, invitedEmail=${notificationPayload.invitedEmail}`,
             );
             await this.notificationCreator.createNotificationForEvent(
               eventName,
@@ -559,7 +568,8 @@ class RealtimeNotificationsConsumer extends BaseDeliveryAwareConsumer<any> {
       const savedCount = confirmedUserIds.length;
 
       this.logger.rabbitmq(
-        `Notification processing completed: messageId=${messageId}, confirmed=${allConfirmed}, saved=${savedCount}/${userMessageIds.size}, elapsed=${Date.now() - startTime}ms`,
+        `Notification processing completed: messageId=${messageId}, confirmed=${allConfirmed},
+         saved=${savedCount}/${userMessageIds.size}, elapsed=${Date.now() - startTime}ms`,
       );
 
       return {
