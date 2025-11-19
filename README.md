@@ -447,15 +447,27 @@ As migrações Prisma são aplicadas automaticamente no boot da API (`migrate de
 | Nome | Descrição | Exemplo |
 |------|-----------|---------|
 | PORT | Porta HTTP | 4000 |
+| HOST | Host de binding HTTP | 0.0.0.0 |
 | NODE_ENV | Ambiente | development |
 | DATABASE_URL | PostgreSQL | postgresql://postgres:postgres@db:5432/multitenant?schema=public |
 | JWT_SECRET | Segredo JWT | supersecretjwt |
 | JWT_EXPIRES_IN | Expiração | 7d |
+| JWT_ALGORITHM | Algoritmo do JWT | HS256 |
+| JWT_PRIVATE_KEY | Chave privada JWT (quando usando RS/ES/EdDSA) | -----BEGIN PRIVATE KEY----- |
+| JWT_PUBLIC_KEY | Chave pública JWT | -----BEGIN PUBLIC KEY----- |
 | COOKIE_NAME | Cookie de sessão | mt_session |
+| WORKER_JWT_SECRET | Segredo JWT dos workers | teste1234567890 |
+| WORKER_JWT_ALGORITHM | Algoritmo JWT dos workers | ES256 |
+| WORKER_JWT_PRIVATE_KEY | Chave privada usada por workers (JWE/JWT) | -----BEGIN PRIVATE KEY----- |
+| WORKER_JWT_PUBLIC_KEY | Chave pública usada por workers (JWE/JWT) | -----BEGIN PUBLIC KEY----- |
+| WORKER_JWT_EXPIRES_IN | Expiração do token worker | 7d |
+| WORKER_JWT_COOKIE_NAME | Nome do cookie worker | worker_session |
 | INVITE_TOKEN_BYTES | Entropia | 24 |
 | INVITE_EXPIRES_DAYS | Validade convite | 7 |
 | RATE_LIMIT_WINDOW_MS | Janela rate limit | 60000 |
 | RATE_LIMIT_MAX | Limite por janela | 100 |
+| CORS_SITES_ENABLES | Lista de origens HTTP permitidas (CSV ou `[a,b]`) | http://localhost:3000,https://app.example.com |
+| CORS_SITES_ENABLES_ALL | Libera todos os domínios HTTP (`true`, `*`, `1`) | false |
 | BCRYPT_COST | Custo bcrypt | 10 |
 | REDIS_URL | Redis | redis://redis:6379 |
 | RABBITMQ_URL | RabbitMQ | amqp://guest:guest@rabbitmq:5672 |
@@ -464,16 +476,19 @@ As migrações Prisma são aplicadas automaticamente no boot da API (`migrate de
 | RABBITMQ_RETRY_MAX | Tentativas de retry | 5 |
 | WS_NAMESPACE | Namespace WebSocket | /rt |
 | WS_CORS_ORIGIN | Origem permitida CORS WS | http://localhost:3000 |
+| WS_CORS_ORIGIN_ALL | Libera todos os domínios WebSocket | false |
 | USE_WS_REDIS_ADAPTER | Habilita adapter Redis | false |
 | WS_RATE_LIMIT_WINDOW_MS | Janela fixa rate limit WS | 1000 |
 | WS_RATE_LIMIT_MAX | Máx emits por janela (por chave) | 50 |
+
+Endpoints em `/workers/**` agora exigem autenticação específica para automações. Envie um token via `Authorization: Bearer <token>` ou cookie `WORKER_JWT_COOKIE_NAME`. O backend aceita tanto JWTs assinados quanto JWEs (que podem encapsular outro JWT ou payload JSON) usando os segredos/chaves configurados acima.
 
 ### Frontend
 
 | Nome | Descrição | Exemplo |
 |------|-----------|---------|
 | NEXT_PUBLIC_API_URL | Base API | http://localhost:4000 |
-| NEXT_PUBLIC_COOKIE_NAME | Cookie esperado | mt_session |
+| NEXT_PUBLIC_SESSION_COOKIE | Cookie esperado | mt_session |
 | NEXT_PUBLIC_WS_URL | Base WebSocket | http://localhost:4000 |
 | NEXT_PUBLIC_DEFAULT_COMPANY_LOGO | Logo padrão fallback | /logo-fallback.png |
 
@@ -506,6 +521,7 @@ Testes cobrem convites, seleção de tenant, invariantes de OWNER e falhas de au
 
 - Rate limiting distribuído com Redis.
 - JWT leve e cookie SameSite=Lax.
+- Helmet aplica CSP, `frame-ancestors 'none'`, referrer policy e bloqueio de clickjacking/XSS para toda requisição HTTP.
 - Estrutura modular apta a sharding por tenant e múltiplos workers.
 - Consumers resilientes e idempotentes (prefetch, retry, DLQ, deduplicação Redis):
 	- `interfaces/consumers/invites.events.consumer.ts` (INVITE_* → realtime)

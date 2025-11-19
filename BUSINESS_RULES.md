@@ -21,6 +21,8 @@ Este documento descreve todas as regras de negócio implementadas no sistema.
 - JWT armazenado em cookie httpOnly
 - Sessão expira conforme configuração
 - Logout limpa cookie e redireciona
+- Endpoints de observabilidade `/workers/**` exigem token próprio para automações. O backend aceita tanto JWT common (via `WORKER_JWT_SECRET` ou par de chaves) quanto JWEs compactos (5 partes) enviados via `Authorization: Bearer <token>` ou cookie `WORKER_JWT_COOKIE_NAME`.
+- Payload de worker deve conter pelo menos `sub` e pode incluir escopos (ex.: `["workers:read"]`). Tokens sem `sub`, inválidos ou não descriptografáveis retornam `WORKER_TOKEN_*` errors.
 
 ### 1.3. Perfil do Usuário
 - Atualização de nome: livre

@@ -2,9 +2,9 @@ import {Controller, Delete, Get, Query, UseGuards} from '@nestjs/common';
 import {ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {JwtAuthGuard} from '@common/guards/jwt.guard';
 import {CurrentUser} from '@common/decorators/current-user.decorator';
-import {User} from '@prisma/client';
 import {SearchUsersUseCase} from '@application/use-cases/users/search-users.usecase';
 import {DeleteAccountUseCase} from '@application/use-cases/users/delete-account.usecase';
+import { User } from "@domain/entities/users/user.entity";
 
 @ApiTags('users')
 @ApiCookieAuth()

@@ -1,11 +1,12 @@
-import {Controller, Get, Param, Query, HttpCode} from '@nestjs/common';
-import {ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
+import {Controller, Get, Param, Query, HttpCode, UseGuards} from '@nestjs/common';
+import {ApiBearerAuth, ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {DeliveryConfirmationService} from '@infrastructure/messaging/services/delivery-confirmation.service';
 import {RabbitMQService} from '@infrastructure/messaging/services/rabbitmq.service';
 import {ConfigService} from '@nestjs/config';
 import {LoggerService} from '@infrastructure/logging/logger.service';
 import * as os from 'os';
 import * as process from 'process';
+import {WorkerAuthGuard} from '@modules/observability/guards/worker-auth.guard';
 
 /**
  * WorkersController - REST API for worker status monitoring
@@ -38,8 +39,10 @@ import * as process from 'process';
  * - Monitore sobrecarga de workers para prevenir acúmulo de filas
  * - Acompanhe contagem de workers ativos para planejamento de capacidade
  */
+@ApiBearerAuth('worker-jwt')
 @ApiTags('workers')
 @Controller('workers')
+@UseGuards(WorkerAuthGuard)
 export class WorkersController {
     private readonly logger: LoggerService;
     private readonly overloadThreshold: number;
@@ -224,17 +227,31 @@ export class WorkersController {
             const overloaded = pendingCount > this.overloadThreshold;
 
             let queueName = '';
-            if (workerType === 'realtime') {
-                queueName = 'notifications.realtimes';
-            } else if (workerType === 'invites') {
-                queueName = 'events.invites';
-            } else if (workerType === 'members') {
-                queueName = 'events.members';
-            } else if (workerType === 'generic') {
-                queueName = 'events';
+
+            switch (workerType) {
+                case 'realtime':
+                    queueName = 'notifications.realtimes';
+                    break;
+
+                case 'invites':
+                    queueName = 'events.invites';
+                    break;
+
+                case 'members':
+                    queueName = 'events.members';
+                    break;
+
+                case 'generic':
+                    queueName = 'events';
+                    break;
+
+                default:
+                    queueName = '';
+                    break;
             }
 
             let queueInfo: any = null;
+
             if (queueName && channel) {
                 try {
                     const queue = await channel.checkQueue(queueName);
@@ -259,8 +276,10 @@ export class WorkersController {
                 queue: queueInfo,
                 timestamp: new Date().toISOString(),
             };
+
         } catch (error: any) {
             this.logger.error(`Error getting worker status for ${workerType}: ${error?.message || String(error)}`);
+
             return {
                 type: workerType,
                 error: error?.message || String(error),

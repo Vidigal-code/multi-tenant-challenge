@@ -15,6 +15,7 @@ import Redis from 'ioredis';
 import {Counter, Gauge, Registry, Summary} from 'prom-client';
 import {LoggerService} from '@infrastructure/logging/logger.service';
 import {DeliveryConfirmationService} from '@infrastructure/messaging/services/delivery-confirmation.service';
+import {resolveAllowedOrigins} from "@common/utils/origin.util";
 
 export const RT_EVENT = {
     COMPANY_UPDATED: 'companys.updated',
@@ -69,10 +70,15 @@ export const RT_EVENT = {
  * - Monitore contagens de conexões WebSocket e taxas de mensagens
  * - Ajuste limites de taxa baseado na carga da aplicação
  */
+const websocketOrigins = resolveAllowedOrigins(
+    process.env.WS_CORS_ORIGIN,
+    process.env.WS_CORS_ORIGIN_ALL,
+);
+
 @Injectable()
 @WebSocketGateway({
     cors: {
-        origin: process.env.WS_CORS_ORIGIN?.split(',') || '*',
+        origin: websocketOrigins,
         credentials: true,
     },
     namespace: process.env.WS_NAMESPACE || '/rt',

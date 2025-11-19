@@ -8,6 +8,17 @@ export const appConfig = registerAs("app", () => ({
         secret: process.env.JWT_SECRET ?? "secret",
         expiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
         cookieName: process.env.COOKIE_NAME ?? "session",
+        algorithm: process.env.JWT_ALGORITHM ?? "HS256",
+        privateKey: process.env.JWT_PRIVATE_KEY,
+        publicKey: process.env.JWT_PUBLIC_KEY,
+    },
+    workerJwt: {
+        secret: process.env.WORKER_JWT_SECRET ?? process.env.JWT_SECRET,
+        expiresIn: process.env.WORKER_JWT_EXPIRES_IN ?? "7d",
+        cookieName: process.env.WORKER_JWT_COOKIE_NAME ?? "worker_session",
+        algorithm: process.env.WORKER_JWT_ALGORITHM ?? "HS256",
+        privateKey: process.env.WORKER_JWT_PRIVATE_KEY ?? process.env.JWT_PRIVATE_KEY,
+        publicKey: process.env.WORKER_JWT_PUBLIC_KEY ?? process.env.JWT_PUBLIC_KEY,
     },
     rateLimit: {
         windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? "60000", 10),

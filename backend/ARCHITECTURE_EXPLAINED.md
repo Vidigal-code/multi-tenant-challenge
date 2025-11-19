@@ -473,6 +473,15 @@ Redis Cluster → Milhões de operações/segundo
 4. **Taxa de Timeout**
    - Se alta → Aumente TTL ou verifique conectividade
 
+### Observabilidade de Workers Protegida
+
+- Endpoints HTTP em `/workers/**` expõem status, sobrecarga e estimativas de quantidade de workers.  
+- Cada requisição passa pelo `WorkerAuthGuard`, que valida tokens dedicados com o `WorkerTokenService`.  
+- Token aceito pode ser um JWT assinado (HS/RS/ES/EdDSA) ou um JWE compacto de 5 partes que encapsula JSON ou um segundo JWT.
+- Fontes permitidas: `Authorization: Bearer <token>` ou cookie `WORKER_JWT_COOKIE_NAME`.  
+- Variáveis `WORKER_JWT_*` definem segredo/chaves, algoritmo e validade; se não forem informadas, o serviço herda as configurações de JWT padrão.
+- Respostas `401 WORKER_TOKEN_*` indicam token ausente, inválido ou sem `sub`. Gere tokens de longa duração para automações (ex.: bot de observabilidade) e mantenha-os fora do frontend público.
+
 ---
 
 ## ✅ Resumo

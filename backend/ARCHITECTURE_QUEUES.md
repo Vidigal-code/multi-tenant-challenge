@@ -275,6 +275,9 @@ Garantir que notificações sejam entregues com sucesso aos clientes antes de pe
 - `GET /workers/:workerType/overloaded` - Verifica se worker está sobrecarregado
 - `GET /workers/:workerType/count` - Contagem de workers ativos
 
+> 🔐 **Autenticação obrigatória:** todos os endpoints `/workers/**` utilizam o `WorkerAuthGuard`.  
+> Gere um token dedicado (JWT ou JWE) usando as variáveis `WORKER_JWT_*` e envie via `Authorization: Bearer <token>` ou cookie `WORKER_JWT_COOKIE_NAME`. Tokens sem `sub` retornam erros `WORKER_TOKEN_*`.
+
 ### Métricas
 
 - Profundidade de filas RabbitMQ
@@ -328,6 +331,14 @@ USE_WS_REDIS_ADAPTER=false
 # Rate Limiting
 WS_RATE_LIMIT_WINDOW_MS=1000
 WS_RATE_LIMIT_MAX=50
+
+# Worker JWT/JWE
+WORKER_JWT_SECRET=secret-ou-chave-privada
+WORKER_JWT_ALGORITHM=HS256
+WORKER_JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----"
+WORKER_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----"
+WORKER_JWT_EXPIRES_IN=7d
+WORKER_JWT_COOKIE_NAME=worker_session
 ```
 
 ## Componentes Principais

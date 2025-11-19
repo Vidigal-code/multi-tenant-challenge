@@ -80,6 +80,14 @@ RABBITMQ_RETRY_MAX=5
 
 # Redis (para deduplicação)
 REDIS_URL=redis://localhost:6379
+
+# Worker JWT/JWE (protege /workers/**)
+WORKER_JWT_SECRET=worker-secret
+WORKER_JWT_ALGORITHM=HS256
+WORKER_JWT_PRIVATE_KEY=""
+WORKER_JWT_PUBLIC_KEY=""
+WORKER_JWT_EXPIRES_IN=7d
+WORKER_JWT_COOKIE_NAME=worker_session
 ```
 
 ### 2. Workers em Execução
@@ -119,6 +127,9 @@ Acesse o RabbitMQ Management UI (geralmente em `http://localhost:15672`):
 2. **Remover um membro** → Deve aparecer em `events.members`
 3. **Verificar logs dos workers** → Devem processar as mensagens
 4. **Verificar RabbitMQ UI** → Filas devem processar mensagens
+5. **Chamar `/workers/status`** com `Authorization: Bearer <token>` (JWT ou JWE configurado via `WORKER_JWT_*`) para validar sobrecarga, contadores e erros de fila.
+
+> Dica: gere tokens de automação com `jose`. O serviço aceita JWT (3 partes) ou JWE compacto (5 partes) contanto que o payload contenha `sub`.
 
 ### Métricas importantes:
 

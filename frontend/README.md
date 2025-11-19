@@ -306,6 +306,8 @@ NEXT_PUBLIC_SESSION_COOKIE=mt_session
 NEXT_PUBLIC_DEFAULT_COMPANY_LOGO=https://dynamic.design.com/preview/logodraft/673b48a6-8177-4a84-9785-9f74d395a258/image/large.png
 ```
 
+> 🔐 Os endpoints de observabilidade `/workers/**` são protegidos por tokens específicos (JWT/JWE) e nunca são chamados diretamente pelo frontend. Bots de monitoramento (ex.: scripts em `backend/`) devem enviar `Authorization: Bearer <token>` gerado com as variáveis `WORKER_JWT_*`.
+
 ### Configuração do Next.js
 
 O projeto utiliza:

@@ -275,6 +275,17 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/multitenant?schema=p
 # JWT
 JWT_SECRET="your-secret-key"
 JWT_EXPIRES_IN="7d"
+JWT_ALGORITHM="HS256"
+JWT_PRIVATE_KEY=""
+JWT_PUBLIC_KEY=""
+
+# Worker JWT / JWE
+WORKER_JWT_SECRET="worker-secret"
+WORKER_JWT_ALGORITHM="HS256"
+WORKER_JWT_PRIVATE_KEY=""
+WORKER_JWT_PUBLIC_KEY=""
+WORKER_JWT_EXPIRES_IN="7d"
+WORKER_JWT_COOKIE_NAME="worker_session"
 
 # Redis
 REDIS_HOST="localhost"
@@ -286,14 +297,49 @@ RABBITMQ_URL="amqp://guest:guest@localhost:5672"
 
 # Server
 PORT=4000
+HOST=0.0.0.0
 NODE_ENV=development
 
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX=100
 
-# CORS
-CORS_ORIGIN="http://localhost:3000"
+# HTTP CORS
+CORS_SITES_ENABLES="http://localhost:3000,https://app.example.com"
+CORS_SITES_ENABLES_ALL=false
+
+# WebSocket CORS
+WS_CORS_ORIGIN="http://localhost:3000"
+WS_CORS_ORIGIN_ALL=false
+```
+
+#### Autenticação de Workers (JWT/JWE)
+
+- Os endpoints `GET /workers/**` agora são protegidos e aceitam tokens enviados via `Authorization: Bearer <token>` ou pelo cookie `WORKER_JWT_COOKIE_NAME`.
+- O backend valida **JWTs assinados** (HS/RS/ES/EdDSA conforme `WORKER_JWT_ALGORITHM`) e também **JWEs no formato compact** (5 partes). O conteúdo do JWE pode ser um JWT assinado ou um payload JSON contendo `sub`.
+- Para ambientes simétricos (HS*), o mesmo `WORKER_JWT_SECRET` serve para assinar e criptografar (`alg=dir`, `enc=A256GCM`). Para chaves assimétricas (ES*, RS*, PS*), configure `WORKER_JWT_PRIVATE_KEY`/`PUBLIC_KEY`; o JWE é desencriptado com a chave privada (ex.: `alg=ECDH-ES+A256KW`).
+- Exemplo rápido com `jose`:
+
+```ts
+import {EncryptJWT, SignJWT} from "jose";
+
+async function generateWorkerTokens() {
+  const secret = new TextEncoder().encode(process.env.WORKER_JWT_SECRET!);
+  const claims = {sub: "ops-bot", scope: ["workers:read"]};
+
+  const jwt = await new SignJWT(claims)
+    .setProtectedHeader({alg: "HS256"})
+    .setExpirationTime(process.env.WORKER_JWT_EXPIRES_IN || "7d")
+    .sign(secret);
+
+  const jwe = await new EncryptJWT({jwt})
+    .setProtectedHeader({alg: "dir", enc: "A256GCM"})
+    .encrypt(secret);
+
+  return {jwt, jwe};
+}
+
+// Envie um dos tokens retornados em Authorization: Bearer <token>.
 ```
 
 ## 📜 Scripts

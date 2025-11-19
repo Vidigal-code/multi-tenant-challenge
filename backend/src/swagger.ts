@@ -30,6 +30,15 @@ export function swaggerSetup(app: INestApplication) {
         .setVersion("1.4")
         .addServer("http://localhost:4000", "Local")
         .addCookieAuth(process.env.COOKIE_NAME || "mt_session")
+        .addBearerAuth(
+            {
+                type: "http",
+                scheme: "bearer",
+                bearerFormat: "JWT",
+                description: "Worker JWT or JWE token used to access /workers endpoints",
+            },
+            "worker-jwt",
+        )
         .build();
     const docs = SwaggerModule.createDocument(app, cfg, {
         extraModels: [

@@ -156,7 +156,9 @@ export class AuthController {
         @Body() dto: UpdateProfileDto,
         @Res({passthrough: true}) res: Response,
     ) {
-        this.logger.default(`Profile update request - user: ${user.sub}, has name: ${!!dto.name}, has email: ${!!dto.email}, has newPassword: ${!!dto.newPassword}, has notificationPreferences: ${dto.notificationPreferences !== undefined && dto.notificationPreferences !== null}`);
+        this.logger.default(`Profile update request - user: ${user.sub}, has name: 
+        ${!!dto.name}, has email: ${!!dto.email}, has newPassword: ${!!dto.newPassword}, 
+        has notificationPreferences: ${dto.notificationPreferences !== undefined && dto.notificationPreferences !== null}`);
         
         const hasNotificationPreferences = dto.notificationPreferences !== undefined && dto.notificationPreferences !== null;
         if (!dto.name && !dto.email && !dto.newPassword && !hasNotificationPreferences) {
@@ -187,7 +189,8 @@ export class AuthController {
         if (dto.email) {
             const existing = await this.userRepo.findByEmail(dto.email);
             if (existing && existing.id !== user.sub) {
-                this.logger.default(`Profile update failed: email already in use - user: ${user.sub}, email: ${dto.email}`);
+                this.logger.default(`Profile update failed: email already in use -
+                 user: ${user.sub}, email: ${dto.email}`);
                 throw new ApplicationError('EMAIL_ALREADY_USED');
             }
         }
@@ -197,7 +200,9 @@ export class AuthController {
             const currentUser = await this.userRepo.findById(user.sub);
             const currentPrefs = currentUser?.notificationPreferences || {};
             mergedNotificationPreferences = { ...currentPrefs, ...dto.notificationPreferences };
-            this.logger.default(`Updating notification preferences - user: ${user.sub}, received: ${JSON.stringify(dto.notificationPreferences)}, current: ${JSON.stringify(currentPrefs)}, merged: ${JSON.stringify(mergedNotificationPreferences)}`);
+            this.logger.default(`Updating notification preferences - user: ${user.sub}, 
+            received: ${JSON.stringify(dto.notificationPreferences)}, current: ${JSON.stringify(currentPrefs)}, merged:
+             ${JSON.stringify(mergedNotificationPreferences)}`);
         }
 
         const updated = await this.userRepo.update({
