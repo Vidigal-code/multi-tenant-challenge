@@ -58,7 +58,7 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                     />
                     <div
                         className={`fixed inset-0 z-[10004] bg-white dark:bg-black w-full    
-                         ${isAuth ? "min-h-[650px]" : "min-h-[320px]"}  h-full shadow-2xl transition-all duration-300 ease-out overflow-y-auto border-l border-gray-200 dark:border-gray-800"`}
+                         ${isAuth ? "min-h-[650px]" : "min-h-[365px]"}  h-full shadow-2xl transition-all duration-300 ease-out overflow-y-auto border-l border-gray-200 dark:border-gray-800"`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="p-6 relative h-full flex flex-col">
