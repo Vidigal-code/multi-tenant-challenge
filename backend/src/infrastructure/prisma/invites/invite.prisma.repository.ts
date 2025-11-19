@@ -1,6 +1,12 @@
 import {Injectable} from "@nestjs/common";
 import {PrismaService} from "../services/prisma.service";
-import {CreateInviteInput, INVITE_REPOSITORY, InviteRepository,} from "@domain/repositories/invites/invite.repository";
+import {
+    CreateInviteInput,
+    INVITE_REPOSITORY,
+    InviteCursorPage,
+    InviteListCursor,
+    InviteRepository,
+} from "@domain/repositories/invites/invite.repository";
 import {Invite} from "@domain/entities/invites/invite.entity";
 import {Role} from "@domain/enums/role.enum";
 import {InviteStatus} from "@domain/enums/invite-status.enum";
@@ -128,8 +134,60 @@ export class InvitePrismaRepository implements InviteRepository {
         return {data: rows.map((r) => this.toDomain(r)), total};
     }
 
+    async listByEmailCursor(params: { email: string; cursor?: InviteListCursor; limit: number }): Promise<InviteCursorPage> {
+        const {email, cursor, limit} = params;
+        const rows = await this.prisma.invite.findMany({
+            where: {email},
+            orderBy: [{createdAt: "desc"}, {id: "desc"}],
+            take: limit + 1,
+            ...(cursor ? {cursor: {id: cursor.id}, skip: 1} : {}),
+        });
+        return this.buildCursorResponse(rows, limit);
+    }
+
+    async listByInviterCursor(params: { inviterId: string; cursor?: InviteListCursor; limit: number }): Promise<InviteCursorPage> {
+        const {inviterId, cursor, limit} = params;
+        const rows = await this.prisma.invite.findMany({
+            where: {inviterId},
+            orderBy: [{createdAt: "desc"}, {id: "desc"}],
+            take: limit + 1,
+            ...(cursor ? {cursor: {id: cursor.id}, skip: 1} : {}),
+        });
+        return this.buildCursorResponse(rows, limit);
+    }
+
     async delete(inviteId: string): Promise<void> {
         await this.prisma.invite.delete({where: {id: inviteId}});
+    }
+
+    async deleteMany(inviteIds: string[]): Promise<number> {
+        if (!inviteIds.length) return 0;
+        const result = await this.prisma.invite.deleteMany({
+            where: {id: {in: inviteIds}},
+        });
+        return result.count;
+    }
+
+    async updateStatusBulk(inviteIds: string[], status: InviteStatus): Promise<number> {
+        if (!inviteIds.length) return 0;
+        const result = await this.prisma.invite.updateMany({
+            where: {id: {in: inviteIds}},
+            data: {status},
+        });
+        return result.count;
+    }
+
+    private buildCursorResponse(records: any[], limit: number): InviteCursorPage {
+        if (!records.length) {
+            return {data: []};
+        }
+        const hasMore = records.length > limit;
+        const slice = hasMore ? records.slice(0, limit) : records;
+        const nextCursor = hasMore ? {id: slice[slice.length - 1].id} : undefined;
+        return {
+            data: slice.map((r) => this.toDomain(r)),
+            nextCursor,
+        };
     }
 
     private toDomain(record: any): Invite {

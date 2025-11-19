@@ -1,4 +1,4 @@
-import {Body, Controller, Delete, Get, Inject, Param, Post, Query, UseGuards} from "@nestjs/common";
+import {Body, Controller, Delete, Get, Inject, Param, ParseUUIDPipe, Post, Query, UseGuards} from "@nestjs/common";
 import {ApiBody, ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags} from "@nestjs/swagger";
 import {ErrorResponse} from "@application/dto/errors/error.response.dto";
 import {JwtAuthGuard} from "@common/guards/jwt.guard";
@@ -17,6 +17,17 @@ import {ConfigService} from "@nestjs/config";
 import {Role} from "@domain/enums/role.enum";
 import {LoggerService} from "@infrastructure/logging/logger.service";
 import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
+import {
+    CreateInviteListJobDto,
+    InviteListJobResponseDto,
+    InviteListQueryDto,
+} from "@application/dto/invites/invite-listing.dto";
+import {InviteListingJobsService} from "@application/services/invite-listing-jobs.service";
+import {
+    CreateInviteBulkJobDto,
+    InviteBulkJobResponseDto,
+} from "@application/dto/invites/invite-bulk.dto";
+import {InviteBulkJobsService} from "@application/services/invite-bulk-jobs.service";
 
 @ApiTags("invites")
 @ApiCookieAuth()
@@ -33,8 +44,83 @@ export class InvitesController {
         private readonly rabbit: RabbitMQService,
         private readonly configService: ConfigService,
         @Inject('EventPayloadBuilderService') private readonly eventBuilder: EventPayloadBuilderService,
+        private readonly inviteListingJobs: InviteListingJobsService,
+        private readonly inviteBulkJobs: InviteBulkJobsService,
     ) {
         this.logger = new LoggerService(InvitesController.name, configService);
+    }
+
+    @Post("listing")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Create asynchronous invite listing job"})
+    @ApiResponse({status: 201, description: "Job created", type: InviteListJobResponseDto})
+    async createListingJob(@CurrentUser() user: any, @Body() body: CreateInviteListJobDto): Promise<InviteListJobResponseDto> {
+        const meta = await this.inviteListingJobs.createJob(user, body);
+        return {
+            jobId: meta.jobId,
+            cursor: 0,
+            status: meta.status,
+            processed: meta.processed,
+            total: meta.total ?? 0,
+            items: [],
+            done: false,
+            nextCursor: 0,
+        };
+    }
+
+    @Get("listing/:jobId")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Fetch invite listing job status"})
+    @ApiResponse({status: 200, description: "Job data returned", type: InviteListJobResponseDto})
+    async getListingJob(
+        @CurrentUser() user: any,
+        @Param("jobId", new ParseUUIDPipe()) jobId: string,
+        @Query() query: InviteListQueryDto,
+    ): Promise<InviteListJobResponseDto> {
+        return this.inviteListingJobs.getJob(user.sub, jobId, query);
+    }
+
+    @Delete("listing/:jobId")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Delete invite listing job and cached data"})
+    @ApiResponse({status: 200, description: "Job deleted", type: SuccessResponse})
+    async deleteListingJob(
+        @CurrentUser() user: any,
+        @Param("jobId", new ParseUUIDPipe()) jobId: string,
+    ) {
+        await this.inviteListingJobs.deleteJob(user.sub, jobId);
+        return {success: true};
+    }
+
+    @Post("bulk")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Create invite bulk action job (delete/reject)"})
+    @ApiResponse({status: 201, description: "Bulk job created", type: InviteBulkJobResponseDto})
+    async createBulkJob(@CurrentUser() user: any, @Body() body: CreateInviteBulkJobDto): Promise<InviteBulkJobResponseDto> {
+        return this.inviteBulkJobs.createJob(user, body);
+    }
+
+    @Get("bulk/:jobId")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Fetch invite bulk job status"})
+    @ApiResponse({status: 200, description: "Bulk job data", type: InviteBulkJobResponseDto})
+    async getBulkJob(
+        @CurrentUser() user: any,
+        @Param("jobId", new ParseUUIDPipe()) jobId: string,
+    ): Promise<InviteBulkJobResponseDto> {
+        return this.inviteBulkJobs.getJob(user.sub, jobId);
+    }
+
+    @Delete("bulk/:jobId")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Delete invite bulk job metadata"})
+    @ApiResponse({status: 200, description: "Bulk job deleted", type: SuccessResponse})
+    async deleteBulkJob(
+        @CurrentUser() user: any,
+        @Param("jobId", new ParseUUIDPipe()) jobId: string,
+    ) {
+        await this.inviteBulkJobs.deleteJob(user.sub, jobId);
+        return {success: true};
     }
 
     @Get()

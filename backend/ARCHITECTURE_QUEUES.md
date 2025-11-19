@@ -29,6 +29,8 @@ Evento → Fila RabbitMQ → Worker → notifications.realtimes → Worker Realt
 |------|-----------|-----|--------|
 | `events.members` | Eventos de membros (mudanças de cargo, entradas, saídas) | `dlq.events.members` | `worker:members` |
 | `events.invites` | Eventos de convites (criados, aceitos, rejeitados) | `dlq.events.invites` | `worker:invites` |
+| `invites.list.requests` | Jobs de listagem massiva de convites | `dlq.invites.list.requests` | `worker:invites-list` |
+| `invites.bulk.requests` | Ações em lote (delete/reject) | `dlq.invites.bulk.requests` | `worker:invites-bulk` |
 | `events` | Eventos genéricos (notificações, amizades) | `dlq.events` | `worker:generic` |
 
 ### Fila de Destino
@@ -55,6 +57,14 @@ Evento → Fila RabbitMQ → Worker → notifications.realtimes → Worker Realt
 - **`worker:invites`** (`invites.events.consumer.ts`)
   - Consome: `events.invites`
   - Encaminha: → `notifications.realtimes`
+
+- **`worker:invites-list`** (`invites.list.consumer.ts`)
+  - Consome: `invites.list.requests`
+  - Processa: gera lotes paginados de convites e armazena no Redis
+
+- **`worker:invites-bulk`** (`invites.bulk.consumer.ts`)
+  - Consome: `invites.bulk.requests`
+  - Processa: deleta ou rejeita convites em lotes e atualiza progresso no Redis
   
 - **`worker:members`** (`members.events.consumer.ts`)
   - Consome: `events.members`

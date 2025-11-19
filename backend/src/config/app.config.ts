@@ -31,6 +31,20 @@ export const appConfig = registerAs("app", () => ({
             (process.env.INVITE_REQUIRE_EXISTING_USER ?? "true").toLowerCase() ===
             "true",
     },
+    inviteListing: {
+        defaultChunkSize: parseInt(process.env.INVITES_LIST_CHUNK_SIZE ?? "1000", 10),
+        minChunkSize: parseInt(process.env.INVITES_LIST_MIN_CHUNK_SIZE ?? "200", 10),
+        maxChunkSize: parseInt(process.env.INVITES_LIST_MAX_CHUNK_SIZE ?? "5000", 10),
+        defaultPageSize: parseInt(process.env.INVITES_LIST_PAGE_SIZE ?? "200", 10),
+        maxPageSize: parseInt(process.env.INVITES_LIST_MAX_PAGE_SIZE ?? "1000", 10),
+        redisTtlSeconds: parseInt(process.env.INVITES_LIST_REDIS_TTL ?? "3600", 10),
+    },
+    inviteBulk: {
+        defaultChunkSize: parseInt(process.env.INVITES_BULK_CHUNK_SIZE ?? "500", 10),
+        minChunkSize: parseInt(process.env.INVITES_BULK_MIN_CHUNK_SIZE ?? "100", 10),
+        maxChunkSize: parseInt(process.env.INVITES_BULK_MAX_CHUNK_SIZE ?? "2000", 10),
+        redisTtlSeconds: parseInt(process.env.INVITES_BULK_REDIS_TTL ?? "3600", 10),
+    },
     bcryptCost: parseInt(process.env.BCRYPT_COST ?? "10", 10),
     redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
     rabbitmqUrl: process.env.RABBITMQ_URL ?? "amqp://guest:guest@localhost:5672",

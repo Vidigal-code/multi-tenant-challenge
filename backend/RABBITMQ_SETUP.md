@@ -42,6 +42,9 @@ Agora roteia corretamente todos os eventos:
 - ✅ `memberships.role.updated` - Quando o cargo de um membro muda
 - ✅ `memberships.left` - Quando um membro sai da empresa
 
+### Jobs de Listagem Massiva (→ `invites.list.requests`)
+- ✅ `invites.listing.requested` - Jobs de exportação/listagem assíncrona de convites (lotes via Redis)
+
 ## 🚀 Como Funciona
 
 ### Fluxo Completo:
@@ -102,18 +105,28 @@ npm run worker:invites
 npm run worker:members
 ```
 
+**Terminal 3 - Invite Listing Worker:**
+```bash
+npm run worker:invites-list
+```
+
+**Terminal 4 - Invite Bulk Worker:**
+```bash
+npm run worker:invites-bulk
+```
+
 ### 3. Verificar Filas no RabbitMQ
 
 Acesse o RabbitMQ Management UI (geralmente em `http://localhost:15672`):
-- Verifique as filas: `events.invites`, `events.members`
-- Verifique as DLQs: `dlq.events.invites`, `dlq.events.members`
+- Verifique as filas: `events.invites`, `events.members`, `invites.list.requests`
+- Verifique as DLQs: `dlq.events.invites`, `dlq.events.members`, `dlq.invites.list.requests`
 - Monitore o processamento de mensagens
 
 ## ✅ Checklist de Funcionamento
 
 - [x] Roteamento de eventos corrigido
 - [x] Producers atualizados com novos métodos
-- [x] Workers configurados e rodando
+- [x] Workers configurados e rodando (incluindo `worker:invites-list` para jobs massivos e `worker:invites-bulk` para ações em lote)
 - [x] DLQs configuradas
 - [x] Deduplicação via Redis
 - [x] Retry automático

@@ -11,6 +11,15 @@ export interface CreateInviteInput {
     inviterId: string;
 }
 
+export interface InviteListCursor {
+    id: string;
+}
+
+export interface InviteCursorPage {
+    data: Invite[];
+    nextCursor?: InviteListCursor;
+}
+
 export interface InviteRepository {
     createOrReuse(data: CreateInviteInput): Promise<Invite>;
 
@@ -29,6 +38,14 @@ export interface InviteRepository {
     listByEmail(email: string, page: number, pageSize: number): Promise<{ data: Invite[]; total: number }>;
 
     listByInviter(inviterId: string, page: number, pageSize: number): Promise<{ data: Invite[]; total: number }>;
+
+    listByEmailCursor(params: { email: string; cursor?: InviteListCursor; limit: number }): Promise<InviteCursorPage>;
+
+    listByInviterCursor(params: { inviterId: string; cursor?: InviteListCursor; limit: number }): Promise<InviteCursorPage>;
+
+    deleteMany(inviteIds: string[]): Promise<number>;
+
+    updateStatusBulk(inviteIds: string[], status: InviteStatus): Promise<number>;
 
     delete(inviteId: string): Promise<void>;
 }

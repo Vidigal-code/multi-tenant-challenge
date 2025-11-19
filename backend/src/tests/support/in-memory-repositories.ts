@@ -7,7 +7,12 @@ import {
     PaginatedCompanies,
 } from "@domain/repositories/companys/company.repository";
 import {CreateMembershipInput, MembershipRepository,} from "@domain/repositories/memberships/membership.repository";
-import {CreateInviteInput, InviteRepository,} from "@domain/repositories/invites/invite.repository";
+import {
+    CreateInviteInput,
+    InviteCursorPage,
+    InviteListCursor,
+    InviteRepository,
+} from "@domain/repositories/invites/invite.repository";
 import {User} from "@domain/entities/users/user.entity";
 import {Company} from "@domain/entities/companys/company.entity";
 import {Membership} from "@domain/entities/memberships/membership.entity";
@@ -309,6 +314,62 @@ export class InMemoryInviteRepository implements InviteRepository {
 
     async delete(inviteId: string): Promise<void> {
         this.items = this.items.filter(i => i.id !== inviteId);
+    }
+
+    async listByEmailCursor(params: { email: string; cursor?: InviteListCursor; limit: number }): Promise<InviteCursorPage> {
+        const ordered = this.orderInvites(
+            this.items.filter((invite) => invite.email.toString() === params.email),
+        );
+        return this.sliceByCursor(ordered, params.cursor, params.limit);
+    }
+
+    async listByInviterCursor(params: { inviterId: string; cursor?: InviteListCursor; limit: number }): Promise<InviteCursorPage> {
+        const ordered = this.orderInvites(
+            this.items.filter((invite) => invite.inviterId === params.inviterId),
+        );
+        return this.sliceByCursor(ordered, params.cursor, params.limit);
+    }
+
+    private orderInvites(invites: Invite[]): Invite[] {
+        return invites
+            .slice()
+            .sort((a, b) => {
+                const timeDiff = b.createdAt.getTime() - a.createdAt.getTime();
+                if (timeDiff !== 0) return timeDiff;
+                return b.id.localeCompare(a.id);
+            });
+    }
+
+    private sliceByCursor(invites: Invite[], cursor: InviteListCursor | undefined, limit: number): InviteCursorPage {
+        const safeLimit = Math.max(1, limit);
+        let startIndex = 0;
+        if (cursor) {
+            const cursorIndex = invites.findIndex((invite) => invite.id === cursor.id);
+            startIndex = cursorIndex >= 0 ? cursorIndex + 1 : invites.length;
+        }
+        const slice = invites.slice(startIndex, startIndex + safeLimit);
+        const nextCursor =
+            startIndex + slice.length < invites.length
+                ? {id: slice[slice.length - 1].id}
+                : undefined;
+        return {data: slice, nextCursor};
+    }
+
+    async deleteMany(inviteIds: string[]): Promise<number> {
+        const before = this.items.length;
+        this.items = this.items.filter((invite) => !inviteIds.includes(invite.id));
+        return before - this.items.length;
+    }
+
+    async updateStatusBulk(inviteIds: string[], status: InviteStatus): Promise<number> {
+        let updated = 0;
+        this.items.forEach((invite) => {
+            if (inviteIds.includes(invite.id)) {
+                (invite as any).props.status = status;
+                updated++;
+            }
+        });
+        return updated;
     }
 }
 

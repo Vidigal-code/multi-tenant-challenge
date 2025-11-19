@@ -45,6 +45,10 @@ Write-Host "  - events" -ForegroundColor Yellow
 Write-Host "  - events.invites" -ForegroundColor Yellow
 Write-Host "  - events.members" -ForegroundColor Yellow
 Write-Host "  - notifications.realtimes" -ForegroundColor Yellow
+Write-Host "  - invites.list.requests" -ForegroundColor Yellow
+Write-Host "  - dlq.invites.list.requests" -ForegroundColor Yellow
+Write-Host "  - invites.bulk.requests" -ForegroundColor Yellow
+Write-Host "  - dlq.invites.bulk.requests" -ForegroundColor Yellow
 Write-Host ""
 
 $confirmation = Read-Host "Are you sure you want to continue? (yes/no)"
@@ -57,7 +61,16 @@ Write-Host ""
 Write-Host "Stopping all workers and clearing queues..." -ForegroundColor Cyan
 Write-Host ""
 
-$queues = @("events", "events.invites", "events.members", "notifications.realtimes")
+$queues = @(
+    "events",
+    "events.invites",
+    "events.members",
+    "notifications.realtimes",
+    "invites.list.requests",
+    "dlq.invites.list.requests",
+    "invites.bulk.requests",
+    "dlq.invites.bulk.requests"
+)
 
 foreach ($queue in $queues) {
     Write-Host "Deleting queue: $queue" -ForegroundColor Yellow

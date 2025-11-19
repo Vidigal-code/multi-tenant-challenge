@@ -8,6 +8,7 @@ import {getErrorMessage} from '../../../lib/error';
 import {useToast} from '../../../hooks/useToast';
 import { ConfirmModal } from '../../../components/modals/ConfirmModal';
 import { DEFAULT_COMPANY_LOGO } from '../../../types';
+import {queryKeys} from '../../../lib/queryKeys';
 
 type InviteInfo = {
     id: string;
@@ -72,8 +73,8 @@ export default function InviteByCodePage() {
             show({ type: 'success', message: 'Convite aceito com sucesso' });
             qc.invalidateQueries({ queryKey: ['invite', token] });
             qc.invalidateQueries({ queryKey: ['invites'] });
-            qc.invalidateQueries({ queryKey: ['invites-created'] });
-            qc.invalidateQueries({ queryKey: ['invites-received'] });
+            qc.invalidateQueries({ queryKey: queryKeys.invitesListing('created') });
+            qc.invalidateQueries({ queryKey: queryKeys.invitesListing('received') });
             setTimeout(() => {
                 router.push('/dashboard');
             }, 1000);
@@ -92,8 +93,8 @@ export default function InviteByCodePage() {
             show({ type: 'info', message: 'Convite rejeitado' });
             qc.invalidateQueries({ queryKey: ['invite', token] });
             qc.invalidateQueries({ queryKey: ['invites'] });
-            qc.invalidateQueries({ queryKey: ['invites-created'] });
-            qc.invalidateQueries({ queryKey: ['invites-received'] });
+            qc.invalidateQueries({ queryKey: queryKeys.invitesListing('created') });
+            qc.invalidateQueries({ queryKey: queryKeys.invitesListing('received') });
             setTimeout(() => {
                 router.push('/dashboard');
             }, 1000);

@@ -65,6 +65,28 @@ services:
       - ./backend:/app
       - /app/node_modules
 
+  worker-invites-list:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:invites-list"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  worker-invites-bulk:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:invites-bulk"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
   web:
     build:
       context: ./frontend

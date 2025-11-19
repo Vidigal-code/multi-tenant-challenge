@@ -2,19 +2,16 @@
 import React, { useEffect, useState } from 'react';
 import {getErrorMessage} from '../../lib/error';
 import {useToast} from '../../hooks/useToast';
-import { useQueryClient } from '@tanstack/react-query';
 import Skeleton from '../../components/skeleton/Skeleton';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { subscribe, whenReady, RT_EVENTS } from '../../lib/realtime';
 import { DEFAULT_COMPANY_LOGO } from '../../types';
-import {queryKeys} from '../../lib/queryKeys';
 import {
     useInvitesCreated,
     useInvitesReceived,
     useAcceptInvite,
     useRejectInvite,
-    useDeleteInvite,
-    useDeleteInvites,
+    useInviteBulkAction,
     type Invite,
 } from '../../services/api/invite.api';
 import { useProfile } from '../../services/api/auth.api';
@@ -69,7 +66,7 @@ function formatDate(dateString: string | null | undefined): string {
 
 function InvitesPageInner() {
     const [page, setPage] = useState(1);
-    const pageSize = 10;
+    const pageSize = 3;
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [tab, setTab] = useState<'created' | 'received'>('created');
@@ -78,13 +75,20 @@ function InvitesPageInner() {
     const [deleteIds, setDeleteIds] = useState<string[]>([]);
     const [rejectModal, setRejectModal] = useState(false);
     const [rejectIds, setRejectIds] = useState<string[]>([]);
+    const [deleteScope, setDeleteScope] = useState<'selected' | 'all'>('selected');
+    const [rejectScope, setRejectScope] = useState<'selected' | 'all'>('selected');
     const [expandedInvites, setExpandedInvites] = useState<Record<string, boolean>>({});
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
     const {show} = useToast();
-    const qc = useQueryClient();
+    const {state: bulkState, run: runBulkAction, reset: resetBulkState} = useInviteBulkAction();
+    const bulkProcessing = bulkState.status === 'pending' || bulkState.status === 'processing';
 
     const profileQuery = useProfile();
+
+    useEffect(() => {
+        setPage(1);
+    }, [tab]);
 
     useEffect(() => {
         if (profileQuery.data) {
@@ -106,8 +110,6 @@ function InvitesPageInner() {
 
     const acceptMutation = useAcceptInvite();
     const rejectMutation = useRejectInvite();
-    const deleteInviteMutation = useDeleteInvite();
-    const deleteInvitesMutation = useDeleteInvites();
 
     function accept(token: string) { 
         setError(null); 
@@ -116,6 +118,9 @@ function InvitesPageInner() {
             onSuccess: () => {
                 setMessage('Convite aceito');
                 show({ type:'success', message:'Convite aceito com sucesso' });
+                createdQuery.restartJob();
+                receivedQuery.restartJob();
+                setPage(1);
             },
             onError: (err: any) => { 
                 const m = getErrorMessage(err,'Não foi possível aceitar o convite'); 
@@ -131,6 +136,9 @@ function InvitesPageInner() {
         rejectMutation.mutate(token, {
             onSuccess: () => {
                 show({type:'info', message:'Convite rejeitado'});
+                createdQuery.restartJob();
+                receivedQuery.restartJob();
+                setPage(1);
             },
             onError: (err:any) => { 
                 const m = getErrorMessage(err,'Não foi possível rejeitar o convite'); 
@@ -140,58 +148,57 @@ function InvitesPageInner() {
         });
     }
 
-    async function handleRejectAll() {
-        setRejectModal(false);
-        const tokens = rejectIds.map(id => {
-            const invite = tab === 'received' 
-                ? receivedQuery.data?.data.find(i => i.id === id)
-                : null;
-            return invite?.token;
-        }).filter(Boolean) as string[];
-
+    async function executeBulkAction(payload: { action: 'delete' | 'reject'; target: 'created' | 'received'; scope: 'selected' | 'all'; inviteIds?: string[] }, successMessage: string) {
         try {
-            for (const token of tokens) {
-                await rejectMutation.mutateAsync(token);
+            const job = await runBulkAction(payload);
+            if (job.status === 'completed') {
+                setSelected([]);
+                setDeleteIds([]);
+                setRejectIds([]);
+                setMessage(successMessage);
+                setError(null);
+                show({type: payload.action === 'delete' ? 'success' : 'info', message: successMessage});
+                createdQuery.restartJob();
+                receivedQuery.restartJob();
+                setPage(1);
+            } else {
+                const m = job.error || 'Falha ao processar convites em lote';
+                setError(m);
+                show({type: 'error', message: m});
             }
-            setRejectIds([]);
-            setSelected([]);
-            setMessage('Convites rejeitados');
         } catch (err: any) {
-            const m = getErrorMessage(err, 'Não foi possível rejeitar os convites');
-            setError(m); 
-            show({ type: 'error', message: m }); 
+            const m = getErrorMessage(err, 'Falha ao processar convites em lote');
+            setError(m);
+            show({type: 'error', message: m});
+        } finally {
+            resetBulkState();
         }
     }
 
-    function handleDelete(ids: string[]) {
+    async function handleBulkReject(scope: 'selected' | 'all', ids: string[]) {
+        setRejectModal(false);
+        await executeBulkAction(
+            {
+                action: 'reject',
+                target: 'received',
+                scope,
+                inviteIds: scope === 'selected' ? ids : undefined,
+            },
+            scope === 'selected' ? 'Convites rejeitados' : 'Todos os convites foram rejeitados',
+        );
+    }
+
+    async function handleBulkDelete(scope: 'selected' | 'all', ids: string[]) {
         setShowModal(false);
-        if (ids.length === 1) {
-            deleteInviteMutation.mutate(ids[0], {
-                onSuccess: () => {
-                    setSelected([]);
-                    setDeleteIds([]);
-                    setMessage('Convite deletado');
-                },
-                onError: (err: any) => {
-                    const m = getErrorMessage(err, 'Não foi possível deletar o convite');
-                    setError(m); 
-                    show({ type: 'error', message: m }); 
-                },
-            });
-        } else {
-            deleteInvitesMutation.mutate(ids, {
-                onSuccess: () => {
-                    setSelected([]);
-                    setDeleteIds([]);
-                    setMessage('Convites deletados');
-                },
-                onError: (err: any) => {
-                    const m = getErrorMessage(err, 'Não foi possível deletar os convites');
-                    setError(m); 
-                    show({ type: 'error', message: m }); 
-                },
-            });
-        }
+        await executeBulkAction(
+            {
+                action: 'delete',
+                target: 'created',
+                scope,
+                inviteIds: scope === 'selected' ? ids : undefined,
+            },
+            scope === 'selected' ? 'Convites deletados' : 'Todos os convites foram deletados',
+        );
     }
 
     function handleSelectAll(items: any[]) {
@@ -206,10 +213,12 @@ function InvitesPageInner() {
             if (!active) return;
             unsubscribers.push(
                 subscribe(RT_EVENTS.INVITE_REJECTED, () => {
-                    qc.invalidateQueries({ queryKey: queryKeys.invitesCreated(page, pageSize) });
+                    createdQuery.restartJob();
+                    receivedQuery.restartJob();
                 }),
                 subscribe(RT_EVENTS.INVITE_ACCEPTED, () => {
-                    qc.invalidateQueries({ queryKey: queryKeys.invitesCreated(page, pageSize) });
+                    createdQuery.restartJob();
+                    receivedQuery.restartJob();
                 }),
             );
         });
@@ -218,21 +227,19 @@ function InvitesPageInner() {
             active = false;
             unsubscribers.forEach((unsubscribe) => unsubscribe());
         };
-    }, [page, pageSize, qc]);
+    }, [createdQuery.restartJob, receivedQuery.restartJob]);
 
     function renderList() {
-        let items: any[] = [];
-        let isLoading = false;
-
-        if (tab === 'created') {
-            items = createdQuery.data?.data ?? [];
-            isLoading = createdQuery.isLoading;
-        } else if (tab === 'received') {
-            items = receivedQuery.data?.data ?? [];
-            isLoading = receivedQuery.isLoading;
+        const currentQuery = tab === 'created' ? createdQuery : receivedQuery;
+        const jobStatus = currentQuery.data?.status ?? 'pending';
+        const jobError = currentQuery.data?.error;
+        const isProcessing = jobStatus !== 'completed';
+        let items: Invite[] = currentQuery.data?.data ?? [];
+        if (tab === 'received') {
+            items = items.filter(invite => invite.status === 'PENDING');
         }
 
-        if (isLoading) {
+        if (currentQuery.isLoading) {
             return (
                 <div className="space-y-2">
                     <Skeleton className="h-14" />
@@ -241,7 +248,33 @@ function InvitesPageInner() {
             );
         }
 
+        if (jobError) {
+            return (
+                <div className="flex flex-col items-center gap-4 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center bg-red-50 dark:bg-red-900/20">
+                    <p className="text-red-700 dark:text-red-300 text-sm sm:text-base">
+                        {jobError || 'Falha ao processar convites em lote.'}
+                    </p>
+                    <button
+                        className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-500 transition-colors"
+                        onClick={() => {
+                            currentQuery.restartJob();
+                            setPage(1);
+                        }}
+                    >
+                        Tentar novamente
+                    </button>
+                </div>
+            );
+        }
+
         if (!items.length) {
+            if (isProcessing) {
+                return (
+                    <div className="text-gray-600 dark:text-gray-400 text-sm sm:text-base py-12 sm:py-16 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
+                        Processando milhares de convites... aguarde enquanto carregamos este lote.
+                    </div>
+                );
+            }
             let emptyMessage = 'Nenhum convite encontrado.';
             if (tab === 'created') emptyMessage = 'Nenhum convite criado.';
             if (tab === 'received') emptyMessage = 'Nenhum convite recebido.';
@@ -253,6 +286,19 @@ function InvitesPageInner() {
         return (
             <>
                 <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-4 justify-center">
+                    <button
+                        className="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
+                        disabled={bulkProcessing}
+                        onClick={() => {
+                            currentQuery.restartJob();
+                            setPage(1);
+                            setSelected([]);
+                            setDeleteIds([]);
+                            setRejectIds([]);
+                        }}
+                    >
+                        Atualizar convites
+                    </button>
                     {tab === 'received' && (
                         <>
                             <button className="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-sm font-medium whitespace-nowrap" onClick={() => handleSelectAll(items)}>
@@ -260,8 +306,9 @@ function InvitesPageInner() {
                             </button>
                             <button 
                                 className="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
-                                disabled={!selected.length} 
+                                disabled={!selected.length || bulkProcessing} 
                                 onClick={() => { 
+                                    setRejectScope('selected');
                                     setRejectIds(selected); 
                                     setRejectModal(true); 
                                 }}
@@ -270,8 +317,9 @@ function InvitesPageInner() {
                             </button>
                             <button 
                                 className="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
-                                disabled={!items.length} 
+                                disabled={!items.length || bulkProcessing} 
                                 onClick={() => { 
+                                    setRejectScope('all');
                                     setRejectIds(items.map(i => i.id)); 
                                     setRejectModal(true); 
                                 }}
@@ -287,8 +335,9 @@ function InvitesPageInner() {
                             </button>
                             <button 
                                 className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
-                                disabled={!selected.length} 
+                                disabled={!selected.length || bulkProcessing} 
                                 onClick={() => { 
+                                    setDeleteScope('selected');
                                     setDeleteIds(selected); 
                                     setShowModal(true); 
                                 }}
@@ -297,8 +346,9 @@ function InvitesPageInner() {
                             </button>
                             <button 
                                 className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
-                                disabled={!items.length} 
+                                disabled={!items.length || bulkProcessing} 
                                 onClick={() => { 
+                                    setDeleteScope('all');
                                     setDeleteIds(items.map(i => i.id)); 
                                     setShowModal(true); 
                                 }}
@@ -409,8 +459,10 @@ function InvitesPageInner() {
                                 <div className="flex gap-2 flex-shrink-0 w-full sm:w-auto">
                                     {canDelete && (
                                         <button 
-                                            className="px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm font-medium whitespace-nowrap" 
+                                            className="px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap" 
+                                            disabled={bulkProcessing}
                                             onClick={() => { 
+                                                setDeleteScope('selected');
                                                 setDeleteIds([i.id]); 
                                                 setShowModal(true); 
                                             }}
@@ -443,6 +495,9 @@ function InvitesPageInner() {
         );
     }
 
+    const currentQueryForPagination = tab === 'created' ? createdQuery : receivedQuery;
+    const disableNext = Boolean(currentQueryForPagination.data?.done && currentQueryForPagination.data?.nextCursor === null);
+
     return (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
             <div>
@@ -473,13 +528,23 @@ function InvitesPageInner() {
             </div>
             {message && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-center">{message}</div>}
             {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-center">{error}</div>}
+            {bulkProcessing && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-blue-700 dark:text-blue-300 text-center">
+                    Processando {bulkState.processed}{bulkState.total ? `/${bulkState.total}` : ''} convites...
+                </div>
+            )}
+            {!bulkProcessing && bulkState.status === 'failed' && bulkState.error && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-center">
+                    {bulkState.error}
+                </div>
+            )}
             {renderList()}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                 <div className="flex items-center gap-2 flex-wrap justify-center">
                     <button 
                         className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium" 
                         onClick={() => setPage(p => Math.max(1, p - 1))} 
-                        disabled={page === 1}
+                        disabled={page === 1 || bulkProcessing}
                     >
                         Anterior
                     </button>
@@ -487,7 +552,7 @@ function InvitesPageInner() {
                     <button 
                         className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium" 
                         onClick={() => setPage(p => p + 1)} 
-                        disabled={false}
+                        disabled={disableNext || currentQueryForPagination.isFetching || bulkProcessing}
                     >
                         Próxima
                     </button>
@@ -497,7 +562,7 @@ function InvitesPageInner() {
                 open={showModal} 
                 title="Deletar convites?" 
                 onCancel={()=>{setShowModal(false); setDeleteIds([]);}} 
-                onConfirm={()=>handleDelete(deleteIds)}
+                onConfirm={()=>handleBulkDelete(deleteScope, deleteIds)}
             >
                 Tem certeza que deseja deletar {deleteIds.length} convite(s)? Esta ação não pode ser desfeita.
             </ConfirmModal>
@@ -505,7 +570,7 @@ function InvitesPageInner() {
                 open={rejectModal} 
                 title="Rejeitar convites?" 
                 onCancel={()=>{setRejectModal(false); setRejectIds([]);}} 
-                onConfirm={()=>handleRejectAll()}
+                onConfirm={()=>handleBulkReject(rejectScope, rejectIds)}
             >
                 Tem certeza que deseja rejeitar {rejectIds.length} convite(s)? Esta ação não pode ser desfeita.
             </ConfirmModal>
@@ -526,3 +591,4 @@ export default function InvitesPage() {
     }
     return <InvitesPageInner />;
 }
+

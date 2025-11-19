@@ -7,6 +7,8 @@ import {membershipRepositoryProvider} from "@infrastructure/prisma/memberships/m
 import {inviteRepositoryProvider} from "@infrastructure/prisma/invites/invite.prisma.repository";
 import {RabbitMQModule} from "./messaging/modules/rabbitmq.module";
 import {emailValidationProvider} from "./cache/redis-email-validation.service";
+import {inviteListCacheProvider} from "./cache/invite-list-cache.service";
+import {inviteBulkCacheProvider} from "./cache/invite-bulk-cache.service";
 import {notificationRepositoryProvider} from "@infrastructure/prisma/notifications/notification.prisma.repository";
 import {friendshipRepositoryProvider} from "@infrastructure/prisma/friendships/friendship.prisma.repository";
 
@@ -31,8 +33,17 @@ const repositoryProviders = [
         },
         ...repositoryProviders,
         emailValidationProvider,
+        inviteListCacheProvider,
+        inviteBulkCacheProvider,
     ],
-    exports: [PrismaService, RabbitMQModule, ...repositoryProviders, emailValidationProvider],
+    exports: [
+        PrismaService,
+        RabbitMQModule,
+        ...repositoryProviders,
+        emailValidationProvider,
+        inviteListCacheProvider,
+        inviteBulkCacheProvider,
+    ],
 })
 export class InfrastructureModule {
 }

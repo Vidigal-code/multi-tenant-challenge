@@ -364,6 +364,8 @@ npm run test:watch       # Testes em watch mode
 # Workers
 npm run worker:invites   # Worker de convites
 npm run worker:members   # Worker de membros
+npm run worker:invites-list # Worker de listagem massiva de convites
+npm run worker:invites-bulk # Worker de ações em lote (delete/reject)
 ```
 
 ## 🗄 Banco de Dados

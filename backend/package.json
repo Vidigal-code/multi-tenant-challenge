@@ -14,6 +14,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "worker:invites": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/invites.events.consumer.ts",
+    "worker:invites-list": "ts-node -r tsconfig-paths/register src/interfaces/consumers/invites/invites.list.consumer.ts",
+    "worker:invites-bulk": "ts-node -r tsconfig-paths/register src/interfaces/consumers/invites/invites.bulk.consumer.ts",
     "worker:members": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/members.events.consumer.ts",
     "worker:generic": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/generic.events.consumer.ts",
     "worker:realtime": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/realtime-notifications.consumer.ts",
