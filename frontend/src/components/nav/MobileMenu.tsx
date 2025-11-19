@@ -58,7 +58,7 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                     />
                     <div
                         className={`fixed inset-0 z-[10004] bg-white dark:bg-black w-full    
-                         ${isAuth ? "min-h-[554px]" : "min-h-[320px]"}  h-full shadow-2xl transition-all duration-300 ease-out overflow-y-auto border-l border-gray-200 dark:border-gray-800"`}
+                         ${isAuth ? "min-h-[650px]" : "min-h-[320px]"}  h-full shadow-2xl transition-all duration-300 ease-out overflow-y-auto border-l border-gray-200 dark:border-gray-800"`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="p-6 relative h-full flex flex-col">
@@ -146,6 +146,15 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                                 className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             <span className="font-medium">Notificações</span>
                                         </Link>
+                                        <Link
+                                            href="/info"
+                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
+                                            onClick={() => setIsOpen(false)}
+                                        >
+                                            <div
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                            <span className="font-medium">Info</span>
+                                        </Link>
 
                                         <button
                                             onClick={() => {
@@ -168,6 +177,15 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                             <div
                                                 className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             <span className="font-medium">Entrar</span>
+                                        </Link>
+                                        <Link
+                                            href="/info"
+                                            className="group px-5 py-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all duration-200 border border-gray-200 dark:border-gray-800 hover:shadow-md flex items-center gap-3"
+                                            onClick={() => setIsOpen(false)}
+                                        >
+                                            <div
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                            <span className="font-medium">Info</span>
                                         </Link>
                                         <Link
                                             href="/signup"
