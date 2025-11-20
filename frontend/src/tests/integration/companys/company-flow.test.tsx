@@ -65,8 +65,10 @@ describe('Company Flow Integration', () => {
     };
 
     it('complete flow: list companies -> select -> view -> edit -> invites', async () => {
-        httpMock.get.mockImplementation((url: string, config?: any) => {
-            if (url.includes('/auth/profile')) {
+        const ownerJobId = 'owner-job';
+        const memberJobId = 'member-job';
+        httpMock.get.mockImplementation((url: string) => {
+            if (url === '/auth/profile') {
                 return Promise.resolve({
                     data: {
                         id: 'u1',
@@ -75,42 +77,75 @@ describe('Company Flow Integration', () => {
                     },
                 });
             }
-            if (url.includes('/auth/account/primary-owner-companies')) {
+            if (url === `/auth/account/primary-owner-companies/listing/${ownerJobId}`) {
                 return Promise.resolve({
                     data: {
-                        data: [
+                        items: [
                             {
                                 id: 'c1',
                                 name: 'Test Company',
                                 logoUrl: 'https://example.com/logo.png',
+                                description: 'Primary owner company',
+                                isPublic: false,
+                                createdAt: new Date().toISOString(),
+                                memberCount: 1,
+                                primaryOwnerName: 'Owner',
+                                primaryOwnerEmail: 'owner@test.com',
                             },
                         ],
                         total: 1,
-                        page: config?.params?.page ?? 1,
-                        pageSize: config?.params?.pageSize ?? 10,
+                        status: 'completed',
+                        done: true,
                     },
                 });
             }
-            if (url.includes('/auth/account/member-companies')) {
+            if (url === `/auth/account/member-companies/listing/${memberJobId}`) {
                 return Promise.resolve({
                     data: {
-                        data: [],
+                        items: [],
                         total: 0,
-                        page: config?.params?.page ?? 1,
-                        pageSize: config?.params?.pageSize ?? 10,
+                        status: 'completed',
+                        done: true,
                     },
                 });
             }
             return Promise.resolve({ data: {} });
         });
+        httpMock.post.mockImplementation((url: string) => {
+            if (url === '/auth/account/primary-owner-companies/listing') {
+                return Promise.resolve({
+                    data: {
+                        jobId: ownerJobId,
+                        status: 'pending',
+                        processed: 0,
+                        items: [],
+                        done: false,
+                    },
+                });
+            }
+            if (url === '/auth/account/member-companies/listing') {
+                return Promise.resolve({
+                    data: {
+                        jobId: memberJobId,
+                        status: 'pending',
+                        processed: 0,
+                        items: [],
+                        done: false,
+                    },
+                });
+            }
+            if (url === '/company/c1/select') {
+                return Promise.resolve({ data: { success: true } });
+            }
+            return Promise.resolve({ data: { success: true } });
+        });
+        httpMock.delete.mockResolvedValue({ data: {} });
 
         renderWithProviders(<DashboardPage />);
 
         await waitFor(() => {
             expect(screen.getByText(/Test Company/i)).toBeInTheDocument();
         }, { timeout: 5000 });
-
-        httpMock.post.mockResolvedValueOnce({data: {success: true}});
 
         const selectButton = screen.getByText(/Ver empresa/i);
         fireEvent.click(selectButton);

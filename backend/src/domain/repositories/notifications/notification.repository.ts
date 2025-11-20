@@ -28,6 +28,8 @@ export interface NotificationRepository {
 
     listByUser(filters: ListNotificationsFilters): Promise<PaginatedNotifications>;
 
+    listByUserCursor(userId: string, cursor: number, limit: number): Promise<Notification[]>;
+
     markRead(id: string | number): Promise<void>;
 
     findById(id: string | number): Promise<Notification | null>;

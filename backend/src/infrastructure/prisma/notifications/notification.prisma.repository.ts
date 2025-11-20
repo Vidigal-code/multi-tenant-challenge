@@ -76,6 +76,43 @@ export class NotificationPrismaRepository implements NotificationRepository {
         return {data: rows.map((r: any) => this.toDomainWithSender(r)), total, page, pageSize};
     }
 
+    async listByUserCursor(userId: string, cursor: number, limit: number): Promise<Notification[]> {
+        const where = {
+            OR: [
+                {recipientUserId: userId},
+                {
+                    AND: [
+                        {recipientUserId: null},
+                        {company: {memberships: {some: {userId}}}},
+                    ],
+                },
+            ],
+        };
+
+        const findArgs: any = {
+            where,
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+            orderBy: {id: "desc"},
+            take: limit,
+        };
+
+        if (cursor > 0) {
+            findArgs.cursor = {id: cursor};
+            findArgs.skip = 1;
+        }
+
+        const rows = await (this.prisma as any).notification.findMany(findArgs);
+        return rows.map((r: any) => this.toDomainWithSender(r));
+    }
+
     async markRead(id: string | number): Promise<void> {
         await (this.prisma as any).notification.update({
             where: {id: Number(id)},

@@ -12,6 +12,7 @@ jest.mock('../../../lib/http', () => ({
     http: {
         get: jest.fn(),
         post: jest.fn(),
+        delete: jest.fn(),
     },
 }));
 
@@ -49,15 +50,101 @@ describe('Auth Flow Integration', () => {
     };
 
     it('complete flow: signup -> login -> dashboard', async () => {
-        httpMock.post.mockResolvedValueOnce({
-            data: {
-                user: {
-                    id: 'u1',
-                    email: 'users@test.com',
-                    name: 'Test User',
-                },
-            },
+        const ownerJobId = 'owner-job';
+        const memberJobId = 'member-job';
+        httpMock.post.mockImplementation((url: string, payload?: any) => {
+            if (url === '/auth/signup') {
+                return Promise.resolve({
+                    data: {
+                        user: {
+                            id: 'u1',
+                            email: 'users@test.com',
+                            name: 'Test User',
+                        },
+                    },
+                });
+            }
+            if (url === '/auth/login') {
+                return Promise.resolve({
+                    data: {
+                        user: {
+                            id: 'u1',
+                            email: 'users@test.com',
+                            name: 'Test User',
+                        },
+                    },
+                });
+            }
+            if (url === '/auth/account/primary-owner-companies/listing') {
+                return Promise.resolve({
+                    data: {
+                        jobId: ownerJobId,
+                        status: 'pending',
+                        processed: 0,
+                        items: [],
+                        done: false,
+                    },
+                });
+            }
+            if (url === '/auth/account/member-companies/listing') {
+                return Promise.resolve({
+                    data: {
+                        jobId: memberJobId,
+                        status: 'pending',
+                        processed: 0,
+                        items: [],
+                        done: false,
+                    },
+                });
+            }
+            return Promise.resolve({ data: {} });
         });
+
+        httpMock.get.mockImplementation((url: string) => {
+            if (url === '/auth/profile') {
+                return Promise.resolve({
+                    data: {
+                        id: 'u1',
+                        email: 'users@test.com',
+                        name: 'Test User',
+                    },
+                });
+            }
+            if (url === `/auth/account/primary-owner-companies/listing/${ownerJobId}`) {
+                return Promise.resolve({
+                    data: {
+                        items: [
+                            {
+                                id: 'c1',
+                                name: 'Test Company',
+                                logoUrl: 'https://example.com/logo.png',
+                                description: 'Test description',
+                                isPublic: false,
+                                createdAt: new Date().toISOString(),
+                                memberCount: 1,
+                                primaryOwnerName: 'Test User',
+                                primaryOwnerEmail: 'users@test.com',
+                            },
+                        ],
+                        total: 1,
+                        status: 'completed',
+                        done: true,
+                    },
+                });
+            }
+            if (url === `/auth/account/member-companies/listing/${memberJobId}`) {
+                return Promise.resolve({
+                    data: {
+                        items: [],
+                        total: 0,
+                        status: 'completed',
+                        done: true,
+                    },
+                });
+            }
+            return Promise.resolve({ data: {} });
+        });
+        httpMock.delete.mockResolvedValue({ data: {} });
 
         renderWithProviders(<SignupPage />);
 
@@ -93,16 +180,6 @@ describe('Auth Flow Integration', () => {
             });
         });
 
-        httpMock.post.mockResolvedValueOnce({
-            data: {
-                user: {
-                    id: 'u1',
-                    email: 'users@test.com',
-                    name: 'Test User',
-                },
-            },
-        });
-
         renderWithProviders(<LoginPage />);
 
         const loginEmailInputs = screen.getAllByPlaceholderText(/email/i);
@@ -134,50 +211,10 @@ describe('Auth Flow Integration', () => {
             });
         });
 
-        httpMock.get.mockResolvedValueOnce({
-            data: {
-                id: 'u1',
-                email: 'users@test.com',
-                name: 'Test User',
-            },
-        });
-
-        httpMock.get.mockImplementation((url: string, config?: any) => {
-            if (url.includes('/auth/account/primary-owner-companies')) {
-                return Promise.resolve({
-                    data: {
-                        data: [
-                            {
-                                id: 'c1',
-                                name: 'Test Company',
-                                logoUrl: 'https://example.com/logo.png',
-                            },
-                        ],
-                        total: 1,
-                        page: config?.params?.page ?? 1,
-                        pageSize: config?.params?.pageSize ?? 10,
-                    },
-                });
-            }
-            if (url.includes('/auth/account/member-companies')) {
-                return Promise.resolve({
-                    data: {
-                        data: [],
-                        total: 0,
-                        page: config?.params?.page ?? 1,
-                        pageSize: config?.params?.pageSize ?? 10,
-                    },
-                });
-            }
-            return Promise.resolve({ data: {} });
-        });
-
         renderWithProviders(<DashboardPage />);
 
         await waitFor(() => {
-            expect(httpMock.get).toHaveBeenCalledWith('/auth/account/primary-owner-companies', {
-                params: {page: 1, pageSize: 10},
-            });
+            expect(httpMock.post).toHaveBeenCalledWith('/auth/account/primary-owner-companies/listing', {});
         });
 
         expect(await screen.findByText(/Test Company/i)).toBeInTheDocument();
@@ -190,6 +227,8 @@ describe('Auth Flow Integration', () => {
                 data: {code: 'INVALID_CREDENTIALS', message: 'INVALID_CREDENTIALS'},
             },
         });
+        httpMock.post.mockImplementation(() => Promise.resolve({ data: {} }));
+        httpMock.get.mockResolvedValue({ data: {} });
 
         renderWithProviders(<LoginPage />);
 

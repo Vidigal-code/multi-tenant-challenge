@@ -10,6 +10,7 @@ import {emailValidationProvider} from "./cache/redis-email-validation.service";
 import {inviteListCacheProvider} from "./cache/invite-list-cache.service";
 import {companyListCacheProvider} from "./cache/company-list-cache.service";
 import {inviteBulkCacheProvider} from "./cache/invite-bulk-cache.service";
+import {notificationListCacheProvider} from "./cache/notification-list-cache.service";
 import {notificationRepositoryProvider} from "@infrastructure/prisma/notifications/notification.prisma.repository";
 import {friendshipRepositoryProvider} from "@infrastructure/prisma/friendships/friendship.prisma.repository";
 
@@ -37,6 +38,7 @@ const repositoryProviders = [
         inviteListCacheProvider,
         companyListCacheProvider,
         inviteBulkCacheProvider,
+        notificationListCacheProvider,
     ],
     exports: [
         PrismaService,
@@ -46,6 +48,7 @@ const repositoryProviders = [
         inviteListCacheProvider,
         companyListCacheProvider,
         inviteBulkCacheProvider,
+        notificationListCacheProvider,
     ],
 })
 export class InfrastructureModule {

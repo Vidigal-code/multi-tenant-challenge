@@ -15,6 +15,12 @@ import {SuccessCode} from "@application/success/success-code";
 import {ErrorCode} from "@application/errors/error-code";
 import {ConfigService} from "@nestjs/config";
 import {LoggerService} from "@infrastructure/logging/logger.service";
+import {NotificationListingJobsService} from "@application/services/notification-listing-jobs.service";
+import {
+    CreateNotificationListJobDto,
+    NotificationListJobResponseDto,
+    NotificationListQueryDto
+} from "@application/dto/notifications/notification-listing.dto";
 
 @ApiTags("notifications")
 @ApiCookieAuth()
@@ -32,8 +38,47 @@ export class NotificationsController {
         private readonly deleteNotificationsUseCase: DeleteNotificationsUseCase,
         private readonly replyToNotification: ReplyToNotificationUseCase,
         private readonly configService: ConfigService,
+        private readonly listingJobs: NotificationListingJobsService,
     ) {
         this.logger = new LoggerService(NotificationsController.name, configService);
+    }
+
+    @Post("listing")
+    @ApiOperation({summary: "Start a background job to list notifications"})
+    @ApiResponse({
+        status: 201,
+        description: "Job created",
+        schema: {example: {jobId: "uuid", status: "pending", processed: 0, items: [], done: false}},
+    })
+    async createListingJob(@CurrentUser() user: any, @Body() body: CreateNotificationListJobDto) {
+        const meta = await this.listingJobs.createJob({sub: user.sub, email: user.email}, body);
+        return {
+            jobId: meta.jobId,
+            status: meta.status,
+            processed: meta.processed,
+            items: [],
+            done: false,
+        };
+    }
+
+    @Get("listing/:jobId")
+    @ApiOperation({summary: "Get notification listing job status and page"})
+    @ApiResponse({status: 200, type: NotificationListJobResponseDto})
+    @ApiResponse({status: 404, description: "Job not found", type: ErrorResponse})
+    async getListingJob(
+        @CurrentUser() user: any,
+        @Param("jobId") jobId: string,
+        @Query() query: NotificationListQueryDto,
+    ) {
+        return this.listingJobs.getJob(user.sub, jobId, query);
+    }
+
+    @Delete("listing/:jobId")
+    @ApiOperation({summary: "Delete/Cancel a notification listing job"})
+    @ApiResponse({status: 200, description: "Job deleted"})
+    async deleteListingJob(@CurrentUser() user: any, @Param("jobId") jobId: string) {
+        await this.listingJobs.deleteJob(user.sub, jobId);
+        return {success: true};
     }
 
     @Post()

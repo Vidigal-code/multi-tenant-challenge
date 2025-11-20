@@ -26,3 +26,5 @@ export const DLQ_COMPANIES_LIST_QUEUE = "dlq.companies.list.requests";
 export const INVITES_BULK_QUEUE = "invites.bulk.requests";
 export const DLQ_INVITES_BULK_QUEUE = "dlq.invites.bulk.requests";
 
+export const NOTIFICATIONS_LIST_QUEUE = "notifications.list.requests";
+export const DLQ_NOTIFICATIONS_LIST_QUEUE = "dlq.notifications.list.requests";

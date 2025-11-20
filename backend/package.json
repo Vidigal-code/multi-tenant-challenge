@@ -20,6 +20,7 @@
     "worker:companies-list": "ts-node -r tsconfig-paths/register src/interfaces/consumers/companys/company.list.consumer.ts",
     "worker:generic": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/generic.events.consumer.ts",
     "worker:realtime": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/realtime-notifications.consumer.ts",
+    "worker:notifications-list": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification.list.consumer.ts",
     "clean:queues": "powershell -ExecutionPolicy Bypass -File ./scripts/clean-queues.ps1",
     "clear:dedup": "powershell -ExecutionPolicy Bypass -File ./scripts/clear-redis-dedup.ps1"
   },

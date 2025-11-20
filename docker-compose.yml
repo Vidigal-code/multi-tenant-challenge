@@ -98,6 +98,17 @@ services:
       - ./backend:/app
       - /app/node_modules
 
+  worker-notifications-list:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:notifications-list"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
   web:
     build:
       context: ./frontend
