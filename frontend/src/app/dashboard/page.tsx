@@ -13,7 +13,9 @@ import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { Modal } from '../../components/modals/Modal';
 
 export default function DashboardPage() {
+
     const [activeTab, setActiveTab] = useState<'owner' | 'member'>('owner');
+
     const [ownerPage, setOwnerPage] = useState(1);
     const [memberPage, setMemberPage] = useState(1);
     const [tabIndex, setTabIndex] = useState(0);
@@ -231,13 +233,15 @@ export default function DashboardPage() {
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Minhas Empresas</h1>
                 <p className="text-gray-600 dark:text-gray-400">Gerencie suas empresas e organizações</p>
             </div>
-            <a href="/company/new" className="text-sm text-gray-900 dark:text-white hover:underline font-medium text-center">Criar nova empresa</a>
+            <a href="/company/new" className="text-sm
+            text-gray-900 dark:text-white hover:underline font-medium text-center">Criar nova empresa</a>
             <div className="border-b border-gray-200 dark:border-gray-800 w-full">
                 <div className="flex items-center gap-2 w-full justify-center">
                     {startTabIndex > 0 && (
                         <button
                             onClick={handlePreviousTab}
-                            className="flex-shrink-0 p-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                            className="flex-shrink-0 p-2 rounded-lg border border-gray-200
+                            dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                             aria-label="Aba anterior"
                         >
                             <MdChevronLeft className="text-xl text-gray-600 dark:text-gray-400" />
@@ -250,10 +254,12 @@ export default function DashboardPage() {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as 'owner' | 'member')}
                                 className={`
-                                    flex items-center justify-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0 w-full sm:w-auto
+                                    flex items-center justify-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium 
+                                    whitespace-nowrap border-b-2 transition-colors flex-shrink-0 w-full sm:w-auto
                                     ${activeTab === tab.id
                                     ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 ' +
+                                    'dark:text-gray-400 dark:hover:text-gray-300'
                                 }
                                 `}
                             >
@@ -265,7 +271,8 @@ export default function DashboardPage() {
                     {(startTabIndex + maxVisibleTabs < allTabs.length) && allTabs.length > maxVisibleTabs && (
                         <button
                             onClick={handleNextTab}
-                            className="flex-shrink-0 p-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                            className="flex-shrink-0 p-2 rounded-lg border border-gray-200 dark:border-gray-800
+                            hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                             aria-label="Próxima aba"
                         >
                             <MdChevronRight className="text-xl text-gray-600 dark:text-gray-400" />
@@ -281,7 +288,8 @@ export default function DashboardPage() {
                     <Skeleton className="h-10" />
                 </div>
             ) : companies.length === 0 ? (
-                <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-8 sm:p-12 text-center bg-gray-50 dark:bg-gray-900">
+                <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-8 sm:p-12 text-center
+                bg-gray-50 dark:bg-gray-900">
                     <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
                         {activeTab === 'owner'
                             ? 'Você não é owner principal de nenhuma empresa.'
@@ -300,10 +308,13 @@ export default function DashboardPage() {
                         isMember={activeTab === 'member'}
                         canEdit={canEditCompanies}
                     />
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t
+                    border-gray-200 dark:border-gray-800">
                         <div className="flex items-center gap-2 flex-wrap justify-center">
                             <button
-                                className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                                className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+                                dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50
+                                dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                                 onClick={() => {
                                     if (activeTab === 'owner') {
                                         setOwnerPage(p => Math.max(1, p - 1));
@@ -317,7 +328,9 @@ export default function DashboardPage() {
                             </button>
                             <span className="text-sm text-gray-600 dark:text-gray-400">Página {currentPage} de {totalPages}</span>
                             <button
-                                className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                                className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+                                dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50
+                                dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                                 onClick={() => {
                                     if (activeTab === 'owner') {
                                         setOwnerPage(p => p + 1);

@@ -41,14 +41,17 @@ const COMPANY_INVITATION_KINDS: NotificationKind[] = [
 ];
 
 const FRIEND_REQUEST_KINDS: NotificationKind[] = ['friend.request.sent', 'friend.request.accepted', 'friend.request.rejected', 'friend.removed'];
+
 const COMPANY_MESSAGE_KINDS: NotificationKind[] = [
     'notification.sent', 'notifications.sent',
     'notification.reply', 'notifications.replied' 
 ];
+
 const MEMBERSHIP_CHANGE_KINDS: NotificationKind[] = [
     'member.added', 'membership.joined', 
     'member.removed', 'membership.removed' 
 ];
+
 const ROLE_CHANGE_KINDS: NotificationKind[] = [
     'role.changed', 'membership.role.updated'
 ];

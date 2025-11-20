@@ -85,8 +85,35 @@ export class UserPrismaRepository implements UserRepository {
         return users.map(user => this.toDomain(user));
     }
 
+    async searchByNameOrEmailCursor(query: string, excludeUserId: string, cursor: string | undefined, limit: number): Promise<User[]> {
+        const findArgs: any = {
+            where: {
+                AND: [
+                    {id: {not: excludeUserId}},
+                    {
+                        OR: [
+                            {name: {contains: query, mode: 'insensitive'}},
+                            {email: {contains: query, mode: 'insensitive'}},
+                        ],
+                    },
+                ],
+            },
+            include: {memberships: true},
+            take: limit,
+            orderBy: {id: 'asc'},
+        };
+
+        if (cursor) {
+            findArgs.cursor = {id: cursor};
+            findArgs.skip = 1;
+        }
+
+        const users = await this.prisma.user.findMany(findArgs);
+        return users.map(user => this.toDomain(user));
+    }
+
     private toDomain(
-        record: Prisma.UserGetPayload<{ include: { memberships: true } }>,
+        record: Prisma.UserGetPayload<{ include: { memberships: true } }> | (Prisma.UserGetPayload<any> & { memberships?: any[] }),
     ): User {
         return User.create({
             id: record.id,

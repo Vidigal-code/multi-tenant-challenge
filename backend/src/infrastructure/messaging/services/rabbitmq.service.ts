@@ -208,7 +208,8 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
                 this.logger.rabbitmq(`The queue has different DLQ configuration. Messages in the queue will be preserved.`);
                 this.logger.rabbitmq(`To fix: Stop all workers, run 'npm run clean:queues', then restart with 'npm run start:all'`);
                 this.logger.rabbitmq(`Or delete the queue manually from RabbitMQ Management UI: http://localhost:15672`);
-                throw new Error(`Queue ${queue} exists with different options. Stop all workers, run 'npm run clean:queues', and restart. Error: ${error?.message || String(error)}`);
+                throw new Error(`Queue ${queue} exists with different options. Stop all workers, run 
+                'npm run clean:queues', and restart. Error: ${error?.message || String(error)}`);
             } else {
                 throw error;
             }
@@ -239,7 +240,8 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
                     await this.channel.deleteQueue(queue, options || { ifUnused: true, ifEmpty: true });
                     this.logger.rabbitmq(`Queue deleted successfully with restrictions: ${queue}`);
                 } catch (retryError: any) {
-                    this.logger.rabbitmq(`Warning: Could not delete queue ${queue}: ${retryError?.message || String(retryError)}. Continuing anyway.`);
+                    this.logger.rabbitmq(`Warning: Could not delete queue ${queue}: ${retryError?.message || 
+                    String(retryError)}. Continuing anyway.`);
                 }
             } else {
                 throw error;

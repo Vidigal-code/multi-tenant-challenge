@@ -1,10 +1,10 @@
 import React from 'react';
-import {render, screen, fireEvent, waitFor, within} from '@testing-library/react';
-import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {Provider as ReduxProvider} from 'react-redux';
-import {store} from '../../../store';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Provider as ReduxProvider } from 'react-redux';
+import { store } from '../../../store';
 import NotificationsPage from '../../../app/notifications/page';
-import {http} from '../../../lib/http';
+import { http } from '../../../lib/http';
 
 jest.mock('../../../lib/http', () => ({
     http: {
@@ -23,7 +23,7 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('../../../lib/realtime', () => ({
-    subscribe: jest.fn(() => () => {}),
+    subscribe: jest.fn(() => () => { }),
     whenReady: jest.fn(() => Promise.resolve()),
     RT_EVENTS: {
         NOTIFICATION_CREATED: 'notifications.created',
@@ -31,7 +31,7 @@ jest.mock('../../../lib/realtime', () => ({
     },
 }));
 
-const {http: httpMock} = jest.requireMock('../../../lib/http');
+const { http: httpMock } = jest.requireMock('../../../lib/http');
 
 describe('Notification Flow Integration', () => {
     let queryClient: QueryClient;
@@ -43,8 +43,8 @@ describe('Notification Flow Integration', () => {
     beforeEach(() => {
         queryClient = new QueryClient({
             defaultOptions: {
-                queries: {retry: false, staleTime: 0},
-                mutations: {retry: false},
+                queries: { retry: false, staleTime: 0 },
+                mutations: { retry: false },
             },
         });
         jest.clearAllMocks();
@@ -121,7 +121,7 @@ describe('Notification Flow Integration', () => {
         fireEvent.click(markReadButton);
 
         httpMock.patch.mockResolvedValueOnce({
-            data: {success: true},
+            data: { success: true },
         });
 
         await waitFor(() => {
@@ -138,7 +138,7 @@ describe('Notification Flow Integration', () => {
         });
 
         fireEvent.change(screen.getByPlaceholderText(/Digite sua resposta/i), {
-            target: {value: 'Thank you!'},
+            target: { value: 'Thank you!' },
         });
 
         httpMock.post.mockResolvedValueOnce({
@@ -161,17 +161,17 @@ describe('Notification Flow Integration', () => {
         });
 
         httpMock.delete.mockResolvedValueOnce({
-            data: {success: true},
+            data: { success: true },
         });
 
-        const deleteButton = within(firstNotificationCard).getByRole('button', {name: /Excluir/i});
+        const deleteButton = within(firstNotificationCard).getByRole('button', { name: /Excluir/i });
         fireEvent.click(deleteButton);
 
         await waitFor(() => {
             expect(screen.getByText(/Confirmar/i)).toBeInTheDocument();
         });
 
-        const confirmButton = screen.getByRole('button', {name: /Confirmar/i});
+        const confirmButton = screen.getByRole('button', { name: /Confirmar/i });
         fireEvent.click(confirmButton);
 
         await waitFor(() => {
@@ -224,12 +224,12 @@ describe('Notification Flow Integration', () => {
 
         const readNotificationElements = screen.getAllByText(/Read notifications?/i);
         expect(readNotificationElements.length).toBeGreaterThan(0);
-        
+
         const readNotificationCard = readNotificationElements.find(el => {
             const parent = el.closest('.border');
             return parent && parent.querySelector('h3')?.textContent?.includes('Read notifications');
         });
-        
+
         if (readNotificationCard) {
             const card = readNotificationCard.closest('.border');
             if (card) {

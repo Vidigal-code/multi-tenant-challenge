@@ -37,6 +37,10 @@ class InMemoryNotificationRepository implements NotificationRepository {
         throw new Error("Not implemented");
     }
 
+    async listByUserCursor(userId: string, cursor: number, limit: number): Promise<Notification[]> {
+        throw new Error("Not implemented");
+    }
+
     async markRead(): Promise<void> {
         throw new Error("Not implemented");
     }
@@ -78,6 +82,10 @@ class StubFriendshipRepository implements FriendshipRepository {
     }
 
     async listByUser(): Promise<any> {
+        throw new Error("Not implemented");
+    }
+
+    async listByUserCursor(params: { userId: string; status?: FriendshipStatus; cursor?: string; limit: number }): Promise<any[]> {
         throw new Error("Not implemented");
     }
 

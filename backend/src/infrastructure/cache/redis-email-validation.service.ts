@@ -88,7 +88,8 @@ export class RedisEmailValidationService implements EmailValidationService {
         const exists = !!user;
         try {
             await this.redis.set(key, exists ? "1" : "0", "EX", exists ? this.ttlHit : this.ttlMiss);
-            this.logger.default(`Email ${email} validated: ${exists ? 'exists' : 'does not exist'}, cached for ${exists ? this.ttlHit : this.ttlMiss}s`);
+            this.logger.default(`Email ${email} validated: ${exists ? 'exists' : 'does not exist'}, 
+            cached for ${exists ? this.ttlHit : this.ttlMiss}s`);
         } catch (err) {
             this.logger.error(`Redis set failed for ${key}: ${String(err)}`);
         }

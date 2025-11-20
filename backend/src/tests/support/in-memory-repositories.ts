@@ -80,6 +80,25 @@ export class InMemoryUserRepository implements UserRepository {
             )
             .slice(0, 20); // Limit results
     }
+
+    async searchByNameOrEmailCursor(query: string, excludeUserId: string, cursor: string | undefined, limit: number): Promise<User[]> {
+        const normalizedQuery = query.toLowerCase();
+        const filtered = this.items
+            .filter(user =>
+                user.id !== excludeUserId &&
+                (user.name.toLowerCase().includes(normalizedQuery) ||
+                    user.email.toString().toLowerCase().includes(normalizedQuery))
+            )
+            .sort((a, b) => a.id.localeCompare(b.id));
+
+        let startIndex = 0;
+        if (cursor) {
+            const cursorIndex = filtered.findIndex(u => u.id === cursor);
+            startIndex = cursorIndex >= 0 ? cursorIndex + 1 : filtered.length;
+        }
+
+        return filtered.slice(startIndex, startIndex + limit);
+    }
 }
 
 export class InMemoryCompanyRepository implements CompanyRepository {

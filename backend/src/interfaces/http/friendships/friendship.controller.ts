@@ -16,6 +16,18 @@ import {
 } from "@application/dto/friendships/friendship.dto";
 import {ErrorResponse} from "@application/dto/errors/error.response.dto";
 import {SuccessCode} from "@application/success/success-code";
+import {FriendshipListingJobsService} from "@application/services/friendship-listing-jobs.service";
+import {UserSearchJobsService} from "@application/services/user-search-jobs.service";
+import {
+    CreateFriendshipListJobDto,
+    FriendshipListJobResponseDto,
+    FriendshipListQueryDto
+} from "@application/dto/friendships/friendship-listing.dto";
+import {
+    CreateUserSearchJobDto,
+    UserSearchJobResponseDto,
+    UserSearchQueryDto
+} from "@application/dto/users/user-search.dto";
 
 @ApiTags("friendships")
 @ApiCookieAuth()
@@ -29,6 +41,8 @@ export class FriendshipController {
         private readonly deleteFriendship: DeleteFriendshipUseCase,
         private readonly listFriendships: ListFriendshipsUseCase,
         private readonly searchUsers: SearchUsersUseCase,
+        private readonly friendshipJobs: FriendshipListingJobsService,
+        private readonly userSearchJobs: UserSearchJobsService,
     ) {
     }
 
@@ -118,6 +132,82 @@ export class FriendshipController {
             friendshipId,
             userId: user.sub,
         });
+        return {success: true};
+    }
+
+    @Get("listing/:jobId")
+    @ApiOperation({summary: "Get friendship listing job status and page"})
+    @ApiResponse({status: 200, type: FriendshipListJobResponseDto})
+    @ApiResponse({status: 404, description: "Job not found", type: ErrorResponse})
+    async getListingJob(
+        @CurrentUser() user: any,
+        @Param("jobId") jobId: string,
+        @Query() query: FriendshipListQueryDto,
+    ) {
+        return this.friendshipJobs.getJob(user.sub, jobId, query);
+    }
+
+    @Delete("listing/:jobId")
+    @ApiOperation({summary: "Delete/Cancel a friendship listing job"})
+    @ApiResponse({status: 200, description: "Job deleted"})
+    async deleteListingJob(@CurrentUser() user: any, @Param("jobId") jobId: string) {
+        await this.friendshipJobs.deleteJob(user.sub, jobId);
+        return {success: true};
+    }
+
+    @Post("listing")
+    @ApiOperation({summary: "Start a background job to list friendships"})
+    @ApiResponse({
+        status: 201,
+        description: "Job created",
+        schema: {example: {jobId: "uuid", status: "pending", processed: 0, items: [], done: false}},
+    })
+    async createListingJob(@CurrentUser() user: any, @Body() body: CreateFriendshipListJobDto) {
+        const meta = await this.friendshipJobs.createJob({sub: user.sub, email: user.email}, body);
+        return {
+            jobId: meta.jobId,
+            status: meta.status,
+            processed: meta.processed,
+            items: [],
+            done: false,
+        };
+    }
+
+    @Post("search/listing")
+    @ApiOperation({summary: "Start a background job to search users"})
+    @ApiResponse({
+        status: 201,
+        description: "Job created",
+        schema: {example: {jobId: "uuid", status: "pending", processed: 0, items: [], done: false}},
+    })
+    async createUserSearchJob(@CurrentUser() user: any, @Body() body: CreateUserSearchJobDto) {
+        const meta = await this.userSearchJobs.createJob({sub: user.sub, email: user.email}, body);
+        return {
+            jobId: meta.jobId,
+            status: meta.status,
+            processed: meta.processed,
+            items: [],
+            done: false,
+        };
+    }
+
+    @Get("search/listing/:jobId")
+    @ApiOperation({summary: "Get user search job status and page"})
+    @ApiResponse({status: 200, type: UserSearchJobResponseDto})
+    @ApiResponse({status: 404, description: "Job not found", type: ErrorResponse})
+    async getUserSearchJob(
+        @CurrentUser() user: any,
+        @Param("jobId") jobId: string,
+        @Query() query: UserSearchQueryDto,
+    ) {
+        return this.userSearchJobs.getJob(user.sub, jobId, query);
+    }
+
+    @Delete("search/listing/:jobId")
+    @ApiOperation({summary: "Delete/Cancel a user search job"})
+    @ApiResponse({status: 200, description: "Job deleted"})
+    async deleteUserSearchJob(@CurrentUser() user: any, @Param("jobId") jobId: string) {
+        await this.userSearchJobs.deleteJob(user.sub, jobId);
         return {success: true};
     }
 

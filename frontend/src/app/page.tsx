@@ -20,12 +20,15 @@ export default function HomePage() {
     return (
         <div className="min-h-screen w-full overflow-x-hidden">
 
-            <section className="relative bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 py-24 sm:py-32 md:py-40 px-4 sm:px-6 lg:px-8 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-gray-50 via-white to-white dark:from-gray-950 dark:via-gray-950 dark:to-gray-950"></div>
+            <section className="relative bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50
+             py-24 sm:py-32 md:py-40 px-4 sm:px-6 lg:px-8 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-gray-50 via-white to-white
+                dark:from-gray-950 dark:via-gray-950 dark:to-gray-950"></div>
                 <div className="relative max-w-7xl mx-auto text-center">
                     <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6 leading-tight">
                         Plataforma Multi-Tenant
-                        <span className="block mt-4 bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 dark:from-white dark:via-gray-300 dark:to-white bg-clip-text text-transparent">
+                        <span className="block mt-4 bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 dark:from-white dark:via-gray-300
+                        dark:to-white bg-clip-text text-transparent">
                             Avançada
                         </span>
                     </h1>
@@ -39,13 +42,16 @@ export default function HomePage() {
                             <>
                                 <Link
                                     href="/dashboard"
-                                    className="w-full sm:w-auto px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium text-base sm:text-lg"
+                                    className="w-full sm:w-auto px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg
+                                    hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium text-base sm:text-lg"
                                 >
                                     Ir para Dashboard
                                 </Link>
                                 <Link
                                     href="/company/new"
-                                    className="w-full sm:w-auto px-8 py-4 bg-transparent border-2 border-gray-900 dark:border-white text-gray-900 dark:text-white rounded-lg hover:bg-gray-900 hover:text-white dark:hover:bg-white dark:hover:text-gray-900 transition-colors font-medium text-base sm:text-lg"
+                                    className="w-full sm:w-auto px-8 py-4 bg-transparent border-2 border-gray-900 dark:border-white text-gray-900
+                                    dark:text-white rounded-lg hover:bg-gray-900 hover:text-white dark:hover:bg-white
+                                    dark:hover:text-gray-900 transition-colors font-medium text-base sm:text-lg"
                                 >
                                     Criar Nova Empresa
                                 </Link>
@@ -54,13 +60,17 @@ export default function HomePage() {
                             <>
                                 <Link
                                     href="/signup"
-                                    className="w-full sm:w-auto px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium text-base sm:text-lg"
+                                    className="w-full sm:w-auto px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800
+                                    dark:hover:bg-gray-200 transition-colors font-medium text-base sm:text-lg"
                                 >
                                     Começar Grátis
                                 </Link>
                                 <Link
                                     href="/login"
-                                    className="w-full sm:w-auto px-8 py-4 bg-transparent border-2 border-gray-900 dark:border-white text-gray-900 dark:text-white rounded-lg hover:bg-gray-900 hover:text-white dark:hover:bg-white dark:hover:text-gray-900 transition-colors font-medium text-base sm:text-lg"
+                                    className="w-full sm:w-auto px-8 py-4 bg-transparent border-2 border-gray-900 dark:border-white text-gray-900
+                                    dark:text-white rounded-lg hover:bg-gray-900 hover:text-white
+                                    dark:hover:bg-white
+                                    dark:hover:text-gray-900 transition-colors font-medium text-base sm:text-lg"
                                 >
                                     Entrar
                                 </Link>
@@ -149,7 +159,8 @@ export default function HomePage() {
                         {!isAuth && (
                             <Link
                                 href="/signup"
-                                className="inline-block px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors text-lg font-medium"
+                                className="inline-block px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800
+                                dark:hover:bg-gray-200 transition-colors text-lg font-medium"
                             >
                                 Criar Conta Grátis
                             </Link>
@@ -171,7 +182,8 @@ function FeatureCard({
     text: string;
 }) {
     return (
-        <div className="p-6 sm:p-8 border border-gray-200 dark:border-gray-800 rounded-xl hover:border-gray-900 dark:hover:border-white transition-colors bg-white dark:bg-gray-950">
+        <div className="p-6 sm:p-8 border border-gray-200 dark:border-gray-800 rounded-xl hover:border-gray-900 dark:hover:border-white transition-colors
+        bg-white dark:bg-gray-950">
             <div className="mb-4">{icon}</div>
             <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-900 dark:text-gray-50">
                 {title}
@@ -192,7 +204,8 @@ function Step({
 }) {
     return (
         <div className="flex gap-4 sm:gap-6 items-start">
-            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg flex items-center justify-center font-bold text-lg sm:text-xl">
+            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg flex items-center
+             justify-center font-bold text-lg sm:text-xl">
                 {number}
             </div>
             <div className="min-w-0 flex-1">

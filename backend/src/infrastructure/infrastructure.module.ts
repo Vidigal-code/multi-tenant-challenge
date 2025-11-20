@@ -11,8 +11,11 @@ import {inviteListCacheProvider} from "./cache/invite-list-cache.service";
 import {companyListCacheProvider} from "./cache/company-list-cache.service";
 import {inviteBulkCacheProvider} from "./cache/invite-bulk-cache.service";
 import {notificationListCacheProvider} from "./cache/notification-list-cache.service";
+import {notificationDeletionCacheProvider} from "./cache/notification-deletion-cache.service";
 import {notificationRepositoryProvider} from "@infrastructure/prisma/notifications/notification.prisma.repository";
 import {friendshipRepositoryProvider} from "@infrastructure/prisma/friendships/friendship.prisma.repository";
+import {friendshipListCacheProvider} from "./cache/friendship-list-cache.service";
+import {userSearchCacheProvider} from "./cache/user-search-cache.service";
 
 const repositoryProviders = [
     userRepositoryProvider,
@@ -39,6 +42,9 @@ const repositoryProviders = [
         companyListCacheProvider,
         inviteBulkCacheProvider,
         notificationListCacheProvider,
+        notificationDeletionCacheProvider,
+        friendshipListCacheProvider,
+        userSearchCacheProvider,
     ],
     exports: [
         PrismaService,
@@ -49,6 +55,9 @@ const repositoryProviders = [
         companyListCacheProvider,
         inviteBulkCacheProvider,
         notificationListCacheProvider,
+        notificationDeletionCacheProvider,
+        friendshipListCacheProvider,
+        userSearchCacheProvider,
     ],
 })
 export class InfrastructureModule {

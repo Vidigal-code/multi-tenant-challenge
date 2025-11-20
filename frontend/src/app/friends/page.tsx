@@ -1,29 +1,30 @@
 "use client";
-import React, { useEffect, useState, useMemo } from 'react';
-import { getErrorMessage } from '../../lib/error';
-import { getSuccessMessage } from '../../lib/messages';
-import { useToast } from '../../hooks/useToast';
-import { useQueryClient } from '@tanstack/react-query';
-import Skeleton from '../../components/skeleton/Skeleton';
-import { ConfirmModal } from '../../components/modals/ConfirmModal';
-import { Modal } from '../../components/modals/Modal';
-import { subscribe, whenReady, RT_EVENTS } from '../../lib/realtime';
-import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
-import { useParams } from 'next/navigation';
+import React, { useEffect, useMemo, useState } from "react";
+import { getErrorMessage } from "../../lib/error";
+import { getSuccessMessage } from "../../lib/messages";
+import { useToast } from "../../hooks/useToast";
+import { useQueryClient } from "@tanstack/react-query";
+import Skeleton from "../../components/skeleton/Skeleton";
+import { ConfirmModal } from "../../components/modals/ConfirmModal";
+import { Modal } from "../../components/modals/Modal";
+import { RT_EVENTS, subscribe, whenReady } from "../../lib/realtime";
+import { MdChevronLeft, MdChevronRight } from "react-icons/md";
+import { useParams } from "next/navigation";
 import {
-    useFriendships,
-    useFriendRequests,
-    useSearchUsers,
-    useSendFriendRequest,
-    useAcceptFriendRequest,
-    useRemoveFriend,
-    useSendFriendNotification,
-    type User,
     type Friendship,
-} from '../../services/api/friendship.api';
-import { useProfile } from '../../services/api/auth.api';
+    useAcceptFriendRequest,
+    useFriendRequests,
+    useFriendships,
+    useProfile,
+    type User,
+    useRemoveFriend,
+    useSearchUsers,
+    useSendFriendNotification,
+    useSendFriendRequest
+} from "../../services/api";
 
 export default function FriendsPage() {
+
     const params = useParams();
     const requestId = params?.id as string | undefined;
 
@@ -139,8 +140,7 @@ export default function FriendsPage() {
 
   const handleNextTab = () => {
     setTabIndex(prev => {
-      const newIndex = Math.min(Math.max(0, allTabs.length - maxVisibleTabs), prev + 1);
-      return newIndex;
+        return Math.min(Math.max(0, allTabs.length - maxVisibleTabs), prev + 1);
     });
   };
 
@@ -432,7 +432,8 @@ export default function FriendsPage() {
                         disabled={sendRequestMutation.isPending}
                         className="px-4 py-2 bg-gray-900 dark:bg-white
                         text-white dark:text-gray-900 text-sm rounded-lg hover:bg-gray-800
-                        dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap flex-shrink-0"
+                        dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors
+                        font-medium whitespace-nowrap flex-shrink-0"
                       >
                         Enviar solicitação
                       </button>
@@ -441,7 +442,8 @@ export default function FriendsPage() {
                 }).filter(Boolean)}
               </div>
               {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200 dark:border-gray-800 mt-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t
+                border-gray-200 dark:border-gray-800 mt-4">
                   <div className="flex items-center gap-2 flex-wrap justify-center w-full">
                     <button
                       className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
@@ -476,7 +478,8 @@ export default function FriendsPage() {
             {startTabIndex > 0 && (
               <button
                 onClick={handlePreviousTab}
-                className="flex-shrink-0 p-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                className="flex-shrink-0 p-2 rounded-lg border border-gray-200 dark:border-gray-800
+                hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                 aria-label="Aba anterior"
               >
                 <MdChevronLeft className="text-xl text-gray-600 dark:text-gray-400" />
@@ -489,10 +492,12 @@ export default function FriendsPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as 'friends' | 'requests' | 'messages')}
                   className={`
-                    flex items-center justify-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0 w-full sm:w-auto
+                    flex items-center justify-center gap-2 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium
+                     whitespace-nowrap border-b-2 transition-colors flex-shrink-0 w-full sm:w-auto
                     ${activeTab === tab.id
                       ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 ' +
+                      'dark:text-gray-400 dark:hover:text-gray-300'
                     }
                   `}
                 >
@@ -504,7 +509,8 @@ export default function FriendsPage() {
             {(startTabIndex + maxVisibleTabs < allTabs.length) && allTabs.length > maxVisibleTabs && (
               <button
                 onClick={handleNextTab}
-                className="flex-shrink-0 p-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                className="flex-shrink-0 p-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50
+                dark:hover:bg-gray-900 transition-colors"
                 aria-label="Próxima aba"
               >
                 <MdChevronRight className="text-xl text-gray-600 dark:text-gray-400" />
@@ -538,13 +544,15 @@ export default function FriendsPage() {
                 <div className="flex flex-col sm:flex-row flex-wrap gap-2 mb-4 justify-center">
                   <button 
                     className="w-full sm:w-auto px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
-                    text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors text-sm font-medium whitespace-nowrap"
+                    text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors
+                    text-sm font-medium whitespace-nowrap"
                     onClick={() => handleSelectAll(friends)}
                   >
                     Selecionar todos
                   </button>
                   <button 
-                    className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600
+                    className="w-full sm:w-auto px-3 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white
+                    dark:bg-gray-950 text-red-600
                      dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors
                       text-sm font-medium whitespace-nowrap"
                     disabled={!selectedFriendsIds.length} 
@@ -586,7 +594,8 @@ export default function FriendsPage() {
                       type="checkbox" 
                       checked={selectedFriendsIds.includes(friendship.id)} 
                       onChange={e => {
-                        setSelectedFriendsIds(sel => e.target.checked ? [...sel, friendship.id] : sel.filter(sid => sid !== friendship.id));
+                        setSelectedFriendsIds(sel => e.target.checked ? [...sel, friendship.id]
+                            : sel.filter(sid => sid !== friendship.id));
                       }} 
                       className="mt-1 flex-shrink-0 w-4 h-4 rounded border-gray-300 dark:border-gray-700 text-gray-900
                       dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-white"
@@ -609,7 +618,8 @@ export default function FriendsPage() {
                       onClick={() => setRemoveConfirm(friendship.id)}
                       className="flex-1 sm:flex-initial px-4 py-2 border
                       border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950
-                      text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm transition-colors font-medium whitespace-nowrap"
+                      text-red-600 dark:text-red-400 hover:bg-red-50
+                      dark:hover:bg-red-900/20 text-sm transition-colors font-medium whitespace-nowrap"
                     >
                       Remover
                     </button>
@@ -776,7 +786,10 @@ export default function FriendsPage() {
               <p className="text-sm sm:text-base">{requestId ? 'Solicitação não encontrada' : 'Nenhuma solicitação pendente'}</p>
             </div>
           ) : (() => {
-            const displayRequests = requestId ? filteredRequests : filteredRequests.slice((requestsPage - 1) * itemsPerPage, requestsPage * itemsPerPage);
+
+            const displayRequests = requestId ? filteredRequests :
+                filteredRequests.slice((requestsPage - 1) * itemsPerPage, requestsPage * itemsPerPage);
+
             const totalPages = requestId ? 1 : Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage));
             
             return (
@@ -790,9 +803,11 @@ export default function FriendsPage() {
               }
               return (
                 <div key={request.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 sm:p-6 border
-                border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900
+                transition-colors">
                   <div className="min-w-0 flex-1 w-full sm:w-auto">
-                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono text-center sm:text-left">id:{request.id}</div>
+                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono
+                    text-center sm:text-left">id:{request.id}</div>
                     <div className="font-medium text-gray-900 dark:text-white text-base sm:text-lg mb-1 text-center sm:text-left">
                         {request.requester.name || 'Unknown'}</div>
                     <div className="text-sm text-gray-600 dark:text-gray-400 truncate text-center sm:text-left">{request.requester.email || ''}</div>
@@ -925,7 +940,8 @@ export default function FriendsPage() {
                 setMessageBody('');
               }}
               className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
-              dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm"
+              dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900
+              transition-colors font-medium text-sm"
             >
               Cancelar
             </button>

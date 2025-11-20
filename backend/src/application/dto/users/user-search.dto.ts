@@ -1,7 +1,14 @@
-import {IsNumber, IsOptional} from "class-validator";
+import {IsNumber, IsOptional, IsString} from "class-validator";
 import {ApiProperty} from "@nestjs/swagger";
 
-export class CreateNotificationListJobDto {
+export class CreateUserSearchJobDto {
+    @ApiProperty({
+        description: "Search query string",
+        example: "john",
+    })
+    @IsString()
+    query!: string;
+
     @ApiProperty({
         description: "Optional chunk size for processing",
         example: 1000,
@@ -12,24 +19,13 @@ export class CreateNotificationListJobDto {
     chunkSize?: number;
 }
 
-export class NotificationListItem {
+export class UserSearchItem {
     id!: string;
-    companyId!: string;
-    senderUserId!: string;
-    recipientUserId!: string;
-    title!: string;
-    body!: string;
-    createdAt!: string;
-    read!: boolean;
-    meta: any;
-    sender?: {
-        id: string;
-        name: string;
-        email: string;
-    };
+    name!: string;
+    email!: string;
 }
 
-export class NotificationListJobResponseDto {
+export class UserSearchJobResponseDto {
     @ApiProperty()
     jobId!: string;
 
@@ -42,8 +38,8 @@ export class NotificationListJobResponseDto {
     @ApiProperty({required: false})
     total?: number;
 
-    @ApiProperty({type: [NotificationListItem]})
-    items!: NotificationListItem[];
+    @ApiProperty({type: [UserSearchItem]})
+    items!: UserSearchItem[];
 
     @ApiProperty()
     done!: boolean;
@@ -55,7 +51,7 @@ export class NotificationListJobResponseDto {
     error?: string;
 }
 
-export class NotificationListQueryDto {
+export class UserSearchQueryDto {
     @ApiProperty({required: false})
     @IsOptional()
     cursor?: number;
@@ -65,13 +61,14 @@ export class NotificationListQueryDto {
     pageSize?: number;
 }
 
-export interface NotificationListingJobPayload {
+export interface UserSearchJobPayload {
     jobId: string;
     userId: string;
+    query: string;
     chunkSize: number;
 }
 
-export interface NotificationListJobMeta {
+export interface UserSearchJobMeta {
     jobId: string;
     userId: string;
     status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -82,3 +79,4 @@ export interface NotificationListJobMeta {
     finishedAt?: number;
     error?: string;
 }
+

@@ -1,7 +1,7 @@
-import {IsNumber, IsOptional} from "class-validator";
+import {IsNumber, IsOptional, IsString} from "class-validator";
 import {ApiProperty} from "@nestjs/swagger";
 
-export class CreateNotificationListJobDto {
+export class CreateFriendshipListJobDto {
     @ApiProperty({
         description: "Optional chunk size for processing",
         example: 1000,
@@ -10,26 +10,32 @@ export class CreateNotificationListJobDto {
     @IsNumber()
     @IsOptional()
     chunkSize?: number;
+
+    @ApiProperty({
+        description: "Friendship status to filter (PENDING, ACCEPTED, etc.)",
+        example: "ACCEPTED",
+        required: false
+    })
+    @IsString()
+    @IsOptional()
+    status?: string;
 }
 
-export class NotificationListItem {
+export class FriendshipListItem {
     id!: string;
-    companyId!: string;
-    senderUserId!: string;
-    recipientUserId!: string;
-    title!: string;
-    body!: string;
+    requesterId!: string;
+    addresseeId!: string;
+    status!: string;
     createdAt!: string;
-    read!: boolean;
-    meta: any;
-    sender?: {
+    updatedAt!: string;
+    friend?: {
         id: string;
         name: string;
         email: string;
     };
 }
 
-export class NotificationListJobResponseDto {
+export class FriendshipListJobResponseDto {
     @ApiProperty()
     jobId!: string;
 
@@ -42,8 +48,8 @@ export class NotificationListJobResponseDto {
     @ApiProperty({required: false})
     total?: number;
 
-    @ApiProperty({type: [NotificationListItem]})
-    items!: NotificationListItem[];
+    @ApiProperty({type: [FriendshipListItem]})
+    items!: FriendshipListItem[];
 
     @ApiProperty()
     done!: boolean;
@@ -55,7 +61,7 @@ export class NotificationListJobResponseDto {
     error?: string;
 }
 
-export class NotificationListQueryDto {
+export class FriendshipListQueryDto {
     @ApiProperty({required: false})
     @IsOptional()
     cursor?: number;
@@ -65,13 +71,14 @@ export class NotificationListQueryDto {
     pageSize?: number;
 }
 
-export interface NotificationListingJobPayload {
+export interface FriendshipListingJobPayload {
     jobId: string;
     userId: string;
+    status?: string;
     chunkSize: number;
 }
 
-export interface NotificationListJobMeta {
+export interface FriendshipListJobMeta {
     jobId: string;
     userId: string;
     status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -82,3 +89,4 @@ export interface NotificationListJobMeta {
     finishedAt?: number;
     error?: string;
 }
+

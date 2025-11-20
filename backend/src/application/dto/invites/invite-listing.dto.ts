@@ -157,4 +157,3 @@ export class InviteListJobResponseDto {
     @ApiPropertyOptional({example: "Optional failure message"})
     error?: string;
 }
-

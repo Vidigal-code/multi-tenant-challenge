@@ -1,7 +1,7 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
-import {useQuery, useMutation, useQueryClient, UseQueryResult} from '@tanstack/react-query';
-import {http} from '../../lib/http';
-import {queryKeys} from '../../lib/queryKeys';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient, UseQueryResult } from "@tanstack/react-query";
+import { http } from "../../lib/http";
+import { queryKeys } from "../../lib/queryKeys";
 
 export interface Invite {
   id: string;
@@ -226,16 +226,14 @@ function useInviteListing(
     error: jobError,
     nextCursor: null,
   };
-  const enhancedQuery: InviteListingHookResult = {
-    ...query,
-    data: query.data ?? fallbackData,
-    isLoading: query.isLoading || (enabled && !jobId && !jobError),
-    isFetching: query.isFetching || (enabled && !jobId && !jobError),
-    restartJob,
-    jobId,
+    return {
+      ...query,
+      data: query.data ?? fallbackData,
+      isLoading: query.isLoading || (enabled && !jobId && !jobError),
+      isFetching: query.isFetching || (enabled && !jobId && !jobError),
+      restartJob,
+      jobId,
   } as InviteListingHookResult;
-
-  return enhancedQuery;
 }
 
 export function useInvitesCreated(page: number = 1, pageSize: number = 10, enabled: boolean = true) {

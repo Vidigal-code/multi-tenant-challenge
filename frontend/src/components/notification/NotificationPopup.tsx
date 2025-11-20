@@ -15,6 +15,10 @@ export function NotificationPopup({ notification, onClose, onNavigate }: Notific
     const router = useRouter();
     const style = getNotificationStyle(notification.meta?.kind);
     const message = formatNotificationMessage(notification);
+    
+    // Use the new formatter to clean up the body preview if needed
+    // For the popup, we stick to the simplified message, but we could enhance it
+    // if the message is too generic.
 
     const handleIgnore = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -58,10 +62,10 @@ export function NotificationPopup({ notification, onClose, onNavigate }: Notific
                     </div>
                     <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 line-clamp-2">{message}</p>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mb-3 space-y-1">
-                        {notification.meta?.sender && (
+                        {(notification.meta?.sender || notification.sender) && (
                             <div>
                                 <strong className="text-gray-700 dark:text-gray-300">De:</strong> <span className="text-gray-600
-                                dark:text-gray-400">{notification.meta.sender.name} ({notification.meta.sender.email})</span>
+                                dark:text-gray-400">{(notification.meta?.sender?.name || notification.sender?.name)} ({notification.meta?.sender?.email || notification.sender?.email})</span>
                             </div>
                         )}
                         <div>
@@ -96,4 +100,3 @@ export function NotificationPopup({ notification, onClose, onNavigate }: Notific
         </div>
     );
 }
-

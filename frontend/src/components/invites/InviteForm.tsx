@@ -68,14 +68,19 @@ export function InviteForm({companyId, onInvited}: { companyId: string; onInvite
                     value={input} 
                     onChange={e => setInput(e.target.value)} 
                     placeholder="Email ou ID do usuário"
-                    className="w-full sm:flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors text-sm" 
+                    className="w-full sm:flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg
+                    bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500
+                    dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900
+                    dark:focus:ring-white focus:border-transparent transition-colors text-sm"
                     required
                 />
-                <div className="relative w-full sm:w-40">
+                <div className="relative w-full sm:w-60">
                     <select 
                         value={role} 
                         onChange={e => setRole(e.target.value)} 
-                        className="w-full appearance-none px-3 py-2 pr-8 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors text-sm"
+                        className="w-full appearance-none px-3 py-2 pr-8 border border-gray-200
+                        dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white
+                         focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors text-center"
                     >
                         <option value="MEMBER">MEMBRO</option>
                         <option value="ADMIN">ADMINISTRADOR</option>
@@ -91,8 +96,11 @@ export function InviteForm({companyId, onInvited}: { companyId: string; onInvite
                     </svg>
                 </div>
             </div>
-            {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-center">{error}</div>}
-            <button disabled={loading} className="w-full px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors text-sm">
+            {error && <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg
+            text-red-700 dark:text-red-400 text-center">{error}</div>}
+            <button disabled={loading} className="w-full px-4 py-3 bg-gray-900 dark:bg-white text-white
+            dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50
+            disabled:cursor-not-allowed font-medium transition-colors text-sm">
                 {loading ? 'Enviando...' : 'Enviar Convite'}
             </button>
         </form>

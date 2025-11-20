@@ -2,6 +2,7 @@ import {Module} from "@nestjs/common";
 import {ConfigModule, ConfigService} from "@nestjs/config";
 import {InfrastructureModule} from "@infrastructure/infrastructure.module";
 import {RealtimeModule} from "@modules/realtime/realtime.module";
+import {RabbitMQModule} from "@infrastructure/messaging/modules/rabbitmq.module";
 import {FriendshipController} from "@interfaces/http/friendships/friendship.controller";
 import {SendFriendRequestUseCase} from "@application/use-cases/friendships/send-friend-request.usecase";
 import {AcceptFriendRequestUseCase} from "@application/use-cases/friendships/accept-friend-request.usecase";
@@ -11,11 +12,15 @@ import {ListFriendshipsUseCase} from "@application/use-cases/friendships/list-fr
 import {SearchUsersUseCase} from "@application/use-cases/users/search-users.usecase";
 import {USER_REPOSITORY} from "@domain/repositories/users/user.repository";
 import {FRIENDSHIP_REPOSITORY} from "@domain/repositories/friendships/friendship.repository";
+import {FriendshipListingJobsService} from "@application/services/friendship-listing-jobs.service";
+import {UserSearchJobsService} from "@application/services/user-search-jobs.service";
 
 @Module({
-    imports: [ConfigModule, InfrastructureModule, RealtimeModule],
+    imports: [ConfigModule, InfrastructureModule, RealtimeModule, RabbitMQModule],
     controllers: [FriendshipController],
     providers: [
+        FriendshipListingJobsService,
+        UserSearchJobsService,
         {
             provide: SendFriendRequestUseCase,
             useFactory: (users, friendships, domainEvents, eventBuilder, configService) =>

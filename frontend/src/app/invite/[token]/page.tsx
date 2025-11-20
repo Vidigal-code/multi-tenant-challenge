@@ -122,7 +122,8 @@ export default function InviteByCodePage() {
         return (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
                 <div>
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-center">{getErrorMessage(inviteQuery.error, 'Convite inválido ou expirado')}</div>
+                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg
+                    text-red-700 dark:text-red-400 text-center">{getErrorMessage(inviteQuery.error, 'Convite inválido ou expirado')}</div>
                 </div>
             </div>
         );
@@ -155,7 +156,8 @@ export default function InviteByCodePage() {
                             onError={() => setLogoError(true)}
                         />
                         <div className="min-w-0 flex-1">
-                            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-1">{invite.companyName || 'Empresa Desconhecida'}</h2>
+                            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-1">{invite.companyName
+                                || 'Empresa Desconhecida'}</h2>
                             <p className="text-sm text-gray-600 dark:text-gray-400 font-mono truncate">ID: {invite.companyId}</p>
                         </div>
                     </div>
@@ -166,11 +168,14 @@ export default function InviteByCodePage() {
                     </div>
                 )}
                 <div className="space-y-3 text-sm sm:text-base">
-                    <div><strong className="text-gray-700 dark:text-gray-300">Email do Destinatário:</strong> <span className="text-gray-900 dark:text-white">{invite.email}</span></div>
+                    <div><strong className="text-gray-700 dark:text-gray-300">Email do Destinatário:</strong> <span className="
+                    text-gray-900 dark:text-white">{invite.email}</span></div>
                     {invite.inviterName && (
-                        <div><strong className="text-gray-700 dark:text-gray-300">Convidado por:</strong> <span className="text-gray-900 dark:text-white">{invite.inviterName} ({invite.inviterEmail || 'N/A'})</span></div>
+                        <div><strong className="text-gray-700 dark:text-gray-300">Convidado por:</strong> <span className="
+                        text-gray-900 dark:text-white">{invite.inviterName} ({invite.inviterEmail || 'N/A'})</span></div>
                     )}
-                    <div><strong className="text-gray-700 dark:text-gray-300">Cargo:</strong> <span className="text-gray-900 dark:text-white">{invite.role}</span></div>
+                    <div><strong className="text-gray-700 dark:text-gray-300">Cargo:</strong> <span className="text-gray-900
+                    dark:text-white">{invite.role}</span></div>
                     <div>
                         <strong className="text-gray-700 dark:text-gray-300">Status:</strong>{' '}
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
@@ -180,8 +185,10 @@ export default function InviteByCodePage() {
                             'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'
                         }`}>{STATUS_LABELS[invite.status] || invite.status}</span>
                     </div>
-                    <div><strong className="text-gray-700 dark:text-gray-300">Data de Envio:</strong> <span className="text-gray-900 dark:text-white">{formatDate(invite.createdAt)}</span></div>
-                    <div><strong className="text-gray-700 dark:text-gray-300">Expira em:</strong> <span className="text-gray-900 dark:text-white">{formatDate(invite.expiresAt)}</span></div>
+                    <div><strong className="text-gray-700 dark:text-gray-300">Data de Envio:</strong> <span className="text-gray-900
+                     dark:text-white">{formatDate(invite.createdAt)}</span></div>
+                    <div><strong className="text-gray-700 dark:text-gray-300">Expira em:</strong> <span className="
+                    text-gray-900 dark:text-white">{formatDate(invite.expiresAt)}</span></div>
                 </div>
                 {invite.isInviter && (
                     <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
@@ -195,14 +202,19 @@ export default function InviteByCodePage() {
                         <button
                             onClick={() => acceptMutation.mutate()}
                             disabled={acceptMutation.isPending}
-                            className="flex-1 sm:flex-initial px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm sm:text-base whitespace-nowrap"
+                            className="flex-1 sm:flex-initial px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg
+                            hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed
+                            transition-colors font-medium text-sm sm:text-base whitespace-nowrap"
                         >
                             {acceptMutation.isPending ? 'Aceitando...' : 'Aceitar'}
                         </button>
                         <button
                             onClick={() => setShowRejectModal(true)}
                             disabled={rejectMutation.isPending}
-                            className="flex-1 sm:flex-initial px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm sm:text-base whitespace-nowrap"
+                            className="flex-1 sm:flex-initial px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+                            dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50
+                            dark:hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed
+                             transition-colors font-medium text-sm sm:text-base whitespace-nowrap"
                         >
                             {rejectMutation.isPending ? 'Rejeitando...' : 'Rejeitar'}
                         </button>

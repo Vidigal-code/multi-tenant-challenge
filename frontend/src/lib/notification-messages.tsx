@@ -77,12 +77,17 @@ export interface NotificationData {
     recipientUserId?: string | null;
     companyId?: string | null;
     meta?: NotificationMeta;
+    sender?: {
+        id: string;
+        name: string;
+        email: string;
+    };
 }
 
 export function formatNotificationMessage(notification: NotificationData): string {
     const {meta, title, body} = notification;
     const kind = meta?.kind || 'notification.sent';
-    const sender = meta?.sender;
+    const sender = meta?.sender || notification.sender;
 
     const params: NotificationMessageParams = {
         senderName: sender?.name,

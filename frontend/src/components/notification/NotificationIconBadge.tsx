@@ -72,7 +72,8 @@ export function NotificationIconBadge({ enabled }: NotificationIconBadgeProps) {
                         }
                     });
                 }}
-                title={`${unreadCount > 0 ? `${unreadCount} notificação${unreadCount > 1 ? 'ões' : ''} não lida${unreadCount > 1 ? 's' : ''}` : 'Notificações'}`}
+                title={`${unreadCount > 0 ? `${unreadCount} notificação${unreadCount > 1 ? 'ões' : ''} não lida${unreadCount > 1 ? 's' : ''}` : 
+                    'Notificações'}`}
             >
                 <MdNotifications className="text-xl text-gray-700 dark:text-gray-300" />
                 {unreadCount > 0 && (

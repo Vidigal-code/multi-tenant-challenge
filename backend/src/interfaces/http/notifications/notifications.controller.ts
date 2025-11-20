@@ -16,11 +16,16 @@ import {ErrorCode} from "@application/errors/error-code";
 import {ConfigService} from "@nestjs/config";
 import {LoggerService} from "@infrastructure/logging/logger.service";
 import {NotificationListingJobsService} from "@application/services/notification-listing-jobs.service";
+import {NotificationDeletionJobsService} from "@application/services/notification-deletion-jobs.service";
 import {
     CreateNotificationListJobDto,
     NotificationListJobResponseDto,
     NotificationListQueryDto
 } from "@application/dto/notifications/notification-listing.dto";
+import {
+    CreateNotificationDeleteJobDto,
+    NotificationDeleteJobResponseDto
+} from "@application/dto/notifications/notification-deletion.dto";
 
 @ApiTags("notifications")
 @ApiCookieAuth()
@@ -39,6 +44,7 @@ export class NotificationsController {
         private readonly replyToNotification: ReplyToNotificationUseCase,
         private readonly configService: ConfigService,
         private readonly listingJobs: NotificationListingJobsService,
+        private readonly deletionJobs: NotificationDeletionJobsService,
     ) {
         this.logger = new LoggerService(NotificationsController.name, configService);
     }
@@ -79,6 +85,34 @@ export class NotificationsController {
     async deleteListingJob(@CurrentUser() user: any, @Param("jobId") jobId: string) {
         await this.listingJobs.deleteJob(user.sub, jobId);
         return {success: true};
+    }
+
+    @Post("deletion-jobs")
+    @ApiOperation({summary: "Start a background job to delete notifications"})
+    @ApiResponse({
+        status: 201,
+        description: "Job created",
+        schema: {example: {jobId: "uuid", status: "pending", deletedCount: 0, done: false}},
+    })
+    async createDeletionJob(@CurrentUser() user: any, @Body() body: CreateNotificationDeleteJobDto) {
+        const meta = await this.deletionJobs.createJob({sub: user.sub, email: user.email}, body);
+        return {
+            jobId: meta.jobId,
+            status: meta.status,
+            deletedCount: meta.deletedCount,
+            done: false,
+        };
+    }
+
+    @Get("deletion-jobs/:jobId")
+    @ApiOperation({summary: "Get notification deletion job status"})
+    @ApiResponse({status: 200, type: NotificationDeleteJobResponseDto})
+    @ApiResponse({status: 404, description: "Job not found", type: ErrorResponse})
+    async getDeletionJob(
+        @CurrentUser() user: any,
+        @Param("jobId") jobId: string,
+    ) {
+        return this.deletionJobs.getJob(user.sub, jobId);
     }
 
     @Post()

@@ -28,6 +28,8 @@ import {FRIENDSHIP_REPOSITORY} from "@domain/repositories/friendships/friendship
 import {INVITE_TOKEN_SERVICE} from "@application/ports/invite-token.service";
 import {EMAIL_VALIDATION_SERVICE} from "@application/ports/email-validation.service";
 import {NotificationListingJobsService} from "@application/services/notification-listing-jobs.service";
+import {NotificationDeletionJobsService} from "@application/services/notification-deletion-jobs.service";
+import {NotificationDeletionConsumer} from "@interfaces/consumers/notifications/notification-deletion.consumer";
 import {NotificationListCacheService} from "@infrastructure/cache/notification-list-cache.service";
 import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
 
@@ -36,6 +38,8 @@ import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.servi
     controllers: [InviteController, MembershipController, NotificationsController],
     providers: [
         NotificationListingJobsService,
+        NotificationDeletionJobsService,
+        NotificationDeletionConsumer,
         {
             provide: InviteUserUseCase,
             useFactory: (

@@ -31,6 +31,8 @@ export interface FriendshipRepository {
 
     listByUser(filters: FriendshipFilters): Promise<FriendshipListResult>;
 
+    listByUserCursor(params: { userId: string; status?: FriendshipStatus; cursor?: string; limit: number }): Promise<Friendship[]>;
+
     updateStatus(id: string, status: FriendshipStatus): Promise<Friendship>;
 
     delete(id: string): Promise<void>;

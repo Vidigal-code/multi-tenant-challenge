@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { getErrorMessage } from '../../lib/error';
 import { useToast } from '../../hooks/useToast';
-import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
 import { Modal } from '../../components/modals/Modal';
 import {
@@ -13,7 +12,7 @@ import {
     useDeleteAccount,
     type PrimaryOwnerCompany,
     type MemberCompany,
-} from '../../services/api/auth.api';
+} from "../../services/api";
 import { useNotificationPreferences } from '../../hooks/useNotificationPreferences';
 import {FaExclamationTriangle} from "react-icons/fa";
 import {MdBusiness, MdPerson, MdMail, MdPersonAdd, MdPersonRemove, MdRefresh, MdNotifications, MdNotificationsActive, MdBadge} from "react-icons/md";
@@ -40,12 +39,17 @@ export default function ProfilePage() {
     const [logoErrors, setLogoErrors] = useState<Record<string, boolean>>({});
     const { show } = useToast();
     const { preferences: notificationPreferences, derived: notificationDerived } = useNotificationPreferences();
-    const qc = useQueryClient();
+
 
     const profileQuery = useProfile();
     const pageSize = 10;
-    const primaryOwnerCompaniesQuery = usePrimaryOwnerCompanies(primaryOwnerPage, pageSize, showPrimaryOwnerModal);
-    const memberCompaniesQuery = useMemberCompanies(memberCompaniesPage, pageSize, showPrimaryOwnerModal);
+
+    const primaryOwnerCompaniesQuery =
+        usePrimaryOwnerCompanies(primaryOwnerPage, pageSize, showPrimaryOwnerModal);
+
+    const memberCompaniesQuery =
+        useMemberCompanies(memberCompaniesPage, pageSize, showPrimaryOwnerModal);
+
     const updateProfileMutation = useUpdateProfile();
     const deleteAccountMutation = useDeleteAccount();
 
@@ -83,7 +87,12 @@ export default function ProfilePage() {
                 memberCompaniesQuery.refetch();
             }
         }
-    }, [primaryOwnerPage, memberCompaniesPage, showPrimaryOwnerModal, activeCompanyTab]);
+    }, [primaryOwnerPage,
+        memberCompaniesPage,
+        showPrimaryOwnerModal,
+        activeCompanyTab,
+        primaryOwnerCompaniesQuery,
+        memberCompaniesQuery]);
 
     const currentName = profileQuery.data?.name ?? '';
     const currentEmail = profileQuery.data?.email ?? '';
@@ -124,7 +133,11 @@ export default function ProfilePage() {
                 enabled: showPrimaryOwnerModal,
             });
         }
-    }, [showPrimaryOwnerModal, primaryOwnerCompaniesQuery.isLoading, primaryOwnerCompaniesQuery.isError, primaryOwnerCompaniesQuery.data]);
+    }, [showPrimaryOwnerModal,
+        primaryOwnerCompaniesQuery.isLoading,
+        primaryOwnerCompaniesQuery.isError,
+        primaryOwnerCompaniesQuery.data,
+        primaryOwnerCompaniesQuery.error]);
 
     const loading = updateProfileMutation.isPending || profileQuery.isLoading;
 
@@ -792,7 +805,8 @@ export default function ProfilePage() {
                                                         Popup Instantâneo
                                                     </label>
                                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        Um pequeno popup aparece no canto inferior direito sempre que chega uma notificação. Some automaticamente após alguns segundos.
+                                                        Um pequeno popup aparece no canto inferior direito sempre que chega uma notificação.
+                                                        Some automaticamente após alguns segundos.
                                                     </p>
                                                 </div>
                                                 <input

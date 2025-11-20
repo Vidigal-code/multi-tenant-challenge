@@ -2,6 +2,43 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { http } from '../../lib/http';
 import { queryKeys } from '../../lib/queryKeys';
 import { extractNotificationsData } from '../../lib/api-response';
+import { useState, useEffect } from 'react';
+
+export interface NotificationUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface NotificationCompany {
+  name?: string;
+  description?: string;
+  memberCount?: number;
+}
+
+export interface NotificationMeta {
+  kind?: string;
+  channel?: string;
+  sender?: NotificationUser;
+  companyName?: string;
+  companyId?: string;
+  inviteId?: string;
+  inviteUrl?: string;
+  inviteEmail?: string;
+  role?: string;
+  previousRole?: string;
+  removedBy?: NotificationUser;
+  rejectedByName?: string;
+  rejectedByEmail?: string;
+  friendshipId?: string;
+  originalNotificationId?: string;
+  replyTo?: string;
+  originalTitle?: string;
+  originalBody?: string;
+  originalMeta?: NotificationMeta;
+  company?: NotificationCompany;
+  [key: string]: any;
+}
 
 export interface Notification {
   id: string;
@@ -14,61 +51,11 @@ export interface Notification {
   senderName?: string;
   senderUserId?: string;
   recipientUserId?: string | null;
-  meta?: {
-    kind?: string;
-    channel?: string;
-    sender?: {
-      id: string;
-      name: string;
-      email: string;
-    };
-    companyName?: string;
-    companyId?: string;
-    inviteId?: string;
-    inviteUrl?: string;
-    role?: string;
-    previousRole?: string;
-    removedBy?: {
-      id: string;
-      name: string;
-      email: string;
-    };
-    originalNotificationId?: string;
-    replyTo?: string;
-    originalTitle?: string;
-    originalBody?: string;
-    originalMeta?: {
-      kind?: string;
-      channel?: string;
-      sender?: {
-        id: string;
-        name: string;
-        email: string;
-      };
-      company?: {
-        name?: string;
-        description?: string;
-        memberCount?: number;
-      };
-      companyName?: string;
-      companyId?: string;
-      inviteId?: string;
-      inviteUrl?: string;
-      inviteEmail?: string;
-      role?: string;
-      previousRole?: string;
-      removedBy?: {
-        id: string;
-        name: string;
-        email: string;
-      };
-      rejectedByName?: string;
-      rejectedByEmail?: string;
-    };
-    rejectedByName?: string;
-    rejectedByEmail?: string;
-    inviteEmail?: string;
-    [key: string]: any;
+  meta?: NotificationMeta;
+  sender?: {
+    id: string;
+    name: string;
+    email: string;
   };
 }
 
@@ -78,6 +65,8 @@ export interface NotificationsResponse {
   page: number;
   pageSize: number;
 }
+
+export * from './notification-listing.api';
 
 export function useNotifications(page: number = 1, pageSize: number = 10) {
   return useQuery<NotificationsResponse>({
@@ -134,7 +123,7 @@ export function useMarkNotificationRead() {
         queryKey: queryKeys.notifications(),
       }).catch((error: any) => {
         if (error?.name !== 'CancelledError') {
-          console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
+          //console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
         }
       });
     },
@@ -153,7 +142,7 @@ export function useDeleteNotification() {
         queryKey: queryKeys.notifications(),
       }).catch((error: any) => {
         if (error?.name !== 'CancelledError') {
-          console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
+         // console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
         }
       });
     },
@@ -172,7 +161,7 @@ export function useDeleteNotifications() {
         queryKey: queryKeys.notifications(),
       }).catch((error: any) => {
         if (error?.name !== 'CancelledError') {
-          console.error('[useDeleteNotifications] Error invalidating queries:', error);
+          //console.error('[useDeleteNotifications] Error invalidating queries:', error);
         }
       });
     },
@@ -191,12 +180,63 @@ export function useReplyToNotification() {
         queryKey: queryKeys.notifications(),
       }).catch((error: any) => {
         if (error?.name !== 'CancelledError') {
-          console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
+          //console.error('[useMarkNotificationRead/useDeleteNotification/useReplyToNotification] Error invalidating queries:', error);
         }
       });
     },
   });
 }
 
+export interface NotificationDeletionJobResponse {
+    jobId: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    deletedCount: number;
+    done: boolean;
+    error?: string;
+}
 
+export function useNotificationDeletionJob() {
+    const queryClient = useQueryClient();
+    const [jobId, setJobId] = useState<string | null>(null);
 
+    const createJobMutation = useMutation({
+        mutationFn: async (data: { ids?: string[]; deleteAll?: boolean }) => {
+            const response = await http.post<{jobId: string}>('/notifications/deletion-jobs', data);
+            return response.data;
+        },
+        onSuccess: (data) => {
+            setJobId(data.jobId);
+        }
+    });
+
+    const jobQuery = useQuery({
+        queryKey: ['notification-deletion-job', jobId],
+        queryFn: async () => {
+            if (!jobId) throw new Error('No job ID');
+            const response = await http.get<NotificationDeletionJobResponse>(`/notifications/deletion-jobs/${jobId}`);
+            return response.data;
+        },
+        enabled: !!jobId,
+        refetchInterval: (query) => {
+            const data = query.state.data;
+            if (data?.done) return false;
+            return 1000;
+        },
+    });
+
+    useEffect(() => {
+        if (jobQuery.data?.done && jobQuery.data.status === 'completed') {
+            queryClient.invalidateQueries({ queryKey: queryKeys.notifications() });
+            queryClient.invalidateQueries({ queryKey: ['notification-listing'] }); 
+        }
+    }, [jobQuery.data?.done, jobQuery.data?.status, queryClient]);
+
+    return {
+        createJob: createJobMutation.mutate,
+        createJobAsync: createJobMutation.mutateAsync,
+        jobStatus: jobQuery.data,
+        isLoading: createJobMutation.isPending, 
+        error: createJobMutation.error || jobQuery.error,
+        reset: () => setJobId(null)
+    };
+}

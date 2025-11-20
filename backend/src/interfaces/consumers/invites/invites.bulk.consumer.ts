@@ -118,7 +118,8 @@ class InviteBulkConsumer extends BaseResilientConsumer<InviteBulkJobPayload> {
         return {segment, nextCursor};
     }
 
-    private async handleInvites(records: any[], payload: InviteBulkJobPayload): Promise<{total: number; succeeded: number; failed: number}> {
+    private async handleInvites(records: any[], payload: InviteBulkJobPayload): Promise<{total: number;
+        succeeded: number; failed: number}> {
         let succeeded = 0;
         let failed = 0;
         for (const invite of records) {

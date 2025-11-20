@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { redirect } from 'next/navigation';
 import { http } from '../../../lib/http';
 import { useParams } from 'next/navigation';
 import { InviteForm } from '../../../components/invites/InviteForm';
@@ -31,11 +30,10 @@ import {
     useLeaveCompany,
     useTransferOwnership,
     type Member,
-    type Company,
-} from '../../../services/api/company.api';
-import { useProfile } from '../../../services/api/auth.api';
-import { useCreateNotification } from '../../../services/api/notification.api';
-import { useFriendships, useSendFriendNotification } from '../../../services/api/friendship.api';
+} from "../../../services/api";
+import { useProfile } from "../../../services/api";
+import { useCreateNotification } from "../../../services/api";
+import { useFriendships, useSendFriendNotification } from "../../../services/api";
 import { MdNotifications, MdSupervisorAccount } from 'react-icons/md';
 import {FiEdit, FiStar, FiTrash2, FiSend} from "react-icons/fi";
 import {BiUser} from "react-icons/bi";
@@ -74,32 +72,46 @@ export default function CompanyPage() {
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [showMemberModal, setShowMemberModal] = useState(false);
     const [showActionConfirmModal, setShowActionConfirmModal] = useState(false);
+
     const [actionType, setActionType] = useState<'delete' | 'changeRole' | null>(null);
+
     const [actionMember, setActionMember] = useState<Member | null>(null);
+
     const [newRole, setNewRole] = useState<'OWNER' | 'ADMIN' | 'MEMBER' | ''>('');
+
     const [removeMemberConfirm, setRemoveMemberConfirm] = useState<Member | null>(null);
     const [showDeleteCompanyModal, setShowDeleteCompanyModal] = useState(false);
     const [membersPage, setMembersPage] = useState(1);
     const [showMemberMessageModal, setShowMemberMessageModal] = useState(false);
     const [memberMessageTitle, setMemberMessageTitle] = useState('');
     const [memberMessageBody, setMemberMessageBody] = useState('');
+
     const MEMBERS_PAGE_SIZE = 10;
+
     const { show } = useToast();
+
     const qc = useQueryClient();
 
     const profileQuery = useProfile();
     const companyQuery = useCompany(id);
     const roleQuery = useCompanyRole(id);
     const isMember = !!roleQuery.data?.role;
-    const shouldFetchPublicInfo = !isMember && ((companyQuery.isError && ((companyQuery.error as any)?.response?.status === 403 || (companyQuery.error as any)?.response?.status === 401)) || companyQuery.data?.is_public);
+
+    const shouldFetchPublicInfo = !isMember && ((companyQuery.isError
+        && ((companyQuery.error as any)?.response?.status === 403 || (companyQuery.error as any)?.response?.status === 401))
+        || companyQuery.data?.is_public);
+
     const publicCompanyInfoQuery = useCompanyPublicInfo(id, shouldFetchPublicInfo);
+
     const company = useMemo(() => {
         return companyQuery.data || (publicCompanyInfoQuery.data ? {
             ...publicCompanyInfoQuery.data,
             is_public: true,
         } : null);
     }, [companyQuery.data, publicCompanyInfoQuery.data]);
+
     const isPublicCompany = company?.is_public ?? false;
+
     const membersQuery = useCompanyMembers(id, isMember);
     const primaryOwnerQuery = useCompanyPrimaryOwner(id, isMember);
 
@@ -149,7 +161,8 @@ export default function CompanyPage() {
 
         whenReady().then(() => {
             if (!active) return;
-                        unsubscribers.push(
+
+            unsubscribers.push(
                 subscribe(RT_EVENTS.COMPANY_UPDATED, (payload: any) => {
                     if (payload?.id === id) {
                         qc.invalidateQueries({ queryKey: queryKeys.company(id) });
@@ -157,10 +170,12 @@ export default function CompanyPage() {
                     }
                 }),
             );
+
             const refetchMembers = () => {
                 qc.invalidateQueries({ queryKey: queryKeys.companyMembers(id) });
                 qc.invalidateQueries({ queryKey: queryKeys.company(id) });
             };
+
             unsubscribers.push(
                 subscribe(RT_EVENTS.MEMBER_JOINED, (payload: any) => {
                     if (payload?.companyId === id) {
@@ -168,6 +183,7 @@ export default function CompanyPage() {
                     }
                 }),
             );
+
             unsubscribers.push(
                 subscribe(RT_EVENTS.MEMBER_LEFT, (payload: any) => {
                     if (payload?.companyId === id) {
@@ -190,7 +206,8 @@ export default function CompanyPage() {
     if (!id || id === 'undefined') {
         return (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full min-w-0">
-                <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+                <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-200
+                dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
                     ID da empresa inválido.
                 </div>
             </div>
@@ -204,7 +221,8 @@ export default function CompanyPage() {
     if (!company) {
         return (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full min-w-0">
-                <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
+                <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-200
+                 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400">
                     Empresa não encontrada.
                 </div>
             </div>
@@ -227,16 +245,19 @@ export default function CompanyPage() {
 
         return (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
-                <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 p-6 sm:p-8 shadow-sm">
+                <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+                dark:bg-gray-950 p-6 sm:p-8 shadow-sm">
                     <div className="flex flex-col items-center gap-6 text-center justify-center">
                         <img
                             src={logoError || !company.logoUrl ? defaultLogo : company.logoUrl}
                             alt="Logo da empresa"
-                            className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg flex-shrink-0 border border-gray-200 dark:border-gray-800"
+                            className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg flex-shrink-0 border
+                            border-gray-200 dark:border-gray-800"
                             onError={() => setLogoError(true)}
                         />
                         <div className="min-w-0 w-full">
-                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 break-words">{company.name}</h1>
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3
+                            break-words">{company.name}</h1>
                             {company.description && (
                                 <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-2 mb-4">
                                     <p className="break-words">{company.description}</p>
@@ -296,12 +317,15 @@ export default function CompanyPage() {
                                 })()}
                                 
                                 {(() => {
+
                                     const ownerName = isMember
                                         ? (primaryOwnerQuery.data?.primaryOwnerName ?? publicCompanyInfoQuery.data?.primaryOwnerName)
                                         : publicCompanyInfoQuery.data?.primaryOwnerName;
+
                                     const ownerEmail = isMember
                                         ? (primaryOwnerQuery.data?.primaryOwnerEmail ?? publicCompanyInfoQuery.data?.primaryOwnerEmail)
                                         : publicCompanyInfoQuery.data?.primaryOwnerEmail;
+
                                     const isLoading = isMember
                                         ? (publicCompanyInfoQuery.isLoading || primaryOwnerQuery.isLoading)
                                         : publicCompanyInfoQuery.isLoading;
@@ -309,7 +333,8 @@ export default function CompanyPage() {
                                     if (isLoading) {
                                         return (
                                             <div className="w-full">
-                                                <div className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center justify-center gap-2">
+                                                <div className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center
+                                                 justify-center gap-2">
                                                     <FiStar className="text-yellow-500" />
                                                     <span>Proprietário Principal</span>
                                                 </div>
@@ -319,20 +344,23 @@ export default function CompanyPage() {
                                     } else if (ownerName && ownerName !== 'N/A') {
                                         return (
                                             <div className="w-full">
-                                                <div className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center justify-center gap-2">
+                                                <div className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center
+                                                 justify-center gap-2">
                                                     <FiStar className="text-yellow-500" />
                                                     <span>Proprietário Principal</span>
                                                 </div>
                                                 <div className="text-gray-600 dark:text-gray-400 break-words font-medium">{ownerName}</div>
                                                 {ownerEmail && ownerEmail !== 'N/A' && (
-                                                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 break-all mt-1">{ownerEmail}</div>
+                                                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400
+                                                    break-all mt-1">{ownerEmail}</div>
                                                 )}
                                             </div>
                                         );
                                     } else {
                                         return (
                                             <div className="w-full">
-                                                <div className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center justify-center gap-2">
+                                                <div className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center justify-center
+                                                 gap-2">
                                                     <FiStar className="text-yellow-500" />
                                                     <span>Proprietário Principal</span>
                                                 </div>
@@ -348,7 +376,8 @@ export default function CompanyPage() {
                             <button
                                 onClick={() => setShowRequestToJoinModal(true)}
                                 className="w-full sm:w-auto px-6 py-3 bg-gray-900 dark:bg-white text-white
-                                dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base"
+                                dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors
+                                 font-medium text-sm sm:text-base"
                             >
                                 Pedir para participar
                             </button>
@@ -369,7 +398,10 @@ export default function CompanyPage() {
                         onSubmit={async (e) => {
                             e.preventDefault();
                             try {
-                                const contacts = requestContacts.trim() ? requestContacts.split(',').map(e => e.trim()) : null;
+
+                                const contacts = requestContacts.trim() ?
+                                    requestContacts.split(',').map(e => e.trim()) : null;
+
                                 await http.post('/notifications', {
                                     companyId: id,
                                     title: `Solicitação de Ingresso para ${company.name}`,
@@ -377,10 +409,13 @@ export default function CompanyPage() {
                                     recipientsEmails: contacts,
                                     onlyOwnersAndAdmins: true,
                                 });
+
                                 show({ type: 'success', message: 'Solicitação enviada com sucesso' });
+
                                 setShowRequestToJoinModal(false);
                                 setRequestContacts('');
                                 setRequestMessage('');
+
                             } catch (err: any) {
                                 const m = getErrorMessage(err, 'Falha ao enviar solicitação');
                                 show({ type: 'error', message: m });
@@ -388,13 +423,17 @@ export default function CompanyPage() {
                         }}
                     >
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Contatos (emails separados por vírgula)</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300
+                            mb-2">Contatos (emails separados por vírgula)</label>
                             <input
                                 type="text"
                                 value={requestContacts}
                                 onChange={(e) => setRequestContacts(e.target.value)}
                                 placeholder="kauan@gmail.com, rodrigo@gmail.com (deixe vazio para enviar a todos owners e admins)"
-                                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors text-sm"
+                                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+                                dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500
+                                dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900
+                                dark:focus:ring-white focus:border-transparent transition-colors text-sm"
                             />
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Deixe vazio
                                 para enviar a todos os owners e admins da empresa</p>
@@ -490,7 +529,8 @@ export default function CompanyPage() {
                 {isMember && primaryOwnerQuery.data && (
                     <div className="w-full border-t border-gray-200 dark:border-gray-800 pt-4 mt-4">
                         <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-800">
-                            <div className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2 text-sm sm:text-base">
+                            <div className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center justify-center gap-2 text-sm
+                            sm:text-base">
                                 <FiStar className="text-yellow-500" />
                                 <span>Proprietário Principal</span>
                             </div>
@@ -510,7 +550,8 @@ export default function CompanyPage() {
                     </div>
                 )}
             </div>
-            {message && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-center">{message}</div>}
+            {message && <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800
+             rounded-lg text-green-700 dark:text-green-400 text-center">{message}</div>}
             {error && <div className="p-4 bg-red-50 dark:bg-red-900/20 border
             border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-center">{error}</div>}
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 items-center justify-center">
@@ -544,7 +585,8 @@ export default function CompanyPage() {
             {canManage && (
                 <>
                     <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-center justify-center">
-                        <button onClick={() => setShowInvite(s => !s)} className="w-full sm:w-auto text-center text-sm text-gray-900 dark:text-white hover:underline">
+                        <button onClick={() => setShowInvite(s => !s)} className="w-full sm:w-auto text-center text-sm
+                        text-gray-900 dark:text-white hover:underline">
                             {showInvite ? 'Ocultar formulário de convite' : 'Mostrar formulário de convite'}
                         </button>
                         {canEdit && (
@@ -559,7 +601,8 @@ export default function CompanyPage() {
                         )}
                         {canDelete && (
                             <button
-                                className="w-full sm:w-auto px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950
+                                className="w-full sm:w-auto px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg
+                                bg-white dark:bg-gray-950
                              text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20
                              transition-colors font-medium text-sm"
                                 onClick={() => setShowDeleteCompanyModal(true)}
@@ -703,7 +746,8 @@ export default function CompanyPage() {
                             setNotificationTitle(e.target.value)} placeholder="Assunto" className="w-full px-4
                             py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
                             text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400
-                            focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors" required />
+                            focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent
+                             transition-colors" required />
                     </div>
                     <div>
                         <textarea value={notificationBody} onChange={e =>
@@ -718,7 +762,8 @@ export default function CompanyPage() {
                             setNotificationEmails(e.target.value)} placeholder="Emails (separados por vírgula, deixe vazio para todos)"
                             className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
                                 dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400
-                                 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors" />
+                                 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent
+                                  transition-colors" />
                     </div>
                     <div className="flex justify-end gap-3">
                         <button type="button" onClick={() => setShowNotificationModal(false)}
@@ -742,6 +787,7 @@ export default function CompanyPage() {
                 </div>
             ) : (
                 (() => {
+
                     const allMembers = membersQuery.data?.members || [];
                     const totalMembers = membersQuery.data?.total ?? allMembers.length;
                     const totalPages = Math.max(1, Math.ceil(totalMembers / MEMBERS_PAGE_SIZE));
@@ -776,7 +822,9 @@ export default function CompanyPage() {
                                             type="button"
                                             onClick={() => setMembersPage((p) => Math.max(1, p - 1))}
                                             disabled={currentPage === 1}
-                                            className="px-3 py-1.5 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                                            className="px-3 py-1.5 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                                            text-gray-700 dark:text-gray-300 disabled:opacity-50
+                                            disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                                         >
                                             Anterior
                                         </button>
@@ -787,7 +835,10 @@ export default function CompanyPage() {
                                             type="button"
                                             onClick={() => setMembersPage((p) => Math.min(totalPages, p + 1))}
                                             disabled={currentPage === totalPages}
-                                            className="px-3 py-1.5 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                                            className="px-3 py-1.5 text-xs sm:text-sm border border-gray-200
+                                            dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                                            text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed
+                                            hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                                         >
                                             Próxima
                                         </button>
@@ -932,7 +983,8 @@ export default function CompanyPage() {
                         </select>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                             {primaryOwnerQuery.data?.primaryOwnerUserId === profileQuery.data?.id
-                                ? 'Você pode transferir a propriedade para outros PROPRIETÁRIOS ou ADMINISTRADORES. Você se tornará um ADMINISTRADOR após transferir a propriedade.'
+                                ? 'Você pode transferir a propriedade para outros PROPRIETÁRIOS ou ' +
+                                'ADMINISTRADORES. Você se tornará um ADMINISTRADOR após transferir a propriedade.'
                                 : 'Você se tornará um ADMINISTRADOR após transferir a propriedade.'}
                         </p>
                     </div>
@@ -971,6 +1023,7 @@ export default function CompanyPage() {
                 }}
             >
                 {selectedMember && (() => {
+
                     const memberCanDelete = () => {
                         if (selectedMember.userId === profileQuery.data?.id) return false;
                         if (roleQuery.data?.role === 'ADMIN') {
@@ -996,10 +1049,13 @@ export default function CompanyPage() {
                     
                     const isCurrentUser = selectedMember.userId === profileQuery.data?.id;
                     const currentUserRole = roleQuery.data?.role;
+
                     const isAdmin = currentUserRole === 'ADMIN' || currentUserRole === 'OWNER';
-                    const isFriend = friends.some(f => 
+
+                    const isFriend = friends.some(f =>
                         (f.requester?.id === selectedMember.userId || f.addressee?.id === selectedMember.userId)
                     );
+
                     const canSendMessage = !isCurrentUser && (isAdmin || (currentUserRole === 'MEMBER' && isFriend));
 
                     return (
@@ -1053,7 +1109,9 @@ export default function CompanyPage() {
                                                 <select
                                                     value={newRole || selectedMember.role}
                                                     onChange={(e) => setNewRole(e.target.value as any)}
-                                                    className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white text-sm"
+                                                    className="flex-1 px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+                                                    dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-2
+                                                    focus:ring-gray-900 dark:focus:ring-white text-sm"
                                                 >
                                                     {['OWNER', 'ADMIN', 'MEMBER']
                                                         .filter(r => roleQuery.data?.role === 'OWNER' ? true : r !== 'OWNER')
@@ -1112,7 +1170,10 @@ export default function CompanyPage() {
                                             setMemberMessageBody('');
                                             setShowMemberMessageModal(true);
                                         }}
-                                        className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                                        className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg
+                                        bg-white dark:bg-gray-950
+                                        text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors
+                                         font-medium text-sm flex items-center justify-center gap-2"
                                     >
                                         <FiSend className="text-base" />
                                         Enviar Mensagem
@@ -1213,7 +1274,10 @@ export default function CompanyPage() {
                             value={memberMessageTitle}
                             onChange={(e) => setMemberMessageTitle(e.target.value)}
                             placeholder="Assunto da mensagem"
-                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"
+                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+                            dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500
+                            dark:placeholder-gray-400 focus:outline-none focus:ring-2
+                            focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors"
                             required
                         />
                     </div>
@@ -1225,7 +1289,10 @@ export default function CompanyPage() {
                             value={memberMessageBody}
                             onChange={(e) => setMemberMessageBody(e.target.value)}
                             placeholder="Digite sua mensagem"
-                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent resize-none transition-colors"
+                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-800 rounded-lg
+                            bg-white dark:bg-gray-950 text-gray-900 dark:text-white placeholder-gray-500
+                            dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900
+                            dark:focus:ring-white focus:border-transparent resize-none transition-colors"
                             rows={4}
                             required
                         />
@@ -1238,14 +1305,18 @@ export default function CompanyPage() {
                                 setMemberMessageTitle('');
                                 setMemberMessageBody('');
                             }}
-                            className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm"
+                            className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
+                            dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50
+                            dark:hover:bg-gray-900 transition-colors font-medium text-sm"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={sendFriendMessageMutation.isPending || !memberMessageTitle.trim() || !memberMessageBody.trim()}
-                            className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors flex items-center gap-2"
+                            className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg
+                            hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed
+                             font-medium text-sm transition-colors flex items-center gap-2"
                         >
                             <FiSend className="text-base" />
                             {sendFriendMessageMutation.isPending ? 'Enviando...' : 'Enviar Mensagem'}

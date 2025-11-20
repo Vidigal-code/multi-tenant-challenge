@@ -21,6 +21,9 @@
     "worker:generic": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/generic.events.consumer.ts",
     "worker:realtime": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/realtime-notifications.consumer.ts",
     "worker:notifications-list": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification.list.consumer.ts",
+    "worker:notifications-delete": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification-deletion.consumer.ts",
+    "worker:friendships-list": "ts-node -r tsconfig-paths/register src/interfaces/consumers/friendships/friendship.list.consumer.ts",
+    "worker:users-search": "ts-node -r tsconfig-paths/register src/interfaces/consumers/users/user.search.consumer.ts",
     "clean:queues": "powershell -ExecutionPolicy Bypass -File ./scripts/clean-queues.ps1",
     "clear:dedup": "powershell -ExecutionPolicy Bypass -File ./scripts/clear-redis-dedup.ps1"
   },

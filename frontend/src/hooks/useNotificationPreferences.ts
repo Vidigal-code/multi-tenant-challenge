@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from 'react';
-import { useProfile } from '../services/api/auth.api';
+import { useProfile } from "../services/api";
 
 export interface NotificationPreferences {
     realtimeEnabled?: boolean;

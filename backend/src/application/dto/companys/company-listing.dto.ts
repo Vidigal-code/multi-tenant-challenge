@@ -107,4 +107,3 @@ export class CompanyListingJobResponseDto {
     @ApiPropertyOptional({example: "Optional failure message"})
     error?: string;
 }
-

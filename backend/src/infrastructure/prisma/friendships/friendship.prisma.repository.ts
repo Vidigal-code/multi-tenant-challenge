@@ -83,12 +83,47 @@ export class FriendshipPrismaRepository implements FriendshipRepository {
         ]);
 
         return {
-            data: records.map(r => this.toDomain(r)),
+            data: records.map(r => this.toDomainWithUsers(r)),
             total,
             page,
             pageSize,
             recordsWithUsers: records,
         };
+    }
+
+    async listByUserCursor(params: { userId: string; status?: FriendshipStatus; cursor?: string; limit: number }): Promise<Friendship[]> {
+        const {userId, status, cursor, limit} = params;
+        const where: any = {
+            OR: [
+                {requesterId: userId},
+                {addresseeId: userId},
+            ],
+        };
+        if (status) {
+            where.status = status;
+        }
+
+        const findArgs: any = {
+            where,
+            include: {
+                requester: {
+                    select: {id: true, name: true, email: true},
+                },
+                addressee: {
+                    select: {id: true, name: true, email: true},
+                },
+            },
+            orderBy: {id: "desc"},
+            take: limit,
+        };
+
+        if (cursor) {
+            findArgs.cursor = {id: cursor};
+            findArgs.skip = 1;
+        }
+
+        const records = await this.prisma.friendship.findMany(findArgs);
+        return records.map(r => this.toDomainWithUsers(r));
     }
 
     async updateStatus(id: string, status: FriendshipStatus): Promise<Friendship> {
@@ -125,6 +160,12 @@ export class FriendshipPrismaRepository implements FriendshipRepository {
             createdAt: record.createdAt,
             updatedAt: record.updatedAt,
         });
+    }
+
+    private toDomainWithUsers(record: any): Friendship {
+        // This method attaches user data to the friendship object via a hack or extends the entity
+        // For now, we'll return the standard entity, but the repository also returns raw records for controllers
+        return this.toDomain(record);
     }
 }
 

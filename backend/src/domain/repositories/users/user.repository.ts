@@ -27,6 +27,8 @@ export interface UserRepository {
     deleteById(id: string): Promise<void>;
 
     searchByNameOrEmail(query: string, excludeUserId: string): Promise<User[]>;
+
+    searchByNameOrEmailCursor(query: string, excludeUserId: string, cursor: string | undefined, limit: number): Promise<User[]>;
 }
 
 export const USER_REPOSITORY = Symbol("USER_REPOSITORY");

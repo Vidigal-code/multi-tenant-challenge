@@ -55,6 +55,22 @@ export const appConfig = registerAs("app", () => ({
         maxPageSize: parseInt(process.env.NOTIFICATIONS_LIST_MAX_PAGE_SIZE ?? "1000", 10),
         redisTtlSeconds: parseInt(process.env.NOTIFICATIONS_LIST_REDIS_TTL ?? "3600", 10),
     },
+    friendshipListing: {
+        defaultChunkSize: parseInt(process.env.FRIENDSHIPS_LIST_CHUNK_SIZE ?? "1000", 10),
+        minChunkSize: parseInt(process.env.FRIENDSHIPS_LIST_MIN_CHUNK_SIZE ?? "200", 10),
+        maxChunkSize: parseInt(process.env.FRIENDSHIPS_LIST_MAX_CHUNK_SIZE ?? "5000", 10),
+        defaultPageSize: parseInt(process.env.FRIENDSHIPS_LIST_PAGE_SIZE ?? "200", 10),
+        maxPageSize: parseInt(process.env.FRIENDSHIPS_LIST_MAX_PAGE_SIZE ?? "1000", 10),
+        redisTtlSeconds: parseInt(process.env.FRIENDSHIPS_LIST_REDIS_TTL ?? "3600", 10),
+    },
+    userSearch: {
+        defaultChunkSize: parseInt(process.env.USER_SEARCH_CHUNK_SIZE ?? "1000", 10),
+        minChunkSize: parseInt(process.env.USER_SEARCH_MIN_CHUNK_SIZE ?? "200", 10),
+        maxChunkSize: parseInt(process.env.USER_SEARCH_MAX_CHUNK_SIZE ?? "5000", 10),
+        defaultPageSize: parseInt(process.env.USER_SEARCH_PAGE_SIZE ?? "20", 10),
+        maxPageSize: parseInt(process.env.USER_SEARCH_MAX_PAGE_SIZE ?? "100", 10),
+        redisTtlSeconds: parseInt(process.env.USER_SEARCH_REDIS_TTL ?? "300", 10),
+    },
     inviteBulk: {
         defaultChunkSize: parseInt(process.env.INVITES_BULK_CHUNK_SIZE ?? "500", 10),
         minChunkSize: parseInt(process.env.INVITES_BULK_MIN_CHUNK_SIZE ?? "100", 10),

@@ -15,12 +15,14 @@ export function ToastContainer() {
         <div className="fixed top-4 right-4 z-[10002] space-y-2 w-full sm:w-72 max-w-sm px-4 sm:px-0">
             {toasts.map(t => (
                 <div key={t.id}
-                     className={`rounded-lg shadow-xl border border-white/20 dark:border-white/20 px-4 py-3 text-sm flex flex-col gap-1 transition-opacity animate-slide-up ${COLORS[t.type || 'info']}`}>
+                     className={`rounded-lg shadow-xl border border-white/20 dark:border-white/20 px-4
+                      py-3 text-sm flex flex-col gap-1 transition-opacity animate-slide-up ${COLORS[t.type || 'info']}`}>
                     {t.title && <p className="font-semibold">{t.title}</p>}
                     <p>{t.message}</p>
                     <button aria-label="close" onClick={() => dismiss(t.id)}
                             className="self-end text-xs opacity-70 hover:opacity-100 transition-opacity">
-                        <svg className="w-4 h-4" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-4 h-4" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                             viewBox="0 0 24 24" stroke="currentColor">
                             <path d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
