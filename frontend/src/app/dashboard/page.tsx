@@ -29,7 +29,7 @@ export default function DashboardPage() {
     const [editDescription, setEditDescription] = useState('');
     const [editIsPublic, setEditIsPublic] = useState(false);
     const [saving, setSaving] = useState(false);
-    const pageSize = 10;
+    const pageSize = 3;
     const router = useRouter();
     const {show} = useToast();
 
@@ -183,7 +183,9 @@ export default function DashboardPage() {
         });
     };
 
-    const isLoading = activeTab === 'owner' ? primaryOwnerQuery.isLoading : memberCompaniesQuery.isLoading;
+    const ownerLoad = primaryOwnerQuery.isLoading || primaryOwnerQuery.jobBootstrapping;
+    const memberLoad = memberCompaniesQuery.isLoading || memberCompaniesQuery.jobBootstrapping;
+    const isLoading = activeTab === 'owner' ? ownerLoad : memberLoad;
     const currentData = activeTab === 'owner' ? primaryOwnerQuery.data : memberCompaniesQuery.data;
     const currentPage = activeTab === 'owner' ? ownerPage : memberPage;
     const total = currentData?.total ?? 0;

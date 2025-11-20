@@ -5,6 +5,7 @@ import {LoginUseCase} from "@application/use-cases/auths/login.usecase";
 import {DeleteAccountUseCase} from "@application/use-cases/users/delete-account.usecase";
 import {ListPrimaryOwnerCompaniesUseCase} from "@application/use-cases/companys/list-primary-owner-companies.usecase";
 import {ListMemberCompaniesUseCase} from "@application/use-cases/companys/list-member-companies.usecase";
+import {CompanyListingJobsService} from "@application/services/company-listing-jobs.service";
 import {JwtService} from "@nestjs/jwt";
 import {ConfigService} from "@nestjs/config";
 import {UserRepository} from "@domain/repositories/users/user.repository";
@@ -42,6 +43,11 @@ describe("AuthController extra endpoints", () => {
     const deleteAccount = {execute: jest.fn()} as any as DeleteAccountUseCase;
     const listPrimaryOwnerCompanies = {execute: jest.fn()} as any as ListPrimaryOwnerCompaniesUseCase;
     const listMemberCompanies = {execute: jest.fn()} as any as ListMemberCompaniesUseCase;
+    const companyListingJobs = {
+        createJob: jest.fn(),
+        getJob: jest.fn(),
+        deleteJob: jest.fn(),
+    } as any as CompanyListingJobsService;
 
     const controller = new AuthController(
         signup,
@@ -50,6 +56,7 @@ describe("AuthController extra endpoints", () => {
         deleteAccount,
         listPrimaryOwnerCompanies,
         listMemberCompanies,
+        companyListingJobs,
         jwt,
         cfg,
         userRepo,

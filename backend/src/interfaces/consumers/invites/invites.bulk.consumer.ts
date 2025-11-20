@@ -1,143 +1,173 @@
 import {ConfigService} from "@nestjs/config";
 import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
 import {BaseResilientConsumer} from "../base.resilient.consumer";
+import {InviteBulkJobPayload} from "@application/dto/invites/invite-bulk.dto";
 import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
-import {InvitePrismaRepository} from "@infrastructure/prisma/invites/invite.prisma.repository";
-import {InviteRepository, InviteListCursor} from "@domain/repositories/invites/invite.repository";
 import {InviteBulkCacheService} from "@infrastructure/cache/invite-bulk-cache.service";
 import {LoggerService} from "@infrastructure/logging/logger.service";
-import {InviteBulkJobPayload} from "@application/services/invite-bulk-jobs.service";
-import {DLQ_INVITES_BULK_QUEUE, INVITES_BULK_QUEUE} from "@infrastructure/messaging/constants/queue.constants";
 import {InviteStatus} from "@domain/enums/invite-status.enum";
 
-class InviteBulkConsumer extends BaseResilientConsumer<InviteBulkJobPayload> {
-    private readonly invites: InviteRepository;
+const INVITES_BULK_QUEUE = "invites.bulk.requests";
+const DLQ_INVITES_BULK_QUEUE = "dlq.invites.bulk.requests";
 
+interface InviteCursor {
+    id: string;
+}
+
+class InviteBulkConsumer extends BaseResilientConsumer<InviteBulkJobPayload> {
     constructor(
         rabbit: RabbitMQService,
         private readonly prisma: PrismaService,
         private readonly cache: InviteBulkCacheService,
         configService: ConfigService,
     ) {
-        super(
-            rabbit,
-            {
-                queue: INVITES_BULK_QUEUE,
-                dlq: DLQ_INVITES_BULK_QUEUE,
-                prefetch: parseInt((configService.get("app.rabbitmq.prefetch") as any) ?? "5", 10),
-                retryMax: parseInt((configService.get("app.rabbitmq.retryMax") as any) ?? "5", 10),
-                redisUrl: (configService.get("app.redisUrl") as string) || process.env.REDIS_URL || "redis://localhost:6379",
-                dedupTtlSeconds: 60,
-            },
-            configService,
-        );
-        this.invites = new InvitePrismaRepository(prisma);
+        super(rabbit, {
+            queue: INVITES_BULK_QUEUE,
+            dlq: DLQ_INVITES_BULK_QUEUE,
+            prefetch: parseInt((configService.get("app.rabbitmq.prefetch") as any) ?? "5", 10),
+            retryMax: parseInt((configService.get("app.rabbitmq.retryMax") as any) ?? "5", 10),
+            redisUrl: (configService.get("app.redisUrl") as string) || process.env.REDIS_URL || "redis://localhost:6379",
+            dedupTtlSeconds: 60,
+        }, configService);
     }
 
     protected async process(payload: InviteBulkJobPayload): Promise<void> {
         let processed = 0;
+        let succeeded = 0;
         let failed = 0;
+        await this.safeUpdateMeta(payload.jobId, {status: "processing", processed, succeeded, failed, error: undefined});
         try {
-            await this.cache.update(payload.jobId, {status: "processing", processed: 0, failedCount: 0, error: undefined});
-            if (payload.scope === "selected") {
-                const normalized = await this.filterSelected(payload);
-                failed = (payload.inviteIds?.length ?? 0) - normalized.length;
-                processed += await this.processChunk(normalized, payload);
-            } else {
-                processed += await this.processAll(payload);
+            if (payload.scope === "selected" && payload.inviteIds) {
+                const chunks = this.splitIntoChunks(payload.inviteIds, payload.chunkSize);
+                for (const ids of chunks) {
+                    const invites = await this.prisma.invite.findMany({
+                        where: {id: {in: ids}},
+                    });
+                    const result = await this.handleInvites(invites, payload);
+                    processed += result.total;
+                    succeeded += result.succeeded;
+                    failed += result.failed;
+                    const shouldContinue = await this.safeUpdateMeta(payload.jobId, {processed, succeeded, failed});
+                    if (!shouldContinue) return;
+                }
+            } else if (payload.scope === "all") {
+                let cursor: InviteCursor | undefined;
+                while (true) {
+                    const page = await this.fetchInvitesPage(payload, cursor);
+                    if (!page.segment.length) break;
+                    const result = await this.handleInvites(page.segment, payload);
+                    processed += result.total;
+                    succeeded += result.succeeded;
+                    failed += result.failed;
+                    const shouldContinue = await this.safeUpdateMeta(payload.jobId, {processed, succeeded, failed});
+                    if (!shouldContinue) return;
+                    if (!page.nextCursor) break;
+                    cursor = page.nextCursor;
+                }
             }
-            await this.cache.update(payload.jobId, {
+
+            await this.safeUpdateMeta(payload.jobId, {
                 status: "completed",
                 processed,
-                total: processed + failed,
-                failedCount: failed,
+                succeeded,
+                failed,
                 finishedAt: new Date().toISOString(),
             });
         } catch (error: any) {
-            const message = error?.message || "INVITE_BULK_JOB_FAILED";
-            this.logger.error(`Invite bulk job failed: ${payload.jobId} - ${message}`);
-            await this.cache.update(payload.jobId, {
+            await this.safeUpdateMeta(payload.jobId, {
                 status: "failed",
-                error: message,
                 processed,
-                failedCount: failed,
+                succeeded,
+                failed,
+                error: error?.message || "INVITE_BULK_JOB_FAILED",
                 finishedAt: new Date().toISOString(),
             });
             throw error;
         }
     }
 
-    private async processChunk(inviteIds: string[], payload: InviteBulkJobPayload): Promise<number> {
-        const chunks = this.chunk(inviteIds, payload.chunkSize);
-        let processed = 0;
-        for (const chunk of chunks) {
-            if (!chunk.length) continue;
-            if (payload.action === "delete") {
-                await this.invites.deleteMany(chunk);
-            } else {
-                await this.invites.updateStatusBulk(chunk, InviteStatus.REJECTED);
-            }
-            processed += chunk.length;
-            await this.cache.update(payload.jobId, {processed});
+    private splitIntoChunks<T>(items: T[], chunkSize: number): T[][] {
+        const result: T[][] = [];
+        for (let i = 0; i < items.length; i += chunkSize) {
+            result.push(items.slice(i, i + chunkSize));
         }
-        return processed;
+        return result;
     }
 
-    private async processAll(payload: InviteBulkJobPayload): Promise<number> {
-        let cursor: InviteListCursor | undefined;
-        let processed = 0;
-        while (true) {
-            const page = payload.target === "created"
-                ? await this.invites.listByInviterCursor({
-                    inviterId: payload.userId,
-                    cursor,
-                    limit: payload.chunkSize,
-                })
-                : await this.invites.listByEmailCursor({
-                    email: payload.userEmail!,
-                    cursor,
-                    limit: payload.chunkSize,
-                });
-            if (!page.data.length) {
-                break;
-            }
-            const ids = page.data.map((invite) => invite.id);
-            if (payload.action === "delete") {
-                await this.invites.deleteMany(ids);
-            } else {
-                await this.invites.updateStatusBulk(ids, InviteStatus.REJECTED);
-            }
-            processed += ids.length;
-            await this.cache.update(payload.jobId, {processed, total: processed});
-            if (!page.nextCursor) {
-                break;
-            }
-            cursor = page.nextCursor;
-        }
-        return processed;
-    }
-
-    private async filterSelected(payload: InviteBulkJobPayload): Promise<string[]> {
-        const ids = payload.inviteIds ?? [];
-        if (!ids.length) return [];
-        const invites: Array<{ id: string }> = await this.prisma.invite.findMany({
-            where: {
-                id: {in: ids},
-                ...(payload.action === "delete"
-                    ? {inviterId: payload.userId}
-                    : {email: payload.userEmail}),
-            },
-            select: {id: true},
+    private async fetchInvitesPage(
+        payload: InviteBulkJobPayload,
+        cursor?: InviteCursor,
+    ): Promise<{segment: any[]; nextCursor?: InviteCursor}> {
+        const where = payload.action === "delete"
+            ? {inviterId: payload.userId}
+            : {
+                email: payload.userEmail,
+            };
+        const rows = await this.prisma.invite.findMany({
+            where,
+            orderBy: [{createdAt: "desc"}, {id: "desc"}],
+            take: payload.chunkSize + 1,
+            ...(cursor ? {cursor: {id: cursor.id}, skip: 1} : {}),
         });
-        return invites.map((invite) => invite.id);
+        if (!rows.length) {
+            return {segment: []};
+        }
+        const hasMore = rows.length > payload.chunkSize;
+        const segment = hasMore ? rows.slice(0, payload.chunkSize) : rows;
+        const nextCursor = hasMore ? {id: segment[segment.length - 1].id} : undefined;
+        return {segment, nextCursor};
     }
 
-    private chunk<T>(items: T[], size: number): T[][] {
-        const chunks: T[][] = [];
-        for (let i = 0; i < items.length; i += size) {
-            chunks.push(items.slice(i, i + size));
+    private async handleInvites(records: any[], payload: InviteBulkJobPayload): Promise<{total: number; succeeded: number; failed: number}> {
+        let succeeded = 0;
+        let failed = 0;
+        for (const invite of records) {
+            const ok = await this.applyAction(invite, payload);
+            if (ok) {
+                succeeded++;
+            } else {
+                failed++;
+            }
         }
-        return chunks;
+        return {total: records.length, succeeded, failed};
+    }
+
+    private async applyAction(invite: any, payload: InviteBulkJobPayload): Promise<boolean> {
+        if (payload.action === "delete") {
+            if (invite.inviterId !== payload.userId) return false;
+            try {
+                await this.prisma.invite.delete({where: {id: invite.id}});
+                return true;
+            } catch {
+                return false;
+            }
+        } else {
+            const inviteEmail = invite.email?.toLowerCase?.() ?? invite.email;
+            if (!payload.userEmail || inviteEmail !== payload.userEmail.toLowerCase()) return false;
+            if (invite.status !== InviteStatus.PENDING) return false;
+            try {
+                await this.prisma.invite.update({
+                    where: {id: invite.id},
+                    data: {status: InviteStatus.REJECTED},
+                });
+                return true;
+            } catch {
+                return false;
+            }
+        }
+    }
+
+    private async safeUpdateMeta(jobId: string, patch: Record<string, any>): Promise<boolean> {
+        try {
+            await this.cache.update(jobId, patch);
+            return true;
+        } catch (error: any) {
+            if (String(error?.message || "").includes("INVITE_BULK_JOB_NOT_FOUND")) {
+                this.logger.default(`Invite bulk job ${jobId} discarded before completion.`);
+                return false;
+            }
+            throw error;
+        }
     }
 }
 
@@ -159,7 +189,6 @@ async function bootstrap() {
         await prisma.onModuleDestroy();
         process.exit(0);
     };
-
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
 }

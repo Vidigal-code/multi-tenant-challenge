@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import { useQuery, useMutation, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import { http } from '../../lib/http';
 import { queryKeys } from '../../lib/queryKeys';
 import { extractData } from '../../lib/api-response';
@@ -11,7 +12,12 @@ export interface Profile {
   notificationPreferences?: Record<string, boolean>;
 }
 
-const PROFILE_STALE_TIME = Number(process.env.NEXT_PUBLIC_PROFILE_STALE_TIME) || 60_000; // Default: 1 minute
+const PROFILE_STALE_TIME = Number(process.env.NEXT_PUBLIC_PROFILE_STALE_TIME) || 60_000; 
+
+const COMPANY_LISTING_PATH: Record<'primary-owner' | 'member', string> = {
+  'primary-owner': '/auth/account/primary-owner-companies',
+  'member': '/auth/account/member-companies',
+};
 
 export function useProfile(enabled: boolean = true) {
   return useQuery<Profile>({
@@ -37,21 +43,179 @@ export interface PrimaryOwnerCompany {
   primaryOwnerEmail: string;
 }
 
-export function usePrimaryOwnerCompanies(page: number = 1, pageSize: number = 10, enabled: boolean = true) {
-  return useQuery<{ data: PrimaryOwnerCompany[]; total: number; page: number; pageSize: number }>({
-    queryKey: [...queryKeys.primaryOwnerCompanies(), page, pageSize],
+interface CompanyListingQueryData<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  done: boolean;
+  jobId: string | null;
+  error?: string | null;
+}
+
+interface CompanyListingJobResponse<T> {
+  jobId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  processed: number;
+  total?: number;
+  items: T[];
+  done: boolean;
+  nextCursor?: number | null;
+  error?: string;
+}
+
+async function startCompanyListingJob(type: 'primary-owner' | 'member', chunkSize?: number) {
+  const response = await http.post(`${COMPANY_LISTING_PATH[type]}/listing`, chunkSize ? { chunkSize } : {});
+  return response.data as CompanyListingJobResponse<any>;
+}
+
+async function fetchCompanyListingPage<T>(type: 'primary-owner' | 'member', jobId: string, cursor: number, pageSize: number) {
+  const response = await http.get(`${COMPANY_LISTING_PATH[type]}/listing/${jobId}`, {
+    params: { cursor, pageSize },
+  });
+  return response.data as CompanyListingJobResponse<T>;
+}
+
+async function deleteCompanyListingJob(type: 'primary-owner' | 'member', jobId: string) {
+  await http.delete(`${COMPANY_LISTING_PATH[type]}/listing/${jobId}`);
+}
+
+type CompanyListingHookResult<T> = UseQueryResult<CompanyListingQueryData<T>> & {
+  restartJob: () => void;
+  jobBootstrapping: boolean;
+};
+
+function useCompanyListing<T extends PrimaryOwnerCompany | MemberCompany>(
+  type: 'primary-owner' | 'member',
+  page: number = 1,
+  pageSize: number = 10,
+  enabled: boolean = true,
+): CompanyListingHookResult<T> {
+  const [jobId, setJobId] = useState<string | null>(null);
+  const jobIdRef = useRef<string | null>(null);
+  const [restartKey, setRestartKey] = useState(0);
+  const [jobError, setJobError] = useState<string | null>(null);
+
+  const cleanupJob = useCallback(async (id: string | null) => {
+    if (!id) return;
+    try {
+      await deleteCompanyListingJob(type, id);
+    } catch {
+    }
+  }, [type]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!enabled) {
+      cleanupJob(jobIdRef.current);
+      jobIdRef.current = null;
+      setJobId(null);
+      setJobError(null);
+      return;
+    }
+
+    setJobId(null);
+    setJobError(null);
+
+    const createJob = async () => {
+      try {
+        const response = await startCompanyListingJob(type);
+        if (cancelled) {
+          await cleanupJob(response.jobId);
+          return;
+        }
+        jobIdRef.current = response.jobId;
+        setJobId(response.jobId);
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Falha ao iniciar job de empresas';
+        setJobError(message);
+      }
+    };
+
+    createJob();
+    return () => {
+      cancelled = true;
+    };
+  }, [type, enabled, restartKey, cleanupJob]);
+
+  const restartJob = useCallback(() => {
+    cleanupJob(jobIdRef.current);
+    jobIdRef.current = null;
+    setJobId(null);
+    setJobError(null);
+    setRestartKey((value) => value + 1);
+  }, [cleanupJob]);
+
+  useEffect(() => {
+    return () => {
+      cleanupJob(jobIdRef.current);
+      jobIdRef.current = null;
+    };
+  }, [cleanupJob]);
+
+  const cursor = Math.max(0, (page - 1) * pageSize);
+  const queryKeyBase = type === 'primary-owner' ? queryKeys.primaryOwnerCompanies() : queryKeys.memberCompanies();
+  const query = useQuery<CompanyListingQueryData<T>>({
+    queryKey: [...queryKeyBase, type, page, pageSize, jobId, restartKey],
+    enabled: enabled && Boolean(jobId),
     queryFn: async () => {
-      const response = await http.get('/auth/account/primary-owner-companies', {
-        params: { page, pageSize },
-      });
-      return response.data as { data: PrimaryOwnerCompany[]; total: number; page: number; pageSize: number };
+      if (!jobId) {
+        return {
+          data: [],
+          total: 0,
+          page,
+          pageSize,
+          status: 'pending',
+          done: false,
+          jobId: null,
+          error: jobError,
+        };
+      }
+      const payload = await fetchCompanyListingPage<T>(type, jobId, cursor, pageSize);
+      return {
+        data: payload.items as T[],
+        total: payload.total ?? payload.items.length,
+        page,
+        pageSize,
+        status: payload.status,
+        done: payload.done,
+        jobId,
+        error: payload.error,
+      };
     },
-    enabled,
-    staleTime: 0, 
+    refetchInterval: (query) => {
+      const currentData = query.state.data as CompanyListingQueryData<T> | undefined;
+      if (!currentData) return false;
+      return currentData.status !== 'completed' ? 2000 : false;
+    },
+    staleTime: 0,
     gcTime: 0,
-    refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
+
+  const defaultData: CompanyListingQueryData<T> = {
+    data: [],
+    total: 0,
+    page,
+    pageSize,
+    status: jobError ? 'failed' : 'pending',
+    done: false,
+    jobId,
+    error: jobError,
+  };
+
+  const jobBootstrapping = enabled && !jobId && !jobError;
+  return {
+    ...query,
+    data: query.data ?? defaultData,
+    restartJob,
+    jobBootstrapping,
+  } as CompanyListingHookResult<T>;
+}
+
+export function usePrimaryOwnerCompanies(page: number = 1, pageSize: number = 10, enabled: boolean = true) {
+  return useCompanyListing<PrimaryOwnerCompany>('primary-owner', page, pageSize, enabled);
 }
 
 export function useUpdateProfile() {
@@ -82,20 +246,7 @@ export interface MemberCompany {
 }
 
 export function useMemberCompanies(page: number = 1, pageSize: number = 10, enabled: boolean = true) {
-  return useQuery<{ data: MemberCompany[]; total: number; page: number; pageSize: number }>({
-    queryKey: [...queryKeys.memberCompanies(), page, pageSize],
-    queryFn: async () => {
-      const response = await http.get('/auth/account/member-companies', {
-        params: { page, pageSize },
-      });
-      return response.data as { data: MemberCompany[]; total: number; page: number; pageSize: number };
-    },
-    enabled,
-    staleTime: 0, 
-    gcTime: 0,
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-  });
+  return useCompanyListing<MemberCompany>('member', page, pageSize, enabled);
 }
 
 export function useDeleteAccount() {

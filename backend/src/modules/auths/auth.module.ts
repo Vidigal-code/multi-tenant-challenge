@@ -13,6 +13,7 @@ import {ListPrimaryOwnerCompaniesUseCase} from "@application/use-cases/companys/
 import {ListMemberCompaniesUseCase} from "@application/use-cases/companys/list-member-companies.usecase";
 import {InviteListingJobsService} from "@application/services/invite-listing-jobs.service";
 import {InviteBulkJobsService} from "@application/services/invite-bulk-jobs.service";
+import {CompanyListingJobsService} from "@application/services/company-listing-jobs.service";
 import {USER_REPOSITORY} from "@domain/repositories/users/user.repository";
 import {INVITE_REPOSITORY} from "@domain/repositories/invites/invite.repository";
 import {MEMBERSHIP_REPOSITORY} from "@domain/repositories/memberships/membership.repository";
@@ -24,8 +25,9 @@ import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
     imports: [ConfigModule, AuthInfraModule, InfrastructureModule, RealtimeModule],
     controllers: [AuthController, InvitesController],
     providers: [
-        InviteBulkJobsService,
         InviteListingJobsService,
+        InviteBulkJobsService,
+        CompanyListingJobsService,
         {
             provide: SignupUseCase,
             useFactory: (userRepo, hashingService) =>

@@ -1,31 +1,25 @@
-import {Injectable} from "@nestjs/common";
+import {Inject, Injectable} from "@nestjs/common";
 import {ConfigService} from "@nestjs/config";
-import {randomUUID} from "crypto";
+import {InviteBulkCacheService} from "@infrastructure/cache/invite-bulk-cache.service";
 import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
 import {
     CreateInviteBulkJobDto,
+    InviteBulkJobMeta,
+    InviteBulkJobPayload,
     InviteBulkJobResponseDto,
-    InviteBulkJobStatus,
 } from "@application/dto/invites/invite-bulk.dto";
-import {InviteBulkCacheService} from "@infrastructure/cache/invite-bulk-cache.service";
-import {DLQ_INVITES_BULK_QUEUE, INVITES_BULK_QUEUE} from "@infrastructure/messaging/constants/queue.constants";
+import {randomUUID} from "crypto";
 import {ApplicationError} from "@application/errors/application-error";
 import {ErrorCode} from "@application/errors/error-code";
+import {
+    DLQ_INVITES_BULK_QUEUE,
+    INVITES_BULK_QUEUE,
+} from "@infrastructure/messaging/constants/queue.constants";
+import {USER_REPOSITORY, UserRepository} from "@domain/repositories/users/user.repository";
 
 interface CurrentUserPayload {
     sub: string;
     email?: string;
-}
-
-export interface InviteBulkJobPayload {
-    jobId: string;
-    userId: string;
-    userEmail?: string;
-    action: "delete" | "reject";
-    target: "created" | "received";
-    scope: "selected" | "all";
-    inviteIds?: string[];
-    chunkSize: number;
 }
 
 @Injectable()
@@ -34,61 +28,59 @@ export class InviteBulkJobsService {
         private readonly cache: InviteBulkCacheService,
         private readonly rabbit: RabbitMQService,
         private readonly configService: ConfigService,
+        @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     ) {
     }
 
     /**
      *
      * EN:
-     * Creates a background job for deleting or rejecting invitations in bulk.
+     * Creates a new invite bulk job (delete/reject) and sends the payload to RabbitMQ.
      *
      * PT:
-     * Cria um job em background para deletar ou rejeitar convites em lote.
+     * Cria um novo job de bulk (delete/reject) e envia o payload para o RabbitMQ.
      *
-     * @params user - Current authenticated user / Usuário autenticado
-     * @params dto - Bulk action DTO / DTO da ação em lote
-     * @returns InviteBulkJobResponseDto
+     * @params user
+     * @params dto
+     * @returns Promise<InviteBulkJobResponseDto>
      */
     async createJob(user: CurrentUserPayload, dto: CreateInviteBulkJobDto): Promise<InviteBulkJobResponseDto> {
         if (dto.scope === "selected" && (!dto.inviteIds || dto.inviteIds.length === 0)) {
-            throw new ApplicationError(ErrorCode.NO_FIELDS_TO_UPDATE);
+            throw new ApplicationError(ErrorCode.INVALID_REQUEST);
         }
-        if (dto.action === "delete" && dto.target !== "created") {
-            throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
+        if (dto.action === "reject" && !user.email) {
+            const dbUser = await this.users.findById(user.sub);
+            if (!dbUser) {
+                throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
+            }
+            user.email = dbUser.email.toString();
         }
-        if (dto.action === "reject" && dto.target !== "received") {
-            throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
-        }
-        const jobId = randomUUID();
         const chunkSize = this.normalizeChunkSize(dto.chunkSize);
-        const payload: InviteBulkJobPayload = {
+        const jobId = randomUUID();
+        const meta: InviteBulkJobMeta = {
             jobId,
             userId: user.sub,
-            userEmail: user.email?.toLowerCase(),
             action: dto.action,
-            target: dto.target,
             scope: dto.scope,
-            inviteIds: dto.scope === "selected" ? dto.inviteIds : undefined,
             chunkSize,
-        };
-        const meta = {
-            jobId,
-            userId: user.sub,
-            status: "pending" as InviteBulkJobStatus,
-            action: dto.action,
-            target: dto.target,
-            scope: dto.scope,
-            total: dto.scope === "selected" ? (dto.inviteIds?.length ?? 0) : 0,
             processed: 0,
-            failedCount: 0,
+            succeeded: 0,
+            failed: 0,
+            status: "pending",
             createdAt: new Date().toISOString(),
         };
         await this.cache.initialize(meta);
+        const payload: InviteBulkJobPayload = {
+            jobId,
+            userId: user.sub,
+            action: dto.action,
+            scope: dto.scope,
+            chunkSize,
+            inviteIds: dto.scope === "selected" ? dto.inviteIds : undefined,
+            userEmail: user.email?.toLowerCase(),
+        };
         await this.rabbit.assertEventQueue(INVITES_BULK_QUEUE, DLQ_INVITES_BULK_QUEUE);
-        await this.rabbit.sendToQueue(
-            INVITES_BULK_QUEUE,
-            Buffer.from(JSON.stringify(payload)),
-        );
+        await this.rabbit.sendToQueue(INVITES_BULK_QUEUE, Buffer.from(JSON.stringify(payload)));
         return this.toResponse(meta);
     }
 
@@ -106,7 +98,7 @@ export class InviteBulkJobsService {
     async deleteJob(userId: string, jobId: string): Promise<void> {
         const meta = await this.cache.get(jobId);
         if (!meta) {
-            return;
+            throw new ApplicationError(ErrorCode.INVITE_BULK_JOB_NOT_FOUND);
         }
         if (meta.userId !== userId) {
             throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
@@ -114,20 +106,13 @@ export class InviteBulkJobsService {
         await this.cache.delete(jobId);
     }
 
-    private toResponse(meta: {
-        jobId: string;
-        status: InviteBulkJobStatus;
-        processed: number;
-        total: number;
-        failedCount: number;
-        error?: string;
-    }): InviteBulkJobResponseDto {
+    private toResponse(meta: InviteBulkJobMeta): InviteBulkJobResponseDto {
         return {
             jobId: meta.jobId,
             status: meta.status,
             processed: meta.processed,
-            total: meta.total,
-            failedCount: meta.failedCount,
+            succeeded: meta.succeeded,
+            failed: meta.failed,
             error: meta.error,
         };
     }

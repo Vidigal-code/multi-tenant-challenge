@@ -110,23 +110,23 @@ npm run worker:members
 npm run worker:invites-list
 ```
 
-**Terminal 4 - Invite Bulk Worker:**
+**Terminal 4 - Company Listing Worker:**
 ```bash
-npm run worker:invites-bulk
+npm run worker:companies-list
 ```
 
 ### 3. Verificar Filas no RabbitMQ
 
 Acesse o RabbitMQ Management UI (geralmente em `http://localhost:15672`):
-- Verifique as filas: `events.invites`, `events.members`, `invites.list.requests`
-- Verifique as DLQs: `dlq.events.invites`, `dlq.events.members`, `dlq.invites.list.requests`
+- Verifique as filas: `events.invites`, `events.members`, `invites.list.requests`, `companies.list.requests`, `invites.bulk.requests`
+- Verifique as DLQs: `dlq.events.invites`, `dlq.events.members`, `dlq.invites.list.requests`, `dlq.companies.list.requests`, `dlq.invites.bulk.requests`
 - Monitore o processamento de mensagens
 
 ## ✅ Checklist de Funcionamento
 
 - [x] Roteamento de eventos corrigido
 - [x] Producers atualizados com novos métodos
-- [x] Workers configurados e rodando (incluindo `worker:invites-list` para jobs massivos e `worker:invites-bulk` para ações em lote)
+- [x] Workers configurados e rodando (incluindo `worker:invites-list`, `worker:companies-list` e `worker:invites-bulk` para jobs massivos)
 - [x] DLQs configuradas
 - [x] Deduplicação via Redis
 - [x] Retry automático

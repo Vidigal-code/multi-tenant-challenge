@@ -30,7 +30,8 @@ Evento → Fila RabbitMQ → Worker → notifications.realtimes → Worker Realt
 | `events.members` | Eventos de membros (mudanças de cargo, entradas, saídas) | `dlq.events.members` | `worker:members` |
 | `events.invites` | Eventos de convites (criados, aceitos, rejeitados) | `dlq.events.invites` | `worker:invites` |
 | `invites.list.requests` | Jobs de listagem massiva de convites | `dlq.invites.list.requests` | `worker:invites-list` |
-| `invites.bulk.requests` | Ações em lote (delete/reject) | `dlq.invites.bulk.requests` | `worker:invites-bulk` |
+| `companies.list.requests` | Jobs de listagem massiva de empresas (owner/member) | `dlq.companies.list.requests` | `worker:companies-list` |
+| `invites.bulk.requests` | Operações em lote (delete/reject) de convites | `dlq.invites.bulk.requests` | `worker:invites-bulk` |
 | `events` | Eventos genéricos (notificações, amizades) | `dlq.events` | `worker:generic` |
 
 ### Fila de Destino
@@ -62,9 +63,13 @@ Evento → Fila RabbitMQ → Worker → notifications.realtimes → Worker Realt
   - Consome: `invites.list.requests`
   - Processa: gera lotes paginados de convites e armazena no Redis
 
-- **`worker:invites-bulk`** (`invites.bulk.consumer.ts`)
+- **`worker:companies-list`** (`companys/company.list.consumer.ts`)
+  - Consome: `companies.list.requests`
+  - Processa: gera lotes paginados de empresas (dono primário e membros) e armazena no Redis
+
+- **`worker:invites-bulk`** (`invites/invites.bulk.consumer.ts`)
   - Consome: `invites.bulk.requests`
-  - Processa: deleta ou rejeita convites em lotes e atualiza progresso no Redis
+  - Processa: exclusões e rejeições em lote, atualizando progressos via Redis
   
 - **`worker:members`** (`members.events.consumer.ts`)
   - Consome: `events.members`

@@ -23,10 +23,7 @@ import {
     InviteListQueryDto,
 } from "@application/dto/invites/invite-listing.dto";
 import {InviteListingJobsService} from "@application/services/invite-listing-jobs.service";
-import {
-    CreateInviteBulkJobDto,
-    InviteBulkJobResponseDto,
-} from "@application/dto/invites/invite-bulk.dto";
+import {CreateInviteBulkJobDto, InviteBulkJobResponseDto} from "@application/dto/invites/invite-bulk.dto";
 import {InviteBulkJobsService} from "@application/services/invite-bulk-jobs.service";
 
 @ApiTags("invites")
@@ -94,16 +91,19 @@ export class InvitesController {
 
     @Post("bulk")
     @UseGuards(JwtAuthGuard)
-    @ApiOperation({summary: "Create invite bulk action job (delete/reject)"})
+    @ApiOperation({summary: "Create invite bulk operation job (delete/reject)"})
     @ApiResponse({status: 201, description: "Bulk job created", type: InviteBulkJobResponseDto})
-    async createBulkJob(@CurrentUser() user: any, @Body() body: CreateInviteBulkJobDto): Promise<InviteBulkJobResponseDto> {
+    async createBulkJob(
+        @CurrentUser() user: any,
+        @Body() body: CreateInviteBulkJobDto,
+    ): Promise<InviteBulkJobResponseDto> {
         return this.inviteBulkJobs.createJob(user, body);
     }
 
     @Get("bulk/:jobId")
     @UseGuards(JwtAuthGuard)
     @ApiOperation({summary: "Fetch invite bulk job status"})
-    @ApiResponse({status: 200, description: "Bulk job data", type: InviteBulkJobResponseDto})
+    @ApiResponse({status: 200, description: "Bulk job status", type: InviteBulkJobResponseDto})
     async getBulkJob(
         @CurrentUser() user: any,
         @Param("jobId", new ParseUUIDPipe()) jobId: string,

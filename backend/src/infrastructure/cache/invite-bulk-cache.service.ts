@@ -1,23 +1,8 @@
 import {Injectable} from "@nestjs/common";
 import {ConfigService} from "@nestjs/config";
 import Redis from "ioredis";
+import {InviteBulkJobMeta} from "@application/dto/invites/invite-bulk.dto";
 import {LoggerService} from "@infrastructure/logging/logger.service";
-import {InviteBulkJobStatus} from "@application/dto/invites/invite-bulk.dto";
-
-export interface InviteBulkJobMeta {
-    jobId: string;
-    userId: string;
-    status: InviteBulkJobStatus;
-    action: "delete" | "reject";
-    target: "created" | "received";
-    scope: "selected" | "all";
-    total: number;
-    processed: number;
-    failedCount: number;
-    createdAt: string;
-    finishedAt?: string;
-    error?: string;
-}
 
 @Injectable()
 export class InviteBulkCacheService {
@@ -35,16 +20,28 @@ export class InviteBulkCacheService {
         const ttl =
             (this.configService.get("app.inviteBulk.redisTtlSeconds") as number) ??
             parseInt(process.env.INVITES_BULK_REDIS_TTL ?? "3600", 10);
-        this.ttlSeconds = Math.max(300, ttl);
+        this.ttlSeconds = Math.max(60, ttl);
     }
 
+    /**
+     *
+     * EN:
+     * Initializes bulk job metadata in Redis, overwriting any previous state for the jobId.
+     *
+     * PT:
+     * Inicializa os metadados do job de bulk no Redis, sobrescrevendo qualquer estado anterior para o jobId.
+     *
+     * @params meta
+     * @returns Promise<void>
+     */
     async initialize(meta: InviteBulkJobMeta): Promise<void> {
         await this.redis.set(this.metaKey(meta.jobId), JSON.stringify(meta), "EX", this.ttlSeconds);
+        this.logger.default(`Invite bulk job initialized: ${meta.jobId}`);
     }
 
     async get(jobId: string): Promise<InviteBulkJobMeta | null> {
-        const payload = await this.redis.get(this.metaKey(jobId));
-        return payload ? (JSON.parse(payload) as InviteBulkJobMeta) : null;
+        const raw = await this.redis.get(this.metaKey(jobId));
+        return raw ? (JSON.parse(raw) as InviteBulkJobMeta) : null;
     }
 
     async update(jobId: string, patch: Partial<InviteBulkJobMeta>): Promise<InviteBulkJobMeta> {
@@ -52,9 +49,9 @@ export class InviteBulkCacheService {
         if (!current) {
             throw new Error(`INVITE_BULK_JOB_NOT_FOUND:${jobId}`);
         }
-        const next = {...current, ...patch};
-        await this.redis.set(this.metaKey(jobId), JSON.stringify(next), "EX", this.ttlSeconds);
-        return next;
+        const merged = {...current, ...patch};
+        await this.redis.set(this.metaKey(jobId), JSON.stringify(merged), "EX", this.ttlSeconds);
+        return merged;
     }
 
     async delete(jobId: string): Promise<void> {

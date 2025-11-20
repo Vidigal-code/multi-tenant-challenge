@@ -3,17 +3,6 @@ import {useQuery, useMutation, useQueryClient, UseQueryResult} from '@tanstack/r
 import {http} from '../../lib/http';
 import {queryKeys} from '../../lib/queryKeys';
 
-const INVITE_LISTING_POLL_INTERVAL = 2000;
-const INVITE_BULK_POLL_INTERVAL = 2000;
-const initialBulkState: InviteBulkJobState = {
-  jobId: null,
-  status: 'idle',
-  processed: 0,
-  total: 0,
-  failedCount: 0,
-  error: null,
-};
-
 export interface Invite {
   id: string;
   companyId: string;
@@ -46,26 +35,12 @@ interface InviteListingQueryData {
   nextCursor: number | null;
 }
 
-export interface InviteBulkActionPayload {
-  action: 'delete' | 'reject';
-  target: 'created' | 'received';
-  scope: 'selected' | 'all';
-  inviteIds?: string[];
-}
-
-export interface InviteBulkJobState {
-  jobId: string | null;
-  status: 'idle' | 'pending' | 'processing' | 'completed' | 'failed';
-  processed: number;
-  total: number;
-  failedCount: number;
-  error?: string | null;
-}
-
-interface InviteListingHookResult extends UseQueryResult<InviteListingQueryData> {
+type InviteListingHookResult = UseQueryResult<InviteListingQueryData> & {
   restartJob: () => void;
   jobId: string | null;
-}
+};
+
+const INVITE_LISTING_POLL_INTERVAL = 2000;
 
 /**
  *
@@ -204,7 +179,7 @@ function useInviteListing(
   const query = useQuery<InviteListingQueryData>({
     queryKey: [...queryKeys.invitesListing(type), page, pageSize, jobId, restartKey],
     enabled: enabled && Boolean(jobId),
-    queryFn: async () => {
+    queryFn: async (): Promise<InviteListingQueryData> => {
       if (!jobId) {
         return {
           data: [],
@@ -213,7 +188,8 @@ function useInviteListing(
           done: false,
           jobId: '',
           error: jobError,
-        };
+          nextCursor: null,
+        } as InviteListingQueryData;
       }
       const payload = await fetchInviteListingJobPage(jobId, cursor, pageSize);
       return {
@@ -224,11 +200,12 @@ function useInviteListing(
         jobId,
         error: payload.error,
         nextCursor: payload.done ? null : (payload.nextCursor ?? null),
-      };
+      } as InviteListingQueryData;
     },
-    refetchInterval: (data) => {
-      if (!data) return false;
-      return data.status !== 'completed' ? INVITE_LISTING_POLL_INTERVAL : false;
+    refetchInterval: (query) => {
+      const jobData = query.state.data as InviteListingQueryData | undefined;
+      if (!jobData) return false;
+      return jobData.status !== 'completed' ? INVITE_LISTING_POLL_INTERVAL : false;
     },
   });
 
@@ -240,24 +217,23 @@ function useInviteListing(
     }
   }, [query.error, restartJob]);
 
+  const fallbackData: InviteListingQueryData = {
+    data: [],
+    total: 0,
+    status: jobError ? 'failed' : 'pending',
+    done: false,
+    jobId: jobId || '',
+    error: jobError,
+    nextCursor: null,
+  };
   const enhancedQuery: InviteListingHookResult = {
     ...query,
-    data:
-      query.data ||
-      ({
-        data: [],
-        total: 0,
-        status: jobError ? 'failed' : 'pending',
-        done: false,
-        jobId: jobId || '',
-        error: jobError,
-        nextCursor: null,
-      } as InviteListingQueryData),
+    data: query.data ?? fallbackData,
     isLoading: query.isLoading || (enabled && !jobId && !jobError),
     isFetching: query.isFetching || (enabled && !jobId && !jobError),
     restartJob,
     jobId,
-  };
+  } as InviteListingHookResult;
 
   return enhancedQuery;
 }
@@ -329,56 +305,44 @@ export function useDeleteInvites() {
   });
 }
 
-function mapBulkResponse(data: any): InviteBulkJobState {
-  return {
-    jobId: data?.jobId ?? null,
-    status: data?.status ?? 'pending',
-    processed: data?.processed ?? 0,
-    total: data?.total ?? 0,
-    failedCount: data?.failedCount ?? 0,
-    error: data?.error ?? null,
-  };
+export interface InviteBulkJobPayload {
+  action: 'delete' | 'reject';
+  scope: 'selected' | 'all';
+  inviteIds?: string[];
+  chunkSize?: number;
 }
 
-async function startInviteBulkJobRequest(payload: InviteBulkActionPayload) {
+export interface InviteBulkJobResult {
+  jobId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  processed: number;
+  succeeded: number;
+  failed: number;
+  error?: string;
+}
+
+/**
+ *
+ * EN:
+ * Starts an invite bulk job (delete or reject).
+ *
+ * PT:
+ * Inicia um job de operação em lote de convites (delete ou reject).
+ *
+ * @params payload - job configuration
+ * @returns Promise<InviteBulkJobResult>
+ */
+export async function createInviteBulkJob(payload: InviteBulkJobPayload): Promise<InviteBulkJobResult> {
   const response = await http.post('/invites/bulk', payload);
-  return response.data;
+  return response.data as InviteBulkJobResult;
 }
 
-async function fetchInviteBulkJobRequest(jobId: string) {
+export async function fetchInviteBulkJob(jobId: string): Promise<InviteBulkJobResult> {
   const response = await http.get(`/invites/bulk/${jobId}`);
-  return response.data;
+  return response.data as InviteBulkJobResult;
 }
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-export function useInviteBulkAction() {
-  const [state, setState] = useState<InviteBulkJobState>(initialBulkState);
-
-  const run = useCallback(async (payload: InviteBulkActionPayload): Promise<InviteBulkJobState> => {
-    setState({...initialBulkState, status: 'pending'});
-    const created = await startInviteBulkJobRequest(payload);
-    let latest = mapBulkResponse(created);
-    setState(latest);
-
-    while (latest.status === 'pending' || latest.status === 'processing') {
-      await delay(INVITE_BULK_POLL_INTERVAL);
-      const next = await fetchInviteBulkJobRequest(created.jobId);
-      latest = mapBulkResponse(next);
-      setState(latest);
-      if (latest.status === 'failed' || latest.status === 'completed') {
-        break;
-      }
-    }
-    return latest;
-  }, []);
-
-  const reset = useCallback(() => {
-    setState(initialBulkState);
-  }, []);
-
-  return {state, run, reset};
+export async function deleteInviteBulkJob(jobId: string): Promise<void> {
+  await http.delete(`/invites/bulk/${jobId}`);
 }
 

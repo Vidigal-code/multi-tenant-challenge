@@ -160,23 +160,6 @@ export class InvitePrismaRepository implements InviteRepository {
         await this.prisma.invite.delete({where: {id: inviteId}});
     }
 
-    async deleteMany(inviteIds: string[]): Promise<number> {
-        if (!inviteIds.length) return 0;
-        const result = await this.prisma.invite.deleteMany({
-            where: {id: {in: inviteIds}},
-        });
-        return result.count;
-    }
-
-    async updateStatusBulk(inviteIds: string[], status: InviteStatus): Promise<number> {
-        if (!inviteIds.length) return 0;
-        const result = await this.prisma.invite.updateMany({
-            where: {id: {in: inviteIds}},
-            data: {status},
-        });
-        return result.count;
-    }
-
     private buildCursorResponse(records: any[], limit: number): InviteCursorPage {
         if (!records.length) {
             return {data: []};

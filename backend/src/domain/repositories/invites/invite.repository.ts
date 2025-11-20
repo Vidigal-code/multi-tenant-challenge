@@ -43,10 +43,6 @@ export interface InviteRepository {
 
     listByInviterCursor(params: { inviterId: string; cursor?: InviteListCursor; limit: number }): Promise<InviteCursorPage>;
 
-    deleteMany(inviteIds: string[]): Promise<number>;
-
-    updateStatusBulk(inviteIds: string[], status: InviteStatus): Promise<number>;
-
     delete(inviteId: string): Promise<void>;
 }
 

@@ -47,6 +47,8 @@ Write-Host "  - events.members" -ForegroundColor Yellow
 Write-Host "  - notifications.realtimes" -ForegroundColor Yellow
 Write-Host "  - invites.list.requests" -ForegroundColor Yellow
 Write-Host "  - dlq.invites.list.requests" -ForegroundColor Yellow
+Write-Host "  - companies.list.requests" -ForegroundColor Yellow
+Write-Host "  - dlq.companies.list.requests" -ForegroundColor Yellow
 Write-Host "  - invites.bulk.requests" -ForegroundColor Yellow
 Write-Host "  - dlq.invites.bulk.requests" -ForegroundColor Yellow
 Write-Host ""
@@ -68,6 +70,8 @@ $queues = @(
     "notifications.realtimes",
     "invites.list.requests",
     "dlq.invites.list.requests",
+    "companies.list.requests",
+    "dlq.companies.list.requests",
     "invites.bulk.requests",
     "dlq.invites.bulk.requests"
 )

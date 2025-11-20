@@ -33,29 +33,33 @@ export const CompanyList = React.memo(function CompanyList({
     const defaultLogo = DEFAULT_COMPANY_LOGO;
     
     return (
-        <ul className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {companies.map(c => (
-                <li key={c.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 border border-gray-200 dark:border-gray-800 p-4 rounded-lg hover:border-gray-900 dark:hover:border-white transition-colors bg-white dark:bg-gray-950">
-                    <div className="flex items-center gap-3 min-w-0 flex-1 w-full sm:w-auto">
+                <div key={c.id} className="flex flex-col h-full border border-gray-200
+                dark:border-gray-800 rounded-xl bg-white dark:bg-gray-950 p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex flex-col items-center text-center gap-2 min-w-0 flex-1">
                         <img
                             src={logoErrors[c.id] || !c.logoUrl ? defaultLogo : c.logoUrl}
                             alt="Logo"
-                            className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-lg flex-shrink-0"
+                            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-full border border-gray-200 dark:border-gray-800"
                             onError={() => setLogoErrors(prev => ({ ...prev, [c.id]: true }))}
                         />
-                        <span className="text-base sm:text-lg font-medium text-gray-900 dark:text-white truncate">{c.name}</span>
+                        <span className="text-base sm:text-lg font-medium text-gray-900 dark:text-white break-words">{c.name}</span>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <div className="flex flex-col gap-2 mt-4">
                         <button 
                             onClick={() => onSelect(c.id)}
-                            className="w-full sm:w-auto px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base flex-shrink-0"
+                            className="w-full px-4 py-2 bg-gray-900 dark:bg-white text-white
+                            dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base"
                         >
                             Ver empresa
                         </button>
                         {((canEdit && isOwner) || (c.userRole === 'OWNER' || c.userRole === 'ADMIN')) && onEdit && (
                             <button 
                                 onClick={() => onEdit(c.id)}
-                                className="w-full sm:w-auto px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm sm:text-base flex-shrink-0"
+                                className="w-full px-4 py-2 border border-gray-200
+                                dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-white
+                                hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors font-medium text-sm sm:text-base"
                             >
                                 Editar empresa
                             </button>
@@ -63,7 +67,9 @@ export const CompanyList = React.memo(function CompanyList({
                         {isOwner && onDelete && (
                             <button 
                                 onClick={() => onDelete(c.id)}
-                                className="w-full sm:w-auto px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium text-sm sm:text-base flex-shrink-0"
+                                className="w-full px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg
+                                bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50
+                                dark:hover:bg-red-900/20 transition-colors font-medium text-sm sm:text-base"
                             >
                                 Excluir empresa
                             </button>
@@ -71,14 +77,16 @@ export const CompanyList = React.memo(function CompanyList({
                         {isMember && !isOwner && onLeave && (
                             <button 
                                 onClick={() => onLeave(c.id)}
-                                className="w-full sm:w-auto px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium text-sm sm:text-base flex-shrink-0"
+                                className="w-full px-4 py-2 border border-red-200 dark:border-red-800 rounded-lg
+                                bg-white dark:bg-gray-950 text-red-600 dark:text-red-400 hover:bg-red-50
+                                dark:hover:bg-red-900/20 transition-colors font-medium text-sm sm:text-base"
                             >
                                 Sair da empresa
                             </button>
                         )}
                     </div>
-                </li>
+                </div>
             ))}
-        </ul>
+        </div>
     );
 });

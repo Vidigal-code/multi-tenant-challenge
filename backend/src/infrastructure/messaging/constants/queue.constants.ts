@@ -20,23 +20,9 @@ export const INVITES_LIST_QUEUE = "invites.list.requests";
  */
 export const DLQ_INVITES_LIST_QUEUE = "dlq.invites.list.requests";
 
-/**
- * EN:
- * Queue dedicated to bulk invite actions (delete/reject), enabling asynchronous processing
- * for millions of invitations without blocking HTTP requests.
- *
- * PT:
- * Fila dedicada às ações em lote de convites (deletar/rejeitar), permitindo processamento
- * assíncrono para milhões de convites sem bloquear requisições HTTP.
- */
-export const INVITES_BULK_QUEUE = "invites.bulk.requests";
+export const COMPANIES_LIST_QUEUE = "companies.list.requests";
+export const DLQ_COMPANIES_LIST_QUEUE = "dlq.companies.list.requests";
 
-/**
- * EN:
- * DLQ for bulk invite actions, preserving failed jobs for inspection or reprocessing.
- *
- * PT:
- * DLQ para ações em lote de convites, preservando jobs com falha para inspeção ou reprocessamento.
- */
+export const INVITES_BULK_QUEUE = "invites.bulk.requests";
 export const DLQ_INVITES_BULK_QUEUE = "dlq.invites.bulk.requests";
 

@@ -1,4 +1,4 @@
-import {Body, Controller, Delete, Get, HttpCode, Inject, Post, Query, Res, UseGuards,} from "@nestjs/common";
+import {Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, Post, Query, Res, UseGuards,} from "@nestjs/common";
 import {ApiBody, ApiOperation, ApiResponse, ApiTags} from "@nestjs/swagger";
 import {ErrorResponse} from "@application/dto/errors/error.response.dto";
 import {JwtAuthGuard} from "@common/guards/jwt.guard";
@@ -18,6 +18,13 @@ import {AcceptInviteUseCase} from "@application/use-cases/memberships/accept-inv
 import {DeleteAccountUseCase} from "@application/use-cases/users/delete-account.usecase";
 import {ListPrimaryOwnerCompaniesUseCase} from "@application/use-cases/companys/list-primary-owner-companies.usecase";
 import {ListMemberCompaniesUseCase} from "@application/use-cases/companys/list-member-companies.usecase";
+import {
+    CompanyListingJobOptionsDto,
+    CompanyListingJobResponseDto,
+    CompanyListingQueryDto,
+    CreateCompanyListingJobDto,
+} from "@application/dto/companys/company-listing.dto";
+import {CompanyListingJobsService} from "@application/services/company-listing-jobs.service";
 import {ConfigService} from "@nestjs/config";
 import {JwtService} from "@nestjs/jwt";
 import {ApplicationError} from "@application/errors/application-error";
@@ -36,6 +43,7 @@ export class AuthController {
         private readonly deleteAccountUseCase: DeleteAccountUseCase,
         private readonly listPrimaryOwnerCompanies: ListPrimaryOwnerCompaniesUseCase,
         private readonly listMemberCompanies: ListMemberCompaniesUseCase,
+        private readonly companyListingJobs: CompanyListingJobsService,
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
         @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
@@ -252,6 +260,54 @@ export class AuthController {
         };
     }
 
+    @Post("account/primary-owner-companies/listing")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Create asynchronous job for primary-owner companies listing"})
+    @ApiResponse({status: 201, description: "Job created", type: CompanyListingJobResponseDto})
+    async createPrimaryOwnerCompaniesListingJob(
+        @CurrentUser() user: any,
+        @Body() body: CompanyListingJobOptionsDto,
+    ): Promise<CompanyListingJobResponseDto> {
+        const meta = await this.companyListingJobs.createJob(user, {
+            type: "primary-owner",
+            chunkSize: body.chunkSize,
+        } as CreateCompanyListingJobDto);
+        return {
+            jobId: meta.jobId,
+            cursor: 0,
+            status: meta.status,
+            processed: meta.processed,
+            total: meta.total ?? 0,
+            items: [],
+            nextCursor: 0,
+            done: false,
+        };
+    }
+
+    @Get("account/primary-owner-companies/listing/:jobId")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Fetch primary-owner companies listing job status"})
+    @ApiResponse({status: 200, description: "Job data returned", type: CompanyListingJobResponseDto})
+    async getPrimaryOwnerCompaniesListingJob(
+        @CurrentUser() user: any,
+        @Param("jobId", new ParseUUIDPipe()) jobId: string,
+        @Query() query: CompanyListingQueryDto,
+    ): Promise<CompanyListingJobResponseDto> {
+        return this.companyListingJobs.getJob(user.sub, jobId, query);
+    }
+
+    @Delete("account/primary-owner-companies/listing/:jobId")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Delete cached data for a primary-owner companies listing job"})
+    @ApiResponse({status: 200, description: "Job cache deleted"})
+    async deletePrimaryOwnerCompaniesListingJob(
+        @CurrentUser() user: any,
+        @Param("jobId", new ParseUUIDPipe()) jobId: string,
+    ) {
+        await this.companyListingJobs.deleteJob(user.sub, jobId);
+        return {success: true};
+    }
+
     @Get("account/member-companies")
     @UseGuards(JwtAuthGuard)
     @ApiOperation({summary: "List companies where user is a member (ADMIN or MEMBER) but not primary owner"})
@@ -281,6 +337,54 @@ export class AuthController {
             page: result.page,
             pageSize: result.pageSize,
         };
+    }
+
+    @Post("account/member-companies/listing")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Create asynchronous job for member companies listing"})
+    @ApiResponse({status: 201, description: "Job created", type: CompanyListingJobResponseDto})
+    async createMemberCompaniesListingJob(
+        @CurrentUser() user: any,
+        @Body() body: CompanyListingJobOptionsDto,
+    ): Promise<CompanyListingJobResponseDto> {
+        const meta = await this.companyListingJobs.createJob(user, {
+            type: "member",
+            chunkSize: body.chunkSize,
+        } as CreateCompanyListingJobDto);
+        return {
+            jobId: meta.jobId,
+            cursor: 0,
+            status: meta.status,
+            processed: meta.processed,
+            total: meta.total ?? 0,
+            items: [],
+            nextCursor: 0,
+            done: false,
+        };
+    }
+
+    @Get("account/member-companies/listing/:jobId")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Fetch member companies listing job status"})
+    @ApiResponse({status: 200, description: "Job data returned", type: CompanyListingJobResponseDto})
+    async getMemberCompaniesListingJob(
+        @CurrentUser() user: any,
+        @Param("jobId", new ParseUUIDPipe()) jobId: string,
+        @Query() query: CompanyListingQueryDto,
+    ): Promise<CompanyListingJobResponseDto> {
+        return this.companyListingJobs.getJob(user.sub, jobId, query);
+    }
+
+    @Delete("account/member-companies/listing/:jobId")
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({summary: "Delete cached data for a member companies listing job"})
+    @ApiResponse({status: 200, description: "Job cache deleted"})
+    async deleteMemberCompaniesListingJob(
+        @CurrentUser() user: any,
+        @Param("jobId", new ParseUUIDPipe()) jobId: string,
+    ) {
+        await this.companyListingJobs.deleteJob(user.sub, jobId);
+        return {success: true};
     }
 
     @Delete("account")

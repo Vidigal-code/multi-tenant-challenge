@@ -354,23 +354,6 @@ export class InMemoryInviteRepository implements InviteRepository {
                 : undefined;
         return {data: slice, nextCursor};
     }
-
-    async deleteMany(inviteIds: string[]): Promise<number> {
-        const before = this.items.length;
-        this.items = this.items.filter((invite) => !inviteIds.includes(invite.id));
-        return before - this.items.length;
-    }
-
-    async updateStatusBulk(inviteIds: string[], status: InviteStatus): Promise<number> {
-        let updated = 0;
-        this.items.forEach((invite) => {
-            if (inviteIds.includes(invite.id)) {
-                (invite as any).props.status = status;
-                updated++;
-            }
-        });
-        return updated;
-    }
 }
 
 export class FakeHashingService {
