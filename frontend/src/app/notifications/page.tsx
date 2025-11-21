@@ -781,6 +781,8 @@ function NotificationsPage() {
                         return (
                             <div
                                 key={notification.id}
+                                data-testid={`notification-card-${notification.id}`}
+                                data-read={notification.read ? "true" : "false"}
                                 className={`group bg-white dark:bg-gray-800 rounded-xl shadow-sm border transition-all duration-200
                                     ${!notification.read ? "border-l-4 border-l-blue-500 border-y-gray-200 dark:border-y-gray-700 " +
                                     "border-r-gray-200 dark:border-r-gray-700 bg-blue-50/10 dark:bg-blue-900/5" : "border-gray-200 " +
@@ -789,6 +791,7 @@ function NotificationsPage() {
                                 `}
                             >
                                 <div
+                                    data-testid={`notification-card-body-${notification.id}`}
                                     className="p-4 cursor-pointer"
                                     onClick={() => toggleExpand(notification.id)}
                                 >

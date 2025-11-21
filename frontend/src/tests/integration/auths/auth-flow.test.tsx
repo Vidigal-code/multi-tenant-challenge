@@ -214,7 +214,11 @@ describe('Auth Flow Integration', () => {
         renderWithProviders(<DashboardPage />);
 
         await waitFor(() => {
-            expect(httpMock.post).toHaveBeenCalledWith('/auth/account/primary-owner-companies/listing', {});
+            expect(httpMock.post).toHaveBeenCalledWith(
+                '/auth/account/primary-owner-companies/listing',
+                {},
+                expect.any(Object)
+            );
         });
 
         expect(await screen.findByText(/Test Company/i)).toBeInTheDocument();

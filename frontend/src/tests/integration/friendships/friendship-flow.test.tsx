@@ -218,10 +218,10 @@ describe('Friendship Flow Integration', () => {
         fireEvent.click(sendButton);
 
         await waitFor(() => {
-            expect(httpMock.post).toHaveBeenCalledWith('/notifications/friend', {
-                friendEmail: 'user2@test.com',
+            expect(httpMock.post).toHaveBeenCalledWith('/notifications/friend-broadcast-jobs', {
                 title: 'Hello',
                 body: 'How are you?',
+                recipientsEmails: ['user2@test.com'],
             });
         });
 
@@ -340,15 +340,10 @@ describe('Friendship Flow Integration', () => {
         fireEvent.click(sendButton);
 
         await waitFor(() => {
-            expect(httpMock.post).toHaveBeenCalledWith('/notifications/friend', {
-                friendEmail: 'user2@test.com',
+            expect(httpMock.post).toHaveBeenCalledWith('/notifications/friend-broadcast-jobs', {
                 title: 'Announcement',
                 body: 'Important message',
-            });
-            expect(httpMock.post).toHaveBeenCalledWith('/notifications/friend', {
-                friendEmail: 'user3@test.com',
-                title: 'Announcement',
-                body: 'Important message',
+                recipientsEmails: undefined,
             });
         });
     });
