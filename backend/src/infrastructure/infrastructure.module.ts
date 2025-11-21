@@ -16,6 +16,7 @@ import {notificationRepositoryProvider} from "@infrastructure/prisma/notificatio
 import {friendshipRepositoryProvider} from "@infrastructure/prisma/friendships/friendship.prisma.repository";
 import {friendshipListCacheProvider} from "./cache/friendship-list-cache.service";
 import {userSearchCacheProvider} from "./cache/user-search-cache.service";
+import {userDeletionCacheProvider} from "./cache/user-deletion-cache.service";
 
 const repositoryProviders = [
     userRepositoryProvider,
@@ -45,6 +46,7 @@ const repositoryProviders = [
         notificationDeletionCacheProvider,
         friendshipListCacheProvider,
         userSearchCacheProvider,
+        userDeletionCacheProvider,
     ],
     exports: [
         PrismaService,
@@ -58,6 +60,7 @@ const repositoryProviders = [
         notificationDeletionCacheProvider,
         friendshipListCacheProvider,
         userSearchCacheProvider,
+        userDeletionCacheProvider,
     ],
 })
 export class InfrastructureModule {

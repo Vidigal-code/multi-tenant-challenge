@@ -39,7 +39,6 @@ import { formatNotificationBody } from "../../lib/notification-formatter";
 import {
     useMarkNotificationRead,
     useDeleteNotification,
-    useDeleteNotifications,
     useReplyToNotification,
     useNotificationListing,
     useNotificationDeletionJob,
@@ -302,7 +301,8 @@ function parseNotificationBody(
     );
 }
 
-type NotificationTab = "all" | "friends" | "friend-messages" | "company-messages" | "invites" | "members" | "roles";
+type NotificationTab = "all" | "friends" | "friend-messages"
+ | "company-messages" | "invites" | "members" | "roles";
 
 interface NotificationCategory {
     id: NotificationTab;
@@ -335,8 +335,10 @@ export default function NotificationsPage() {
     const queryClient = useQueryClient();
 
     const deletionJob = useNotificationDeletionJob();
-    const notificationsQuery = useNotificationListing(currentPage, itemsPerPage, activeTab); // Pass activeTab as type
-    const notifications = (notificationsQuery.data && "items" in notificationsQuery.data && Array.isArray(notificationsQuery.data.items)) ? notificationsQuery.data.items as Notification[] : [];
+    const notificationsQuery = useNotificationListing(currentPage, itemsPerPage, activeTab); 
+    const notifications = (notificationsQuery.data && "items" in notificationsQuery.data &&
+         Array.isArray(notificationsQuery.data.items)) ?
+     notificationsQuery.data.items as Notification[] : [];
     const isLoading = notificationsQuery.isLoading;
     const totalNotifications = (notificationsQuery.data && "total" in notificationsQuery.data) ? notificationsQuery.data.total : 0;
     const friendRequestsQuery = useFriendRequests();
@@ -393,12 +395,12 @@ export default function NotificationsPage() {
                 message: deletionJob.jobStatus.error || "Falha ao excluir notificações"
             });
         }
-    }, [deletionJob.jobStatus?.status, deletionJob.jobStatus?.done, notificationsQuery.restartJob, show, deletionJob.reset]);
+    }, [deletionJob.jobStatus?.status, deletionJob.jobStatus?.done]); 
 
     useEffect(() => {
         setCurrentPage(1);
         notificationsQuery.restartJob();
-    }, [activeTab, notificationsQuery.restartJob]);
+    }, [activeTab]); 
 
     const handleMarkRead = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();

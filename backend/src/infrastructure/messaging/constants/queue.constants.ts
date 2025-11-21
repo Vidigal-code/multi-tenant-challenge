@@ -28,3 +28,6 @@ export const DLQ_FRIENDSHIPS_LIST_QUEUE = "dlq.friendships.list.requests";
 
 export const USER_SEARCH_QUEUE = "users.search.requests";
 export const DLQ_USER_SEARCH_QUEUE = "dlq.users.search.requests";
+
+export const USERS_DELETE_QUEUE = "users.delete.requests";
+export const DLQ_USERS_DELETE_QUEUE = "dlq.users.delete.requests";

@@ -287,16 +287,56 @@ export function useMemberCompanies(page: number = 1, pageSize: number = 10, enab
   return useCompanyListing<MemberCompany>('member', page, pageSize, enabled);
 }
 
+export interface UserDeletionJobResponse {
+    jobId: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    progress: number;
+    currentStep: string;
+    done: boolean;
+    error?: string;
+}
+
 export function useDeleteAccount() {
   const queryClient = useQueryClient();
+  const [jobId, setJobId] = useState<string | null>(null);
   
-  return useMutation({
+  const createJobMutation = useMutation({
     mutationFn: async () => {
-      await http.delete('/auth/account');
+      const response = await http.delete<{jobId: string}>('/users/me');
+      return response.data;
     },
-    onSuccess: async () => {
-      await queryClient.clear();
+    onSuccess: (data) => {
+      setJobId(data.jobId);
     },
   });
+
+  const jobQuery = useQuery({
+    queryKey: ['user-deletion-job', jobId],
+    queryFn: async () => {
+        if (!jobId) throw new Error('No job ID');
+        const response = await http.get<UserDeletionJobResponse>(`/users/deletion-jobs/${jobId}`);
+        return response.data;
+    },
+    enabled: !!jobId,
+    refetchInterval: (query) => {
+        const data = query.state.data;
+        if (data?.done) return false;
+        return 1000;
+    },
+  });
+
+  useEffect(() => {
+      if (jobQuery.data?.done && jobQuery.data.status === 'completed') {
+          queryClient.clear();
+      }
+  }, [jobQuery.data?.done, jobQuery.data?.status, queryClient]);
+
+  return {
+      mutate: createJobMutation.mutate,
+      isPending: createJobMutation.isPending || (!!jobId && !jobQuery.data?.done),
+      jobStatus: jobQuery.data,
+      error: createJobMutation.error || jobQuery.error,
+      reset: () => setJobId(null)
+  };
 }
 

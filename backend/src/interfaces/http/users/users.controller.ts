@@ -1,10 +1,12 @@
-import {Controller, Delete, Get, Query, UseGuards} from '@nestjs/common';
+import {Body, Controller, Delete, Get, Param, Post, Query, UseGuards} from '@nestjs/common';
 import {ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {JwtAuthGuard} from '@common/guards/jwt.guard';
 import {CurrentUser} from '@common/decorators/current-user.decorator';
 import {SearchUsersUseCase} from '@application/use-cases/users/search-users.usecase';
-import {DeleteAccountUseCase} from '@application/use-cases/users/delete-account.usecase';
 import { User } from "@domain/entities/users/user.entity";
+import {UserDeletionJobsService} from "@application/services/user-deletion-jobs.service";
+import {CreateUserDeleteJobDto, UserDeleteJobResponseDto} from "@application/dto/users/user-deletion.dto";
+import {ErrorResponse} from "@application/dto/errors/error.response.dto";
 
 @ApiTags('users')
 @ApiCookieAuth()
@@ -13,7 +15,7 @@ import { User } from "@domain/entities/users/user.entity";
 export class UsersController {
     constructor(
         private readonly searchUsersUseCase: SearchUsersUseCase,
-        private readonly deleteAccountUseCase: DeleteAccountUseCase,
+        private readonly deletionJobs: UserDeletionJobsService,
     ) {
     }
 
@@ -32,15 +34,33 @@ export class UsersController {
     }
 
     @Delete('me')
-    @ApiOperation({summary: 'Delete current users account. Automatically deletes all companies where user is primary owner and removes user from all companies where they are ADMIN or MEMBER.'})
-    @ApiResponse({status: 200, description: 'Account deleted successfully'})
-    @ApiResponse({status: 400, description: 'Cannot delete account (e.g., last owner of a company)'})
+    @ApiOperation({summary: 'Start background job to delete current users account.'})
+    @ApiResponse({
+        status: 201,
+        description: 'Job created',
+        schema: {example: {jobId: "uuid", status: "pending", progress: 0, currentStep: "INIT", done: false}},
+    })
     async deleteAccount(
         @CurrentUser() user: User,
     ) {
-        await this.deleteAccountUseCase.execute({
-            userId: user.id,
-        });
-        return {message: 'Account deleted successfully'};
+        const meta = await this.deletionJobs.createJob({sub: user.id, email: user.email}, {});
+        return {
+            jobId: meta.jobId,
+            status: meta.status,
+            progress: meta.progress,
+            currentStep: meta.currentStep,
+            done: false,
+        };
+    }
+
+    @Get("deletion-jobs/:jobId")
+    @ApiOperation({summary: "Get user deletion job status"})
+    @ApiResponse({status: 200, type: UserDeleteJobResponseDto})
+    @ApiResponse({status: 404, description: "Job not found", type: ErrorResponse})
+    async getDeletionJob(
+        @CurrentUser() user: User,
+        @Param("jobId") jobId: string,
+    ) {
+        return this.deletionJobs.getJob(user.id, jobId);
     }
 }

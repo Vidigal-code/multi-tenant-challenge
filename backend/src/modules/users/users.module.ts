@@ -8,11 +8,16 @@ import {USER_REPOSITORY} from '@domain/repositories/users/user.repository';
 import {COMPANY_REPOSITORY} from '@domain/repositories/companys/company.repository';
 import {MEMBERSHIP_REPOSITORY} from '@domain/repositories/memberships/membership.repository';
 import {PrismaService} from '@infrastructure/prisma/services/prisma.service';
+import {UserDeletionJobsService} from "@application/services/user-deletion-jobs.service";
+import {UserDeletionConsumer} from "@interfaces/consumers/users/user-deletion.consumer";
+import {ConfigModule} from "@nestjs/config";
 
 @Module({
-    imports: [InfrastructureModule],
+    imports: [InfrastructureModule, ConfigModule],
     controllers: [UsersController],
     providers: [
+        UserDeletionJobsService,
+        UserDeletionConsumer,
         {
             provide: SearchUsersUseCase,
             useFactory: (userRepo) => new SearchUsersUseCase(userRepo),

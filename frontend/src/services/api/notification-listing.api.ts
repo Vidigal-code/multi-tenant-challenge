@@ -47,17 +47,23 @@ export function useNotificationListing(
 
   const paramsRef = useRef({ page, pageSize, type });
 
+  const restartJob = useCallback(() => {
+    setJobId(null);
+    setCreationError(null);
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     let timeoutId: NodeJS.Timeout;
 
     const createJob = async () => {
+      if (isCreatingRef.current) return;
+      
       isCreatingRef.current = true;
       setIsCreatingJob(true);
       setCreationError(null);
       
       try {
-        // Simple retry logic for 429 errors
         let attempts = 0;
         const maxAttempts = 3;
         
@@ -72,16 +78,18 @@ export function useNotificationListing(
             if (!controller.signal.aborted) {
               setJobId(response.data.jobId);
             }
-            break; // Success, exit loop
+            break; 
           } catch (error: any) {
             if (error.response?.status === 429 && attempts < maxAttempts - 1) {
               attempts++;
-              // Exponential backoff: 1s, 2s, 4s...
               await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts - 1)));
               if (controller.signal.aborted) break;
               continue;
             }
-            throw error; // Re-throw other errors or if max attempts reached
+            if (error.code !== 'ERR_CANCELED' && error.name !== 'CanceledError') {
+                throw error;
+            }
+            break; 
           }
         }
       } catch (error: any) {
@@ -105,29 +113,22 @@ export function useNotificationListing(
       prevParams.pageSize !== pageSize ||
       prevParams.type !== type;
 
-    if (paramsChanged) {
-      paramsRef.current = { page, pageSize, type };
-      setJobId(null);
-      setCreationError(null);
-      
-      // Clear any existing timeout to avoid double execution
-      // @ts-ignore - timeoutId might be undefined in first run but that's safe for clearTimeout
-      if (typeof timeoutId !== 'undefined') clearTimeout(timeoutId);
+    if (paramsChanged || (!jobId && !isCreatingRef.current && !creationError)) {
+      if (paramsChanged) {
+          paramsRef.current = { page, pageSize, type };
+          setJobId(null);
+      }
       
       // Create new job with debounce
-      timeoutId = setTimeout(createJob, 500);
-    } else if (!jobId && !isCreatingRef.current && !creationError) {
-      // Initial load or retry needed, and not currently creating, and no previous fatal error
-      timeoutId = setTimeout(createJob, 500);
+      timeoutId = setTimeout(createJob, 300);
     }
 
     return () => {
       controller.abort();
       if (timeoutId) clearTimeout(timeoutId);
-      // We don't reset isCreatingRef here because unmount might be temporary in StrictMode
-      // but the abort controller will handle the cancellation of the fetch
+      isCreatingRef.current = false; 
     };
-  }, [page, pageSize, type, jobId]);
+  }, [page, pageSize, type, jobId, creationError]); 
 
   const fallbackData: NotificationListingQueryData = {
     items: [],
@@ -140,7 +141,7 @@ export function useNotificationListing(
   };
 
   const query = useQuery<NotificationListingQueryData>({
-    queryKey: queryKeys.notificationListing(type || 'all', page, pageSize),
+    queryKey: queryKeys.notificationListing(type || 'all', page, pageSize, jobId),
     queryFn: async () => {
       if (!jobId) throw new Error('No job ID available');
 
@@ -161,13 +162,8 @@ export function useNotificationListing(
       }
       return 2000;
     },
-    staleTime: Infinity,
+    staleTime: 5000,
   });
-
-  const restartJob = useCallback(() => {
-    setJobId(null);
-    setCreationError(null);
-  }, []);
 
   const isLoading = isCreatingJob || query.isLoading || (!!jobId && !query.data?.done);
 
@@ -175,7 +171,8 @@ export function useNotificationListing(
     ...query,
     isLoading,
     data: query.data ?? fallbackData,
-    error: creationError || (query.error as Error) || (query.data?.error ? new Error(query.data.error) : undefined),
+    error: creationError || (query.error as Error) || 
+    (query.data?.error ? new Error(query.data.error) : undefined),
     restartJob
   };
 }
