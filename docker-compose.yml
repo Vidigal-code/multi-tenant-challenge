@@ -142,6 +142,17 @@ services:
       - ./backend:/app
       - /app/node_modules
 
+  worker-users-delete:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:users-delete"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
   web:
     build:
       context: ./frontend

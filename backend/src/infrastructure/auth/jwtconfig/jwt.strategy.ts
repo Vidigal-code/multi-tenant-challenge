@@ -32,13 +32,22 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             ]),
             ignoreExpiration: false,
             secretOrKey: secret,
-            passReqToCallback: false,
+            passReqToCallback: true,
         });
     }
 
-    async validate(payload: JwtPayload) {
+    async validate(req: Request, payload: JwtPayload) {
         const user = await this.userRepository.findById(payload.sub);
         if (!user) {
+            const path = req.path || "";
+            if (path === "/auth/logout") {
+                return {
+                    sub: payload.sub,
+                    email: payload.email,
+                    activeCompanyId: payload.activeCompanyId ?? null,
+                    deleted: true,
+                };
+            }
             throw new UnauthorizedException("USER_NOT_FOUND");
         }
 

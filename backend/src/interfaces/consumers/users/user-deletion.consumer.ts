@@ -5,7 +5,6 @@ import {BaseResilientConsumer} from "../base.resilient.consumer";
 import {UserDeletionJobPayload} from "@application/dto/users/user-deletion.dto";
 import {PrismaService} from "@infrastructure/prisma/services/prisma.service";
 import {UserDeletionCacheService} from "@infrastructure/cache/user-deletion-cache.service";
-import {LoggerService} from "@infrastructure/logging/logger.service";
 import {
     DLQ_USERS_DELETE_QUEUE,
     USERS_DELETE_QUEUE
@@ -23,7 +22,7 @@ export class UserDeletionConsumer extends BaseResilientConsumer<UserDeletionJobP
         super(rabbit, {
             queue: USERS_DELETE_QUEUE,
             dlq: DLQ_USERS_DELETE_QUEUE,
-            prefetch: 1, // Sequential processing per job to avoid race conditions on same user data
+            prefetch: 1, 
             retryMax: 5,
             redisUrl: (configService.get("app.redisUrl") as string) || process.env.REDIS_URL || "redis://localhost:6379",
             dedupTtlSeconds: 60,
@@ -35,25 +34,37 @@ export class UserDeletionConsumer extends BaseResilientConsumer<UserDeletionJobP
     }
 
     protected async process(payload: UserDeletionJobPayload): Promise<void> {
-        this.logger.default(`Processing user deletion job: ${payload.jobId}, Step: ${payload.step}, User: ${payload.userId}`);
+        let userId = payload.userId;
+        if (!userId) {
+            const meta = await this.cache.getMeta(payload.jobId);
+            if (!meta?.userId) {
+                this.logger.error(`User deletion job ${payload.jobId} missing userId reference. Marking as failed.`);
+                await this.cache.updateMeta(payload.jobId, {
+                    status: "failed",
+                    error: "USER_ID_MISSING",
+                    finishedAt: Date.now(),
+                });
+                return;
+            }
+            userId = meta.userId;
+            payload.userId = userId;
+        }
+
+        this.logger.default(`Processing user deletion job: ${payload.jobId}, Step: ${payload.step}, User: ${userId}`);
         
         try {
             if (payload.step === 'INIT') {
                 await this.cache.updateMeta(payload.jobId, {status: "processing", currentStep: "OWNED_COMPANIES", progress: 5});
-                await this.requeue({...payload, step: 'OWNED_COMPANIES', cursor: null, deletedOwnedCompanies: 0});
+                await this.requeue({...payload, userId, step: 'OWNED_COMPANIES', cursor: null, deletedOwnedCompanies: 0});
                 return;
             }
 
             if (payload.step === 'OWNED_COMPANIES') {
                 const BATCH_SIZE = 100;
-                // Find companies where user is OWNER
-                // We need to be careful: "Primary Owner" usually implies checking the creator or specific logic. 
-                // The original logic filtered by Role.OWNER.
-                // Let's fetch memberships where role is OWNER and delete those companies.
-                
+             
                 const memberships = await (this.prisma as any).membership.findMany({
                     where: {
-                        userId: payload.userId,
+                        userId,
                         role: Role.OWNER
                     },
                     take: BATCH_SIZE,
@@ -61,21 +72,15 @@ export class UserDeletionConsumer extends BaseResilientConsumer<UserDeletionJobP
                 });
 
                 if (memberships.length === 0) {
-                    // No more owned companies
                     await this.cache.updateMeta(payload.jobId, {currentStep: "MEMBERSHIPS", progress: 30});
-                    await this.requeue({...payload, step: 'MEMBERSHIPS', cursor: null});
+                    await this.requeue({...payload, userId, step: 'MEMBERSHIPS', cursor: null});
                     return;
                 }
 
-                // Delete these companies
-                // Use transaction or deleteMany if cascading is set up correctly in DB (usually it is for Owner -> Company)
-                // However, schema says Membership -> Company (Cascade), Invite -> Company (Cascade).
-                // If we delete Company, memberships and invites go away.
-                // But we are deleting based on User being OWNER.
+           
                 
                 const companyIds = memberships.map((m: any) => m.companyId);
                 
-                // In "millions" scenario, we delete in batches.
                 await (this.prisma as any).company.deleteMany({
                     where: {
                         id: { in: companyIds }
@@ -83,25 +88,23 @@ export class UserDeletionConsumer extends BaseResilientConsumer<UserDeletionJobP
                 });
 
                 const deletedCount = (payload.deletedOwnedCompanies || 0) + memberships.length;
-                await this.cache.updateMeta(payload.jobId, {progress: 10 + Math.min(20, Math.floor(deletedCount / 10))}); // Fake progress for now or cumulative
+                await this.cache.updateMeta(payload.jobId, {progress: 10 + Math.min(20, Math.floor(deletedCount / 10))}); 
                 
-                // Requeue to check for more
-                await this.requeue({...payload, step: 'OWNED_COMPANIES', deletedOwnedCompanies: deletedCount});
+                await this.requeue({...payload, userId, step: 'OWNED_COMPANIES', deletedOwnedCompanies: deletedCount});
                 return;
             }
 
             if (payload.step === 'MEMBERSHIPS') {
-                // Remove user from other companies (where they are not owner, or remaining ones)
                 const BATCH_SIZE = 500;
                 const memberships = await (this.prisma as any).membership.findMany({
-                    where: { userId: payload.userId },
+                    where: { userId },
                     take: BATCH_SIZE,
                     select: { id: true }
                 });
 
                 if (memberships.length === 0) {
                     await this.cache.updateMeta(payload.jobId, {currentStep: "NOTIFICATIONS", progress: 50});
-                    await this.requeue({...payload, step: 'NOTIFICATIONS'});
+                    await this.requeue({...payload, userId, step: 'NOTIFICATIONS'});
                     return;
                 }
 
@@ -110,7 +113,7 @@ export class UserDeletionConsumer extends BaseResilientConsumer<UserDeletionJobP
                     where: { id: { in: ids } }
                 });
 
-                await this.requeue({...payload, step: 'MEMBERSHIPS'});
+                await this.requeue({...payload, userId, step: 'MEMBERSHIPS'});
                 return;
             }
 
@@ -118,13 +121,13 @@ export class UserDeletionConsumer extends BaseResilientConsumer<UserDeletionJobP
                 await (this.prisma as any).notification.deleteMany({
                     where: {
                         OR: [
-                            { senderUserId: payload.userId },
-                            { recipientUserId: payload.userId },
+                            { senderUserId: userId },
+                            { recipientUserId: userId },
                         ],
                     },
                 });
                 await this.cache.updateMeta(payload.jobId, {currentStep: "FRIENDSHIPS", progress: 70});
-                await this.requeue({...payload, step: 'FRIENDSHIPS'});
+                await this.requeue({...payload, userId, step: 'FRIENDSHIPS'});
                 return;
             }
 
@@ -132,26 +135,25 @@ export class UserDeletionConsumer extends BaseResilientConsumer<UserDeletionJobP
                 await (this.prisma as any).friendship.deleteMany({
                     where: {
                         OR: [
-                            { requesterId: payload.userId },
-                            { addresseeId: payload.userId },
+                            { requesterId: userId },
+                            { addresseeId: userId },
                         ],
                     },
                 });
                 await this.cache.updateMeta(payload.jobId, {currentStep: "INVITES", progress: 80});
-                await this.requeue({...payload, step: 'INVITES'});
+                await this.requeue({...payload, userId, step: 'INVITES'});
                 return;
             }
 
             if (payload.step === 'INVITES') {
                 await (this.prisma as any).invite.deleteMany({
                     where: {
-                        inviterId: payload.userId,
+                        inviterId: userId,
                     },
                 });
                 
-                // Also delete invites sent TO this user email
                 const user = await (this.prisma as any).user.findUnique({
-                    where: { id: payload.userId },
+                    where: { id: userId },
                     select: { email: true }
                 });
                 
@@ -164,13 +166,13 @@ export class UserDeletionConsumer extends BaseResilientConsumer<UserDeletionJobP
                 }
 
                 await this.cache.updateMeta(payload.jobId, {currentStep: "USER", progress: 90});
-                await this.requeue({...payload, step: 'USER'});
+                await this.requeue({...payload, userId, step: 'USER'});
                 return;
             }
 
             if (payload.step === 'USER') {
                 await (this.prisma as any).user.delete({
-                    where: { id: payload.userId }
+                    where: { id: userId }
                 });
 
                 await this.cache.updateMeta(payload.jobId, {

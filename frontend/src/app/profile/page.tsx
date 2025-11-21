@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getErrorMessage } from '../../lib/error';
 import { useToast } from '../../hooks/useToast';
 import { ConfirmModal } from '../../components/modals/ConfirmModal';
@@ -14,6 +14,7 @@ import {
     type MemberCompany,
     type UpdateProfilePayload,
 } from "../../services/api";
+import { useQueryClient } from '@tanstack/react-query';
 import { useNotificationPreferences } from '../../hooks/useNotificationPreferences';
 import {FaExclamationTriangle} from "react-icons/fa";
 import {MdBusiness, MdPerson, MdMail, MdPersonAdd, MdPersonRemove, MdRefresh, MdNotifications, MdNotificationsActive, MdBadge} from "react-icons/md";
@@ -21,6 +22,7 @@ import { formatDate, formatDateOnly } from '../../lib/date-utils';
 import { translateMemberCompaniesMessage, translateRole } from '../../lib/messages';
 import Link from 'next/link';
 import { DEFAULT_COMPANY_LOGO } from '../../types';
+import { http } from '../../lib/http';
 
 /**
  *      
@@ -61,6 +63,18 @@ export default function ProfilePage() {
 
     const updateProfileMutation = useUpdateProfile();
     const deleteAccountMutation = useDeleteAccount();
+    const queryClient = useQueryClient();
+
+    async function logoutAndRedirect() {
+        try {
+            await http.post('/auth/logout');
+        } catch {
+            // ignore logout failures
+        } finally {
+            await queryClient.clear();
+            window.location.href = '/login';
+        }
+    }
 
     /**
      *      
@@ -89,26 +103,8 @@ export default function ProfilePage() {
             setShowDeleteModal(false);
             setShowPrimaryOwnerModal(false);
                 setShowFinalConfirmModal(false);
-                show({ type: 'success', message: 'Exclusão iniciada. Isso pode levar alguns minutos.' });
-                
-                // Redirect after a delay or keep showing progress. 
-                // Since we clear session on complete, let's wait for it or redirect now.
-                // Actually, the hook clears session when complete.
-                // But if it takes minutes, user might close tab.
-                // Let's redirect to homepage where they will see they are logged out eventually 
-                // or we can show a "Deleting..." overlay.
-                // The user request said "redirect to /".
-                
-                // However, to support "progress" we should probably stay on page with a loading state
-                // OR redirect to a specific "Goodbye" page that polls status?
-                // For now, let's keep existing behavior but with the job running.
-                // The hook `useDeleteAccount` will clear session when job finishes.
-                
-                // BUT, if we redirect immediately, the hook unmounts. 
-                // `useDeleteAccount` hook is tied to this component.
-                // We should probably NOT redirect immediately if we want to poll.
-                
-                // Let's show a non-closable modal with progress?
+                show({ type: 'success', message: 'Exclusão iniciada. Redirecionando para login.' });
+                void logoutAndRedirect();
             },
             onError: (err: any) => {
                 const m = getErrorMessage(err, 'Falha ao iniciar exclusão de conta');
@@ -170,32 +166,7 @@ export default function ProfilePage() {
         });
     };
 
-
-    useEffect(() => {
-        if (deleteAccountMutation.jobStatus?.done && deleteAccountMutation.jobStatus.status === 'completed') {
-             show({ type: 'success', message: 'Conta excluída com sucesso. Até logo!' });
-             setTimeout(() => {
-                 window.location.href = '/';
-             }, 1000);
-        } else if (deleteAccountMutation.jobStatus?.status === 'failed') {
-             show({ type: 'error', message: deleteAccountMutation.jobStatus.error || 'Falha durante o processamento da exclusão.' });
-        }
-    }, [deleteAccountMutation.jobStatus?.done, deleteAccountMutation.jobStatus?.status, show]);
-
     const loading = updateProfileMutation.isPending || profileQuery.isLoading || deleteAccountMutation.isPending;
-
-    if (deleteAccountMutation.isPending && deleteAccountMutation.jobStatus) {
-        return (
-            <div className="fixed inset-0 bg-white dark:bg-gray-950 flex flex-col items-center justify-center z-50">
-                <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Excluindo sua conta...</h2>
-                <div className="w-64 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mb-4">
-                    <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${deleteAccountMutation.jobStatus.progress}%` }}></div>
-                </div>
-                <p className="text-gray-600 dark:text-gray-400">{deleteAccountMutation.jobStatus.currentStep}</p>
-                <p className="text-sm text-gray-500 mt-2">Por favor, não feche esta página.</p>
-            </div>
-        );
-    }
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
