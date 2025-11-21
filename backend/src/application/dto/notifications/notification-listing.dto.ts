@@ -10,6 +10,13 @@ export class CreateNotificationListJobDto {
     @IsNumber()
     @IsOptional()
     chunkSize?: number;
+
+    @ApiProperty({
+        description: "Filter type (e.g. invites, friends)",
+        required: false
+    })
+    @IsOptional()
+    type?: string;
 }
 
 export class NotificationListItem {
@@ -69,6 +76,7 @@ export interface NotificationListingJobPayload {
     jobId: string;
     userId: string;
     chunkSize: number;
+    type?: string;
 }
 
 export interface NotificationListJobMeta {

@@ -11,6 +11,17 @@ interface NotificationPopupProps {
     onNavigate: () => void;
 }
 
+/**
+ *      
+ * EN: Notification Popup Component
+ *
+ * PT: Componente de Popup de Notificação
+ *
+ * @params notification - Notification data
+ * @params onClose - Close handler
+ * @params onNavigate - Navigate handler
+ * @returns JSX.Element
+ */
 export function NotificationPopup({ notification, onClose, onNavigate }: NotificationPopupProps) {
     const router = useRouter();
     const style = getNotificationStyle(notification.meta?.kind);

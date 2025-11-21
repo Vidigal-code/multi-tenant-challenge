@@ -106,7 +106,10 @@ function useCompanyListing<T extends PrimaryOwnerCompany | MemberCompany>(
   }, [type]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let timeoutId: NodeJS.Timeout;
     let cancelled = false;
+
     if (!enabled) {
       cleanupJob(jobIdRef.current);
       jobIdRef.current = null;
@@ -120,22 +123,49 @@ function useCompanyListing<T extends PrimaryOwnerCompany | MemberCompany>(
 
     const createJob = async () => {
       try {
-        const response = await startCompanyListingJob(type);
-        if (cancelled) {
-          await cleanupJob(response.jobId);
+        // Retry mechanism for 429
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+          try {
+             const response = await http.post(`${COMPANY_LISTING_PATH[type]}/listing`, 
+               {}, 
+               { signal: controller.signal }
+             );
+             
+             if (cancelled || controller.signal.aborted) {
+                await cleanupJob(response.data.jobId);
           return;
         }
-        jobIdRef.current = response.jobId;
-        setJobId(response.jobId);
+             
+             jobIdRef.current = response.data.jobId;
+             setJobId(response.data.jobId);
+             break;
+          } catch (error: any) {
+             if (error.response?.status === 429 && attempts < maxAttempts - 1) {
+                attempts++;
+                await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts - 1)));
+                if (cancelled || controller.signal.aborted) break;
+                continue;
+             }
+             throw error;
+          }
+        }
       } catch (error: any) {
+        if (error.code !== 'ERR_CANCELED' && error.name !== 'CanceledError' && !cancelled) {
         const message = error?.response?.data?.message || 'Falha ao iniciar job de empresas';
         setJobError(message);
+        }
       }
     };
 
-    createJob();
+    timeoutId = setTimeout(createJob, 300); // Debounce job creation
+
     return () => {
       cancelled = true;
+      controller.abort();
+      clearTimeout(timeoutId);
     };
   }, [type, enabled, restartKey, cleanupJob]);
 
@@ -218,11 +248,19 @@ export function usePrimaryOwnerCompanies(page: number = 1, pageSize: number = 10
   return useCompanyListing<PrimaryOwnerCompany>('primary-owner', page, pageSize, enabled);
 }
 
+export interface UpdateProfilePayload {
+  name?: string;
+  email?: string;
+  notificationPreferences?: Record<string, boolean>;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (data: { name?: string; email?: string; notificationPreferences?: Record<string, boolean> }) => {
+    mutationFn: async (data: UpdateProfilePayload) => {
       const response = await http.post('/auth/profile', data);
       return extractData<Profile>(response.data);
     },

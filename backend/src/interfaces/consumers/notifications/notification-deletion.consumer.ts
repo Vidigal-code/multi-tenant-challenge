@@ -1,4 +1,4 @@
-import {Injectable} from "@nestjs/common";
+import {Injectable, OnModuleInit} from "@nestjs/common";
 import {ConfigService} from "@nestjs/config";
 import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
 import {BaseResilientConsumer} from "../base.resilient.consumer";
@@ -12,7 +12,7 @@ import {
 } from "@infrastructure/messaging/constants/queue.constants";
 
 @Injectable()
-export class NotificationDeletionConsumer extends BaseResilientConsumer<NotificationDeletionJobPayload> {
+export class NotificationDeletionConsumer extends BaseResilientConsumer<NotificationDeletionJobPayload> implements OnModuleInit {
     constructor(
         rabbit: RabbitMQService,
         private readonly prisma: PrismaService,
@@ -27,6 +27,10 @@ export class NotificationDeletionConsumer extends BaseResilientConsumer<Notifica
             redisUrl: (configService.get("app.redisUrl") as string) || process.env.REDIS_URL || "redis://localhost:6379",
             dedupTtlSeconds: 60,
         }, configService);
+    }
+
+    async onModuleInit() {
+        await this.start();
     }
 
     protected async process(payload: NotificationDeletionJobPayload): Promise<void> {

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { http } from '../../lib/http';
 import { queryKeys } from '../../lib/queryKeys';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export type NotificationListingStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
@@ -42,49 +42,90 @@ export function useNotificationListing(
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [isCreatingJob, setIsCreatingJob] = useState(false);
+  const [creationError, setCreationError] = useState<Error | null>(null);
+  const isCreatingRef = useRef(false);
 
   const paramsRef = useRef({ page, pageSize, type });
 
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
+    let timeoutId: NodeJS.Timeout;
 
     const createJob = async () => {
-      if (!isMounted) return;
+      isCreatingRef.current = true;
       setIsCreatingJob(true);
+      setCreationError(null);
+      
       try {
-        const response = await http.post<{ jobId: string }>(
-          '/notifications/listing',
-          {
-            page,
-            pageSize,
-            type
+        // Simple retry logic for 429 errors
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+          try {
+            const response = await http.post<{ jobId: string }>(
+              '/notifications/listing',
+              { page, pageSize, type },
+              { signal: controller.signal }
+            );
+            
+            if (!controller.signal.aborted) {
+              setJobId(response.data.jobId);
+            }
+            break; // Success, exit loop
+          } catch (error: any) {
+            if (error.response?.status === 429 && attempts < maxAttempts - 1) {
+              attempts++;
+              // Exponential backoff: 1s, 2s, 4s...
+              await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts - 1)));
+              if (controller.signal.aborted) break;
+              continue;
+            }
+            throw error; // Re-throw other errors or if max attempts reached
           }
-        );
-        if (isMounted) {
-          setJobId(response.data.jobId);
         }
-      } catch (error) {
-        console.error('Failed to create notification listing job:', error);
+      } catch (error: any) {
+        if (error.code !== 'ERR_CANCELED' && error.name !== 'CanceledError') {
+             console.error('Failed to create notification listing job:', error);
+             if (!controller.signal.aborted) {
+               setCreationError(error);
+             }
+        }
       } finally {
-        if (isMounted) {
+        if (!controller.signal.aborted) {
+          isCreatingRef.current = false;
           setIsCreatingJob(false);
         }
       }
     };
 
     const prevParams = paramsRef.current;
-    if (
+    const paramsChanged = 
       prevParams.page !== page ||
       prevParams.pageSize !== pageSize ||
-      prevParams.type !== type ||
-      !jobId
-    ) {
+      prevParams.type !== type;
+
+    if (paramsChanged) {
       paramsRef.current = { page, pageSize, type };
-      createJob();
+      setJobId(null);
+      setCreationError(null);
+      
+      // Clear any existing timeout to avoid double execution
+      // @ts-ignore - timeoutId might be undefined in first run but that's safe for clearTimeout
+      if (typeof timeoutId !== 'undefined') clearTimeout(timeoutId);
+      
+      // Create new job with debounce
+      timeoutId = setTimeout(createJob, 500);
+    } else if (!jobId && !isCreatingRef.current && !creationError) {
+      // Initial load or retry needed, and not currently creating, and no previous fatal error
+      timeoutId = setTimeout(createJob, 500);
     }
 
     return () => {
-      isMounted = false;
+      controller.abort();
+      if (timeoutId) clearTimeout(timeoutId);
+      // We don't reset isCreatingRef here because unmount might be temporary in StrictMode
+      // but the abort controller will handle the cancellation of the fetch
     };
   }, [page, pageSize, type, jobId]);
 
@@ -123,16 +164,18 @@ export function useNotificationListing(
     staleTime: Infinity,
   });
 
-  const restartJob = () => {
+  const restartJob = useCallback(() => {
     setJobId(null);
-  };
+    setCreationError(null);
+  }, []);
 
-  const isLoading = isCreatingJob || query.isLoading;
+  const isLoading = isCreatingJob || query.isLoading || (!!jobId && !query.data?.done);
 
   return {
     ...query,
     isLoading,
     data: query.data ?? fallbackData,
+    error: creationError || (query.error as Error) || (query.data?.error ? new Error(query.data.error) : undefined),
     restartJob
   };
 }

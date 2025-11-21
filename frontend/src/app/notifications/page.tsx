@@ -48,6 +48,16 @@ import {
 
 import { useFriendRequests } from "../../services/api";
 
+/**
+ *      
+ * EN: Truncate text to a maximum length
+ *
+ * PT: Truncar texto para um comprimento máximo
+ *
+ * @params text - Text to truncate
+ * @params max - Maximum length
+ * @returns Truncated text
+ */
 function truncate(text: string, max: number) {
     if (!text) return "";
     return text.length > max ? `${text.slice(0, max)}...` : text;
@@ -325,7 +335,7 @@ export default function NotificationsPage() {
     const queryClient = useQueryClient();
 
     const deletionJob = useNotificationDeletionJob();
-    const notificationsQuery = useNotificationListing(currentPage, itemsPerPage);
+    const notificationsQuery = useNotificationListing(currentPage, itemsPerPage, activeTab); // Pass activeTab as type
     const notifications = (notificationsQuery.data && "items" in notificationsQuery.data && Array.isArray(notificationsQuery.data.items)) ? notificationsQuery.data.items as Notification[] : [];
     const isLoading = notificationsQuery.isLoading;
     const totalNotifications = (notificationsQuery.data && "total" in notificationsQuery.data) ? notificationsQuery.data.total : 0;
@@ -365,9 +375,30 @@ export default function NotificationsPage() {
     }, [queryClient, activeTab, currentPage, itemsPerPage, friendRequestsQuery]);
 
     useEffect(() => {
+        if (deletionJob.jobStatus?.status === 'completed' && deletionJob.jobStatus.done) {
+            notificationsQuery.restartJob();
+            setSelected([]);
+            setDeleteIds([]);
+            if (showDeleteModal) setShowDeleteModal(false);
+            if (showClearAllModal) setShowClearAllModal(false);
+            
+            show({
+                type: "success",
+                message: "Notificações excluídas com sucesso"
+            });
+            deletionJob.reset();
+        } else if (deletionJob.jobStatus?.status === 'failed') {
+             show({
+                type: "error",
+                message: deletionJob.jobStatus.error || "Falha ao excluir notificações"
+            });
+        }
+    }, [deletionJob.jobStatus?.status, deletionJob.jobStatus?.done, notificationsQuery.restartJob, show, deletionJob.reset]);
+
+    useEffect(() => {
         setCurrentPage(1);
         notificationsQuery.restartJob();
-    }, [activeTab, notificationsQuery]);
+    }, [activeTab, notificationsQuery.restartJob]);
 
     const handleMarkRead = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -396,6 +427,7 @@ export default function NotificationsPage() {
                 type: "success",
                 message: "Notificação removida com sucesso"
             });
+            notificationsQuery.restartJob();
         } catch (error) {
             show({
                 type: "error",
@@ -407,13 +439,7 @@ export default function NotificationsPage() {
     const handleBulkDelete = async (ids: string[]) => {
         try {
             await deletionJob.createJobAsync({ ids });
-            setSelected([]);
-            setShowDeleteModal(false);
-            setDeleteIds([]);
-            show({
-                type: "success",
-                message: "Exclusão iniciada. Isso pode levar alguns instantes.",
-            });
+            // Modal closing and success message will be handled by the useEffect monitoring job status
         } catch (error) {
             show({
                 type: "error",
@@ -425,11 +451,7 @@ export default function NotificationsPage() {
     const handleClearAll = async () => {
         try {
             await deletionJob.createJobAsync({ deleteAll: true });
-            setShowClearAllModal(false);
-            show({
-                type: "success",
-                message: "Exclusão de todas as notificações iniciada.",
-            });
+             // Modal closing and success message will be handled by the useEffect monitoring job status
         } catch (error) {
             show({
                 type: "error",
@@ -788,7 +810,9 @@ export default function NotificationsPage() {
                                                     {getTranslatedTitle(notification.title)}
                                                 </h3>
                                                 <span
-                                                    className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0">
+                                                    className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0"
+                                                    suppressHydrationWarning
+                                                >
                                                     {formatDate(notification.createdAt)}
                                                 </span>
                                             </div>

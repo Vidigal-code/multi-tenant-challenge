@@ -76,8 +76,8 @@ export class NotificationPrismaRepository implements NotificationRepository {
         return {data: rows.map((r: any) => this.toDomainWithSender(r)), total, page, pageSize};
     }
 
-    async listByUserCursor(userId: string, cursor: number, limit: number): Promise<Notification[]> {
-        const where = {
+    async listByUserCursor(userId: string, cursor: number, limit: number, type?: string): Promise<Notification[]> {
+        const where: any = {
             OR: [
                 {recipientUserId: userId},
                 {
@@ -88,6 +88,77 @@ export class NotificationPrismaRepository implements NotificationRepository {
                 },
             ],
         };
+
+        if (type && type !== 'all') {
+            if (type === 'invites') {
+                where.AND = [
+                    ...(where.AND || []),
+                    {
+                        OR: [
+                            {meta: {path: ['kind'], string_contains: 'invite'}},
+                            {title: {contains: 'INVITE', mode: 'insensitive'}},
+                            {meta: {path: ['inviteId'], not: null}}
+                        ]
+                    }
+                ];
+            } else if (type === 'friends') {
+                where.AND = [
+                    ...(where.AND || []),
+                    {
+                        OR: [
+                            {meta: {path: ['kind'], string_contains: 'friend'}},
+                            {title: {contains: 'FRIEND', mode: 'insensitive'}},
+                            {meta: {path: ['friendshipId'], not: null}}
+                        ]
+                    }
+                ];
+            } else if (type === 'company-messages') {
+                where.AND = [
+                    ...(where.AND || []),
+                    {
+                        OR: [
+                            {meta: {path: ['kind'], string_contains: 'company'}},
+                            {title: {contains: 'COMPANY', mode: 'insensitive'}},
+                            {meta: {path: ['companyId'], not: null}}
+                        ],
+                        NOT: {meta: {path: ['kind'], string_contains: 'invite'}}
+                    }
+                ];
+            } else if (type === 'members') {
+                where.AND = [
+                    ...(where.AND || []),
+                    {
+                        OR: [
+                            {meta: {path: ['kind'], string_contains: 'member'}},
+                            {title: {contains: 'MEMBER', mode: 'insensitive'}},
+                            {title: {contains: 'USER_JOINED', mode: 'insensitive'}},
+                            {title: {contains: 'USER_REMOVED', mode: 'insensitive'}}
+                        ]
+                    }
+                ];
+            } else if (type === 'roles') {
+                where.AND = [
+                    ...(where.AND || []),
+                    {
+                        OR: [
+                            {meta: {path: ['kind'], string_contains: 'role'}},
+                            {title: {contains: 'ROLE', mode: 'insensitive'}},
+                            {title: {contains: 'USER_STATUS_UPDATED', mode: 'insensitive'}}
+                        ]
+                    }
+                ];
+            } else if (type === 'friend-messages') {
+                where.AND = [
+                    ...(where.AND || []),
+                    {
+                        OR: [
+                            {meta: {path: ['kind'], string_contains: 'notification'}},
+                            {title: {contains: 'NOTIFICATION', mode: 'insensitive'}}
+                        ]
+                    }
+                ];
+            }
+        }
 
         const findArgs: any = {
             where,

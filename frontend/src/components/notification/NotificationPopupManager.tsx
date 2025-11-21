@@ -56,6 +56,16 @@ const ROLE_CHANGE_KINDS: NotificationKind[] = [
     'role.changed', 'membership.role.updated'
 ];
 
+/**
+ *      
+ * EN: Check if notification should be shown based on preferences
+ *
+ * PT: Verificar se a notificação deve ser mostrada com base nas preferências
+ *
+ * @params notification - Notification data
+ * @params derived - Derived notification preferences
+ * @returns boolean
+ */
 function shouldShowNotification(notification: NotificationData, derived: any): boolean {
     if (!derived) return true;
 
@@ -101,6 +111,15 @@ function shouldShowNotification(notification: NotificationData, derived: any): b
     return true;
 }
 
+/**
+ *      
+ * EN: Notification Popup Manager Component
+ *
+ * PT: Componente Gerenciador de Popup de Notificação
+ *
+ * @params enabled - Whether the manager is enabled
+ * @returns JSX.Element | null
+ */
 export function NotificationPopupManager({ enabled }: NotificationPopupManagerProps) {
     const [currentNotification, setCurrentNotification] = useState<NotificationData | null>(null);
     const queryClient = useQueryClient();
@@ -137,18 +156,13 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                             try {
                                 const { emit } = await import('../../lib/realtime');
                                 emit(RT_EVENTS.NOTIFICATION_DELIVERED, { messageId });
-                                console.log('[NotificationPopupManager] Delivery confirmed (popup disabled):', messageId);
                             } catch (error) {
-                                console.error('[NotificationPopupManager] Error confirming delivery:', error);
+                                // Ignore
                             }
                         }
                         queryClient.invalidateQueries({ 
                             queryKey: queryKeys.notifications(),
-                        }).catch((error: any) => {
-                            if (error?.name !== 'CancelledError') {
-                                console.error('[NotificationPopupManager] Error invalidating queries:', error);
-                            }
-                        });
+                        }).catch(() => {});
                         return;
                     }
 
@@ -159,11 +173,7 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                     try {
                         queryClient.invalidateQueries({ 
                                 queryKey: queryKeys.notifications(),
-                        }).catch((error: any) => {
-                            if (error?.name !== 'CancelledError') {
-                                console.error('[NotificationPopupManager] Error invalidating queries:', error);
-                            }
-                        });
+                        }).catch(() => {});
                         
                         await new Promise(resolve => setTimeout(resolve, 500));
                         
@@ -215,16 +225,15 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                             }
                         }
                     } catch (fetchError) {
-                        console.error('[NotificationPopupManager] Error fetching notifications:', fetchError);
+                        // Ignore
                     }
 
                     if (messageId) {
                         try {
                             const { emit } = await import('../../lib/realtime');
                             emit(RT_EVENTS.NOTIFICATION_DELIVERED, { messageId });
-                            console.log('[NotificationPopupManager] Delivery confirmed:', messageId);
                         } catch (error) {
-                            console.error('[NotificationPopupManager] Error confirming delivery:', error);
+                            // Ignore
                         }
                     }
 
@@ -234,11 +243,7 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
 
                             queryClient.invalidateQueries({ 
                                 queryKey: queryKeys.notifications(),
-                            }).catch((error: any) => {
-                                if (error?.name !== 'CancelledError') {
-                                    console.error('[NotificationPopupManager] Error invalidating queries:', error);
-                                }
-                            });
+                            }).catch(() => {});
 
                             setTimeout(() => {
                                 if (active) {
@@ -249,14 +254,10 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                     } else {
                         queryClient.invalidateQueries({ 
                             queryKey: queryKeys.notifications(),
-                        }).catch((error: any) => {
-                            if (error?.name !== 'CancelledError') {
-                                console.error('[NotificationPopupManager] Error invalidating queries:', error);
-                            }
-                        });
+                        }).catch(() => {});
                     }
                 } catch (error) {
-                    console.error('[NotificationPopupManager] Error handling notification:', error);
+                    // Ignore
                 }
             };
 

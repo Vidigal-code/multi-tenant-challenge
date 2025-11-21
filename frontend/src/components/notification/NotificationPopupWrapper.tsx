@@ -5,6 +5,14 @@ import { NotificationIconBadge } from './NotificationIconBadge';
 import { usePathname } from 'next/navigation';
 import { useNotificationPreferences } from '../../hooks/useNotificationPreferences';
 
+/**
+ *      
+ * EN: Notification Popup Wrapper Component
+ *
+ * PT: Componente Wrapper de Popup de Notificação
+ *
+ * @returns JSX.Element | null
+ */
 export function NotificationPopupWrapper() {
     const pathname = usePathname();
     

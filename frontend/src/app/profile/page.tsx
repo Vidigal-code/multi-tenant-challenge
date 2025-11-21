@@ -12,6 +12,7 @@ import {
     useDeleteAccount,
     type PrimaryOwnerCompany,
     type MemberCompany,
+    type UpdateProfilePayload,
 } from "../../services/api";
 import { useNotificationPreferences } from '../../hooks/useNotificationPreferences';
 import {FaExclamationTriangle} from "react-icons/fa";
@@ -21,6 +22,14 @@ import { translateMemberCompaniesMessage, translateRole } from '../../lib/messag
 import Link from 'next/link';
 import { DEFAULT_COMPANY_LOGO } from '../../types';
 
+/**
+ *      
+ * EN: Profile Page Component
+ *
+ * PT: Componente da Página de Perfil
+ *
+ * @returns JSX.Element
+ */
 export default function ProfilePage() {
 
     const [name, setName] = useState('');
@@ -53,11 +62,27 @@ export default function ProfilePage() {
     const updateProfileMutation = useUpdateProfile();
     const deleteAccountMutation = useDeleteAccount();
 
+    /**
+     *      
+     * EN: Handle delete account button click
+     *
+     * PT: Lidar com o clique no botão de excluir conta
+     *
+     * @returns void
+     */
     async function handleDeleteAccountClick() {
                 setPrimaryOwnerPage(1);
                 setShowPrimaryOwnerModal(true);
     }
 
+    /**
+     *      
+     * EN: Execute account deletion
+     *
+     * PT: Executar exclusão da conta
+     *
+     * @returns void
+     */
     function handleDeleteAccount() {
         deleteAccountMutation.mutate(undefined, {
             onSuccess: () => {
@@ -79,24 +104,21 @@ export default function ProfilePage() {
         });
     }
 
-    useEffect(() => {
-        if (showPrimaryOwnerModal) {
-            if (activeCompanyTab === 'owner') {
-            primaryOwnerCompaniesQuery.refetch();
-            } else {
-                memberCompaniesQuery.refetch();
-            }
-        }
-    }, [primaryOwnerPage,
-        memberCompaniesPage,
-        showPrimaryOwnerModal,
-        activeCompanyTab,
-        primaryOwnerCompaniesQuery,
-        memberCompaniesQuery]);
+ 
 
     const currentName = profileQuery.data?.name ?? '';
     const currentEmail = profileQuery.data?.email ?? '';
 
+    /**
+     *      
+     * EN: Update a single notification preference
+     *
+     * PT: Atualizar uma única preferência de notificação
+     *
+     * @params key - Preference key
+     * @params value - Preference value
+     * @returns void
+     */
     const updateNotificationPreference = (key: string, value: boolean) => {
         const newPrefs = { ...notificationPreferences, [key]: value };
         updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
@@ -110,6 +132,15 @@ export default function ProfilePage() {
         });
     };
 
+    /**
+     *      
+     * EN: Update multiple notification preferences
+     *
+     * PT: Atualizar múltiplas preferências de notificação
+     *
+     * @params updates - Object with preferences to update
+     * @returns void
+     */
     const updateMultipleNotificationPreferences = (updates: Record<string, boolean>) => {
         const newPrefs = { ...notificationPreferences, ...updates };
         updateProfileMutation.mutate({ notificationPreferences: newPrefs }, {
@@ -123,21 +154,6 @@ export default function ProfilePage() {
         });
     };
 
-    useEffect(() => {
-        if (showPrimaryOwnerModal) {
-            console.log('Primary Owner Companies Query State:', {
-                isLoading: primaryOwnerCompaniesQuery.isLoading,
-                isError: primaryOwnerCompaniesQuery.isError,
-                error: primaryOwnerCompaniesQuery.error,
-                data: primaryOwnerCompaniesQuery.data,
-                enabled: showPrimaryOwnerModal,
-            });
-        }
-    }, [showPrimaryOwnerModal,
-        primaryOwnerCompaniesQuery.isLoading,
-        primaryOwnerCompaniesQuery.isError,
-        primaryOwnerCompaniesQuery.data,
-        primaryOwnerCompaniesQuery.error]);
 
     const loading = updateProfileMutation.isPending || profileQuery.isLoading;
 
@@ -197,7 +213,7 @@ export default function ProfilePage() {
                             e.preventDefault();
                             setError(null);
                             setMessage(null);
-                            const payload: any = {};
+                            const payload: UpdateProfilePayload = {};
                             if (name) payload.name = name;
                             if (email) payload.email = email;
                             if (newPassword) {
@@ -1018,9 +1034,6 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* {updateProfileMutation.isPending && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Salvando preferências...</p>
-                    )} */}
                 </div>
             )}
         </div>

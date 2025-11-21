@@ -48,6 +48,7 @@ export class NotificationListingJobsService {
             jobId,
             userId: user.sub,
             chunkSize,
+            type: dto.type,
         };
 
         await this.rabbit.assertEventQueue(NOTIFICATIONS_LIST_QUEUE, DLQ_NOTIFICATIONS_LIST_QUEUE);

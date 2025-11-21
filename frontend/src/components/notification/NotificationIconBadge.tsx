@@ -11,6 +11,15 @@ interface NotificationIconBadgeProps {
     enabled: boolean;
 }
 
+/**
+ *      
+ * EN: Notification Icon Badge Component
+ *
+ * PT: Componente de Ícone de Notificação com Badge
+ *
+ * @params enabled - Whether the badge is enabled
+ * @returns JSX.Element | null
+ */
 export function NotificationIconBadge({ enabled }: NotificationIconBadgeProps) {
     const [isOpen, setIsOpen] = useState(false);
     const queryClient = useQueryClient();
@@ -33,11 +42,7 @@ export function NotificationIconBadge({ enabled }: NotificationIconBadgeProps) {
             const refetch = () => {
                 queryClient.invalidateQueries({ 
                     queryKey: queryKeys.notifications(),
-                }).catch((error: any) => {
-                    if (error?.name !== 'CancelledError') {
-                        console.error('[NotificationIconBadge] Error invalidating queries:', error);
-                    }
-                });
+                }).catch(() => {});
             };
 
             unsubscribers.push(subscribe(RT_EVENTS.NOTIFICATION_CREATED, refetch));
@@ -66,10 +71,8 @@ export function NotificationIconBadge({ enabled }: NotificationIconBadgeProps) {
                     setIsOpen(false);
                     queryClient.invalidateQueries({ 
                         queryKey: queryKeys.notifications(),
-                    }).catch((error: any) => {
-                        if (error?.name !== 'CancelledError') {
-                            console.error('[NotificationIconBadge] Error invalidating queries:', error);
-                        }
+                    }).catch(() => {
+                        // Ignore errors on invalidation
                     });
                 }}
                 title={`${unreadCount > 0 ? `${unreadCount} notificação${unreadCount > 1 ? 'ões' : ''} não lida${unreadCount > 1 ? 's' : ''}` : 

@@ -55,7 +55,8 @@ class NotificationListConsumer extends BaseResilientConsumer<NotificationListing
                 const chunk = await this.notifications.listByUserCursor(
                     payload.userId,
                     cursor,
-                    payload.chunkSize
+                    payload.chunkSize,
+                    payload.type
                 );
 
                 if (!chunk.length) {
