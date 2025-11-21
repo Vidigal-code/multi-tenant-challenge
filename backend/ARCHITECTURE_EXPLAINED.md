@@ -510,6 +510,42 @@ Redis Cluster → Milhões de operações/segundo
 
 ---
 
+## 📦 Jobs Assíncronos (Listagem & Broadcast)
+
+Além do fluxo “evento → websocket” descrito acima, alguns recursos trabalham em pipelines de **jobs idempotentes**, o que garante UX suave mesmo com grande volume de dados.
+
+### 1. Listagem de Notificações (`POST /notifications/listing`)
+1. Frontend cria o job (`POST /notifications/listing`), opcionalmente enviando `chunkSize` ou `type`.
+2. API publica uma mensagem em `notifications.list.requests` contendo `jobId`, `userId` e cursor inicial.
+3. `worker:notifications-list` lê a fila, busca as notificações em lotes, salva parciais no Redis (`notifications:list:job:{jobId}`) e atualiza campos `processed`, `items`, `nextCursor`, `status`.
+4. O cliente faz polling em `GET /notifications/listing/{jobId}` até `status === "completed"` ou `done === true`.
+5. Se `status === "failed"`, o usuário pode chamar `restartJob()` (frontend) que basicamente recria o job.
+
+**Benefícios:**
+- Não bloqueia a API com `OFFSET/LIMIT` gigantes.
+- Permite retomar do último cursor sem repetir trabalho.
+- Funciona bem em mobile conexões lentas (polling leve).
+
+### 2. Broadcast Seletivo/Global para Amigos
+1. Usuário seleciona modo (seletivo ou global) na aba “Enviar Mensagem”.
+2. Frontend chama `POST /notifications/friend-broadcast-jobs` com `title`, `body` e, opcionalmente, `recipientsEmails`.
+3. API publica `notifications.friends.broadcast.requests` descrevendo o job e o modo (`selected` ou `friends`).
+4. `worker:notifications-friends-broadcast`:
+   - Recupera o job do Redis.
+   - Resolve lista de destinatários (array fixo ou paginação de amizades via `friendships.list.requests`).
+   - Publica cada notificação como mensagem interna (respeita throttling e deduplicação).
+   - Atualiza progresso (`processed`, `totalTargets`, `done`).
+5. Frontend acompanha via `GET /notifications/friend-broadcast-jobs/{jobId}` e exibe “Enviadas X de Y”, erros por destinatário etc.
+
+**Regras extras:**
+- Se `recipientsEmails` vier vazio → modo global (todos os amigos aceitos).
+- Emails duplicados/que não são amigos são ignorados com entrada em `validationResults`.
+- Job falhou? Usuário pode reenviar (novo job) sem risco de duplicar, pois as notificações carregam `jobId`.
+
+Esses mesmos padrões valem para **broadcast corporativo** (`notifications.broadcast.requests`) e **exclusão em lote de notificações** (`notifications.delete.requests`), sempre desacoplando o clique do usuário do trabalho pesado no backend.
+
+---
+
 ## 🎓 Aprendizado
 
 **Por que essa arquitetura?**

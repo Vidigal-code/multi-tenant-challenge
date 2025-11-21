@@ -21,6 +21,17 @@ Evento → Fila RabbitMQ → Worker → notifications.realtimes → Worker Realt
 7. **Persistência BD** - Notificação salva no banco apenas após confirmação
 8. **Auto-cleanup** - Entregas pendentes expiradas são limpas automaticamente
 
+### Fluxo de Jobs (Listagem / Broadcast / Exclusão)
+
+Algumas operações não produzem WebSocket imediato, mas sim **jobs assíncronos** que geram resultados consultados via HTTP:
+
+1. API recebe requisição pesada (`POST /notifications/listing`, `POST /notifications/friend-broadcast-jobs`, `POST /notifications/deletion-jobs`, etc.).
+2. Em vez de executar sincronicamente, publica uma mensagem na fila correspondente (`notifications.list.requests`, `notifications.friends.broadcast.requests`, …).
+3. Worker especializado processa em lotes, armazenando progresso no Redis (tabelas `job:{jobId}`).
+4. Cliente faz polling (`GET .../{jobId}`) até `status=completed/done`.
+
+Esse padrão evita `timeouts`, permite retomar jobs, fornece métricas de progresso e mantém a API sempre responsiva.
+
 ## Filas RabbitMQ
 
 ### Filas de Origem
@@ -29,10 +40,17 @@ Evento → Fila RabbitMQ → Worker → notifications.realtimes → Worker Realt
 |------|-----------|-----|--------|
 | `events.members` | Eventos de membros (mudanças de cargo, entradas, saídas) | `dlq.events.members` | `worker:members` |
 | `events.invites` | Eventos de convites (criados, aceitos, rejeitados) | `dlq.events.invites` | `worker:invites` |
+| `events` | Eventos genéricos (notificações, amizades) | `dlq.events` | `worker:generic` |
 | `invites.list.requests` | Jobs de listagem massiva de convites | `dlq.invites.list.requests` | `worker:invites-list` |
 | `companies.list.requests` | Jobs de listagem massiva de empresas (owner/member) | `dlq.companies.list.requests` | `worker:companies-list` |
+| `friendships.list.requests` | Jobs de listagem de amizades (para dashboards e broadcasts) | `dlq.friendships.list.requests` | `worker:friendships-list` |
 | `invites.bulk.requests` | Operações em lote (delete/reject) de convites | `dlq.invites.bulk.requests` | `worker:invites-bulk` |
-| `events` | Eventos genéricos (notificações, amizades) | `dlq.events` | `worker:generic` |
+| `notifications.list.requests` | Jobs de listagem de notificações (feed `/notifications`) | `dlq.notifications.list.requests` | `worker:notifications-list` |
+| `notifications.delete.requests` | Exclusão em lote de notificações | `dlq.notifications.delete.requests` | `worker:notifications-delete` |
+| `notifications.broadcast.requests` | Broadcast corporativo (membros da empresa) | `dlq.notifications.broadcast.requests` | `worker:notifications-broadcast` |
+| `notifications.friends.broadcast.requests` | Broadcast seletivo/global para amigos | `dlq.notifications.friends.broadcast.requests` | `worker:notifications-friends-broadcast` |
+| `users.search.requests` | Indexação/busca assíncrona de usuários | `dlq.users.search.requests` | `worker:users-search` |
+| `users.delete.requests` | Exclusão em lote de usuários (operado por suporte) | `dlq.users.delete.requests` | `worker:users-delete` |
 
 ### Fila de Destino
 
@@ -78,6 +96,21 @@ Evento → Fila RabbitMQ → Worker → notifications.realtimes → Worker Realt
 - **`worker:generic`** (`generic.events.consumer.ts`)
   - Consome: `events`
   - Encaminha: → `notifications.realtimes` (apenas para eventos de notificação/amizade)
+
+### 1.1. Workers de Jobs
+
+**Propósito**: Processar jobs de listagem/broadcast/exclusão que podem executar por minutos sem bloquear requisições HTTP. Todos são idempotentes e persistem progresso no Redis.
+
+- **`worker:invites-list`** – Enfileirado por `POST /invites/listing`, gera páginas de convites.
+- **`worker:companies-list`** – Lista empresas onde o usuário é owner principal ou membro (base para exclusão de conta).
+- **`worker:friendships-list`** – Alimenta dashboards de amizades e modo global de mensagens para amigos.
+- **`worker:notifications-list`** – Sustenta o feed `/notifications`. Lê `notifications.list.requests`, pagina por cursor e salva parciais (`items`, `processed`, `nextCursor`) no Redis.
+- **`worker:notifications-delete`** – Remove notificações em lote (tanto seleção manual quanto “limpar tudo”), emitindo eventos de progresso.
+- **`worker:notifications-broadcast`** – Faz fan-out para membros da empresa (inclui request-to-join quando `onlyOwnersAndAdmins=true`).
+- **`worker:notifications-friends-broadcast`** – Resolve modo seletivo/global para amigos. Integra com `worker:friendships-list` quando precisa de todos os amigos.
+- **`worker:invites-bulk`** – Cancela/rejeita convites em lote.
+- **`worker:users-search`** – Indexação/atualização de caches de busca de usuários.
+- **`worker:users-delete`** – Exclusão massiva comandada pelo suporte (limpeza de contas/ghost tenants).
 
 ### 2. Worker Realtime
 

@@ -390,6 +390,32 @@ MEMBER (Menor privilégio)
 
 **Frontend**: Sistema de tradução em `src/lib/messages.ts` converte códigos para mensagens amigáveis com suporte a parâmetros e formatação.
 
+### 5.7. Jobs de Notificações
+
+#### 5.7.1. Listagem (Feed `/notifications`)
+- **Regra**: feeds com muitas notificações SEMPRE usam um job assíncrono.
+- **Fluxo**:
+  1. Frontend chama `POST /notifications/listing` (opcional `chunkSize`, `type`).
+  2. Backend retorna `{ jobId, status: "pending" }`.
+  3. O worker `worker:notifications-list` processa em lotes e armazena parciais (`items`, `processed`, `nextCursor`).
+  4. Frontend faz polling em `GET /notifications/listing/{jobId}` até `status === "completed"` ou `done === true`.
+- **Regras**:
+  - `status` pode ser `pending`, `processing`, `completed`, `failed`.
+  - Em caso de `failed`, o frontend deve chamar `restartJob()` (cria novo job).
+  - `nextCursor` permite paginação incremental sem refazer o job do zero.
+  - Jobs expiram automaticamente após entrega ou falha para evitar lixo no cache.
+
+#### 5.7.2. Broadcast para amigos
+- `POST /notifications/friend-broadcast-jobs` cria um job com `title`, `body` e `recipientsEmails?`.
+- O campo `recipientsEmails` define o modo:
+  - **Seletivo** (`recipientsEmails` preenchido) → envia apenas para os emails listados (desde que sejam amigos aceitos).
+  - **Global** (`recipientsEmails` omitido) → envia para todos os amigos aceitos.
+- `GET /notifications/friend-broadcast-jobs/{jobId}` informa `processed`, `totalTargets`, `done`, `error`.
+- Regras extras:
+  - Não permite e-mails duplicados dentro do array.
+  - Cada envio respeita throttling (100ms) para evitar flood.
+  - Job fracassado pode ser reiniciado com novo POST; envios anteriores ficam marcados como `processed`.
+
 ---
 
 ## 6. REGRAS DE AMIZADES (FRIENDSHIPS)

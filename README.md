@@ -102,6 +102,25 @@ Exposição de métricas de processo e HTTP em `/metrics` para observabilidade (
 | `redis` | 6379 | Cache e rate limiting |
 | `rabbitmq` | 5672 / 15672 | Mensageria AMQP e painel de monitoramento |
 
+Os workers AMQP/WebSocket agora rodam sob o profile opcional `workers`. No dia a dia basta subir API + Web (`docker compose up api web` ou simplesmente `docker compose up`). Para processar filas em background execute `docker compose --profile workers up worker-notifications-broadcast worker-notifications-friends-broadcast ...` conforme a necessidade ou `docker compose --profile workers up -d` para todos.
+
+## Pipelines baseadas em Jobs
+
+Para evitar consultas gigantescas em tabelas multi-tenant e permitir retries idempotentes, os fluxos de listagem/broadcast funcionam por jobs assíncronos:
+
+1. **Listagem de notificações**  
+   - `POST /notifications/listing` cria um job (opcional `chunkSize` e `type`).
+   - Backend devolve `jobId` e status `pending`.  
+   - Workers (`worker:notifications-list`) processam o job em lotes e persistem no cache.  
+   - O cliente consulta `GET /notifications/listing/{jobId}` até receber `status=completed` com `items`, `processed`, `done`, `nextCursor`.  
+   - Se o job falhar, `status=failed` + `error` permitem restart rápido (`restartJob()` no frontend reinicia pipeline).
+
+2. **Broadcast para amigos (global/seletivo)**  
+   - `POST /notifications/friend-broadcast-jobs` recebe `title`, `body` e `recipientsEmails?`.  
+   - O worker `worker:notifications-friends-broadcast` resolve o modo (`selected` vs `friends`), pagina a lista de amigos aceitos e publica uma notificação por destinatário respeitando deduplicação e throttling.  
+   - `GET /notifications/friend-broadcast-jobs/{jobId}` expõe progresso (`processed`, `totalTargets`, `done`, `error`).  
+   - O frontend trava a UI até `done=true`, garantindo feedback claro de quantos envios foram realizados.
+
 ## Fluxos Principais
 
 1. **Onboarding**: signup (`POST /auth/signup`) cria usuário, hash seguro e cookie JWT.
@@ -143,6 +162,10 @@ Exposição de métricas de processo e HTTP em `/metrics` para observabilidade (
 | POST | `/notifications/:id/reply` | Responde a uma notificação; valida que o usuário é remetente ou destinatário e inclui contexto completo da notificação original em `meta` |
 | DELETE | `/notifications/:id` | Exclui uma notificação específica (remetente ou destinatário) |
 | DELETE | `/notifications` | Exclui múltiplas notificações em lote (body `{ notificationIds: string[] }`) |
+| POST | `/notifications/listing` | Cria job assíncrono para listar notificações (suporta filtros/`chunkSize`) |
+| GET | `/notifications/listing/{jobId}` | Consulta status/resultados do job de listagem (`pending/processing/completed/failed`) |
+| POST | `/notifications/friend-broadcast-jobs` | Cria job para envio seletivo/global de mensagens a amigos; aceita `recipientsEmails` |
+| GET | `/notifications/friend-broadcast-jobs/{jobId}` | Consulta progresso do broadcast (`processed`, `totalTargets`, `done`, `error`) |
 | GET | `/invites/rejected` | Lista convites rejeitados com razão |
 | GET | `/realtime/rooms` | Retorna rooms e catálogo de eventos para conexão WebSocket |
 | GET | `/invites` | Lista convites recebidos (paginação) |
@@ -412,11 +435,19 @@ Executar periodicamente `npm audit` e avaliar correções antes de aplicar `--fo
 ## Como Rodar (Windows PowerShell)
 
 ```powershell
+# 1) Preparar variáveis
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-docker compose up -d --build
-# Apply Prisma schema, generate client, then seed
-# If this is the first run (no tables yet), run dev with a name; otherwise, deploy existing migrations
+
+# 2) Subir stack principal (db, redis, rabbitmq, api, web)
+docker compose up --build
+# ou em background
+# docker compose up -d --build
+
+# 3) (opcional) subir workers quando precisar consumir filas
+# docker compose --profile workers up worker-notifications-list worker-notifications-friends-broadcast
+
+# 4) Aplicar/gerar Prisma + seed (somente no primeiro boot local)
 docker compose exec api npx prisma migrate deploy
 docker compose exec api npx prisma generate
 docker compose exec api npm run seed

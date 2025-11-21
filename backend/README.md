@@ -199,6 +199,13 @@ Gerencia amizades:
 - Remover amizade
 - Enviar mensagens
 
+### NotificationModule
+- Envio de notificações para membros (broadcast, request to join, respostas)
+- Envio de notificações para amigos a partir de amizades aceitas
+- **Jobs de listagem** (`POST /notifications/listing` + `GET /notifications/listing/{jobId}`) para recuperar grandes volumes de notificações em lotes paginados por cursor
+- **Jobs de broadcast para amigos** (`POST /notifications/friend-broadcast-jobs`) que aceitam modo seletivo (`recipientsEmails`) ou global (todos os amigos aceitos), com acompanhamento via `GET /notifications/friend-broadcast-jobs/{jobId}`
+- Exclusão em lote e marcação como lida com validações idempotentes
+
 ### UsersModule
 Gerencia usuários:
 - Buscar usuários
@@ -364,9 +371,18 @@ npm run test:watch       # Testes em watch mode
 # Workers
 npm run worker:invites   # Worker de convites
 npm run worker:members   # Worker de membros
-npm run worker:invites-list # Worker de listagem massiva de convites
-npm run worker:companies-list # Worker de listagem massiva de empresas (owner/member)
-npm run worker:invites-bulk # Worker para exclusão/rejeição em lote de convites
+npm run worker:invites-list # Listagem massiva de convites
+npm run worker:companies-list # Listagem massiva de empresas (owner/member)
+npm run worker:invites-bulk # Exclusão/rejeição em lote de convites
+npm run worker:notifications-list # Job de listagem de notificações
+npm run worker:notifications-delete # Exclusão em lote de notificações
+npm run worker:notifications-broadcast # Broadcast corporativo
+npm run worker:notifications-friends-broadcast # Broadcast seletivo/global para amigos
+npm run worker:friendships-list # Listagem em lote de amizades
+npm run worker:users-search # Pré-processamento de buscas
+npm run worker:users-delete # Exclusão em lote de usuários
+npm run worker:generic   # Eventos genéricos (DLQ)
+npm run worker:realtime  # Relay de eventos para WebSocket
 ```
 
 ## 🗄 Banco de Dados
@@ -447,6 +463,8 @@ docker build -t backend:latest .
 docker run -p 4000:4000 --env-file .env backend:latest
 ```
 
+> No `docker-compose.yml` os workers ficam em um profile opcional (`workers`). Execute `docker compose --profile workers up worker-notifications-list` para rodá-los quando necessário sem sobrecarregar o ambiente padrão.
+
 ## 🔌 API Endpoints
 
 ### Autenticação
@@ -502,6 +520,19 @@ docker run -p 4000:4000 --env-file .env backend:latest
 ### Tempo Real
 - `GET /realtime/events` - Listar eventos disponíveis
 - WebSocket: `/` - Conexão WebSocket
+
+## ⚙️ Jobs Assíncronos
+
+| Fluxo | Criação | Consulta | Worker |
+|-------|---------|----------|--------|
+| Listagem de notificações | `POST /notifications/listing` | `GET /notifications/listing/{jobId}` | `worker:notifications-list` |
+| Broadcast para membros | `POST /notifications/broadcast-jobs` | `GET /notifications/broadcast-jobs/{jobId}` | `worker:notifications-broadcast` |
+| Broadcast para amigos | `POST /notifications/friend-broadcast-jobs` | `GET /notifications/friend-broadcast-jobs/{jobId}` | `worker:notifications-friends-broadcast` |
+| Exclusão em lote de notificações | `POST /notifications/deletion-jobs` | `GET /notifications/deletion-jobs/{jobId}` | `worker:notifications-delete` |
+
+- Todos retornam `jobId`, `status (pending|processing|completed|failed)`, `processed`, `done`, `error`.
+- O frontend realiza polling até `done=true`; em caso de falha, basta recriar o job (idempotente).
+- Os workers registram progresso no Redis para dashboards/monitoramento.
 
 ## 🔐 Segurança
 

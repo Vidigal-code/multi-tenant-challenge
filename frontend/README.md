@@ -429,7 +429,7 @@ ENV NEXT_PUBLIC_DEFAULT_COMPANY_LOGO=$NEXT_PUBLIC_DEFAULT_COMPANY_LOGO
 - Listar amigos
 - Enviar solicitações
 - Aceitar/Rejeitar solicitações
-- Enviar mensagens (global ou seletivo)
+- Enviar mensagens (global ou seletivo) — dispara `POST /notifications/friend-broadcast-jobs` e acompanha o job via `GET /notifications/friend-broadcast-jobs/{jobId}` para mostrar progresso e feedback detalhado
 
 ### Notificações
 - Feed de notificações
@@ -440,6 +440,8 @@ ENV NEXT_PUBLIC_DEFAULT_COMPANY_LOGO=$NEXT_PUBLIC_DEFAULT_COMPANY_LOGO
 - **Respeito às preferências**: popups só aparecem se o tipo de notificação estiver habilitado
 - **Aparecem em qualquer rota** quando habilitados
 - **Redirecionam para /notifications** ao clicar
+- **Listagem escalável**: a página cria jobs com `POST /notifications/listing` e monitora `GET /notifications/listing/{jobId}` para carregar grandes volumes paginados sem travar a UI
+- **Filtros client-side** para tabs (Todas, Amigos, Convites, etc.) sincronizados com o job ativo
 
 ### Tempo Real
 - WebSocket para atualizações em tempo real

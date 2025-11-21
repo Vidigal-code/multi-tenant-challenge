@@ -91,7 +91,7 @@ describe('Notification Flow Integration', () => {
         httpMock.get.mockImplementation((url: string) => {
             if (url === `/notifications/listing/${jobId}`) {
                 return Promise.resolve({
-                    data: {
+            data: {
                         items,
                         total: items.length,
                         status: 'completed',
@@ -119,43 +119,43 @@ describe('Notification Flow Integration', () => {
     it('complete flow: list notifications -> mark read -> reply', async () => {
         setupNotificationListingMocks(
             [
-                {
-                    id: 'n1',
-                    title: 'Welcome!',
-                    body: 'Welcome to the companys',
-                    senderUserId: 'u2',
-                    recipientUserId: 'u1',
-                    companyId: 'c1',
-                    createdAt: new Date().toISOString(),
-                    read: false,
-                    meta: {
-                        kind: 'notifications.sent',
-                        sender: {
-                            id: 'u2',
-                            name: 'User 2',
-                            email: 'u2@test.com',
+                    {
+                        id: 'n1',
+                        title: 'Welcome!',
+                        body: 'Welcome to the companys',
+                        senderUserId: 'u2',
+                        recipientUserId: 'u1',
+                        companyId: 'c1',
+                        createdAt: new Date().toISOString(),
+                        read: false,
+                        meta: {
+                            kind: 'notifications.sent',
+                            sender: {
+                                id: 'u2',
+                                name: 'User 2',
+                                email: 'u2@test.com',
+                            },
                         },
                     },
-                },
-                {
-                    id: 'n2',
-                    title: 'Meeting',
-                    body: 'Team meeting at 3pm',
-                    senderUserId: 'u2',
-                    recipientUserId: 'u1',
-                    companyId: 'c1',
-                    createdAt: new Date().toISOString(),
-                    read: true,
-                    meta: {
-                        kind: 'notifications.sent',
-                        sender: {
-                            id: 'u2',
-                            name: 'User 2',
-                            email: 'u2@test.com',
+                    {
+                        id: 'n2',
+                        title: 'Meeting',
+                        body: 'Team meeting at 3pm',
+                        senderUserId: 'u2',
+                        recipientUserId: 'u1',
+                        companyId: 'c1',
+                        createdAt: new Date().toISOString(),
+                        read: true,
+                        meta: {
+                            kind: 'notifications.sent',
+                            sender: {
+                                id: 'u2',
+                                name: 'User 2',
+                                email: 'u2@test.com',
+                            },
                         },
                     },
-                },
-            ],
+                ],
             {
                 jobId: 'job-complete-flow',
                 extraPostMocks: {
@@ -166,7 +166,7 @@ describe('Notification Flow Integration', () => {
                                 title: 'Re: Welcome!',
                                 body: payload?.replyBody ?? 'Thank you!',
                             },
-                        },
+            },
                     }),
                 },
             }
@@ -217,29 +217,29 @@ describe('Notification Flow Integration', () => {
     it('filter notifications by read status', async () => {
         setupNotificationListingMocks(
             [
-                {
-                    id: 'n1',
-                    title: 'Unread',
-                    body: 'Unread notifications',
-                    senderUserId: 'u2',
-                    recipientUserId: 'u1',
-                    companyId: 'c1',
-                    createdAt: new Date().toISOString(),
-                    read: false,
-                    meta: {},
-                },
-                {
-                    id: 'n2',
-                    title: 'Read',
-                    body: 'Read notifications',
-                    senderUserId: 'u2',
-                    recipientUserId: 'u1',
-                    companyId: 'c1',
-                    createdAt: new Date().toISOString(),
-                    read: true,
-                    meta: {},
-                },
-            ],
+                    {
+                        id: 'n1',
+                        title: 'Unread',
+                        body: 'Unread notifications',
+                        senderUserId: 'u2',
+                        recipientUserId: 'u1',
+                        companyId: 'c1',
+                        createdAt: new Date().toISOString(),
+                        read: false,
+                        meta: {},
+                    },
+                    {
+                        id: 'n2',
+                        title: 'Read',
+                        body: 'Read notifications',
+                        senderUserId: 'u2',
+                        recipientUserId: 'u1',
+                        companyId: 'c1',
+                        createdAt: new Date().toISOString(),
+                        read: true,
+                        meta: {},
+                    },
+                ],
             { jobId: 'job-filter-flow' }
         );
 
