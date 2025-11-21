@@ -25,7 +25,7 @@ export class UserDeletionCacheService {
     async updateMeta(jobId: string, patch: Partial<UserDeleteJobMeta>): Promise<void> {
         const key = `user_del_job:${jobId}`;
         const raw = await this.redis.get(key);
-        if (!raw) return; // Job expired or missing
+        if (!raw) return;
 
         const current = JSON.parse(raw) as UserDeleteJobMeta;
         const updated = {...current, ...patch};

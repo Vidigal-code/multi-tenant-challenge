@@ -15,7 +15,10 @@ export class PrismaService
         
         if (prismaLogEnv && prismaLogEnv.toLowerCase() !== 'false' && prismaLogEnv.toLowerCase() !== 'none') {
             const validLevels: Array<'query' | 'info' | 'warn' | 'error'> = ['query', 'info', 'warn', 'error'];
-            const levels = prismaLogEnv.split(',').map(level => level.trim().toLowerCase()).filter(level => validLevels.includes(level as any));
+
+            const levels = prismaLogEnv.split(',').map(level =>
+                level.trim().toLowerCase()).filter(level => validLevels.includes(level as any));
+
             prismaLogLevels = levels as Array<'query' | 'info' | 'warn' | 'error'>;
         }
 

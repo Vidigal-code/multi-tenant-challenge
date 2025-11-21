@@ -44,8 +44,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
             this.logger.default(`HttpException: ${status} - ${message} - Path: ${request.method} ${request.url}`);
         } else if (exception instanceof Error) {
             message = exception.message;
-            this.logger.error(`Erro não tratado: ${exception.message} - Path: ${request.method} ${request.url} - Stack: ${exception.stack?.substring(0, 200)}`);
-            this.logger.error(`Unhandled error: ${exception.message} - Path: ${request.method} ${request.url} - Stack: ${exception.stack?.substring(0, 200)}`);
+            this.logger.error(`Erro não tratado: ${exception.message} - Path: ${request.method} ${request.url} - 
+            Stack: ${exception.stack?.substring(0, 200)}`);
+            this.logger.error(`Unhandled error: ${exception.message} - Path: ${request.method} ${request.url} - 
+            Stack: ${exception.stack?.substring(0, 200)}`);
         } else {
             this.logger.error(`Erro desconhecido: ${String(exception)} - Path: ${request.method} ${request.url}`);
             this.logger.error(`Unknown error: ${String(exception)} - Path: ${request.method} ${request.url}`);

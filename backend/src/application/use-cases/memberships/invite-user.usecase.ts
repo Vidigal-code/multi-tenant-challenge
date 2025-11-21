@@ -41,17 +41,20 @@ export class InviteUserUseCase {
         );
 
         if (!membership) {
-            this.logger.default(`Invite failed: user is not a member - user: ${input.inviterUserId}, company: ${input.companyId}`);
+            this.logger.default(`Invite failed: user is not a member - user:
+             ${input.inviterUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.NOT_A_MEMBER);
         }
 
         if (membership.role === Role.MEMBER) {
-            this.logger.default(`Invite failed: insufficient role - user: ${input.inviterUserId}, company: ${input.companyId}, role: ${membership.role}`);
+            this.logger.default(`Invite failed: insufficient role - user:
+             ${input.inviterUserId}, company: ${input.companyId}, role: ${membership.role}`);
             throw new ApplicationError(ErrorCode.INSUFFICIENT_ROLE);
         }
 
         if (input.role === Role.OWNER && membership.role !== Role.OWNER) {
-            this.logger.default(`Invite failed: only owner can invite owner - user: ${input.inviterUserId}, company: ${input.companyId}`);
+            this.logger.default(`Invite failed: only owner can invite owner - user:
+             ${input.inviterUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.ONLY_OWNER_CAN_INVITE_OWNER);
         }
 

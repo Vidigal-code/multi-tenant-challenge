@@ -74,7 +74,8 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                 <button
                                     onClick={() => setIsOpen(false)}
                                     className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-900
-                                    dark:hover:bg-gray-800 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm border border-gray-200 dark:border-gray-800"
+                                    dark:hover:bg-gray-800 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm border
+                                    border-gray-200 dark:border-gray-800"
                                     type="button"
                                     aria-label="Close menu"
                                 >
@@ -117,7 +118,8 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                             onClick={() => setIsOpen(false)}
                                         >
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100
+                                                transition-opacity"></div>
                                             <span className="font-medium">Dashboard</span>
                                         </Link>
                                         <Link
@@ -129,7 +131,8 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                             onClick={() => setIsOpen(false)}
                                         >
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100
+                                                transition-opacity"></div>
                                             <span className="font-medium">Perfil</span>
                                         </Link>
                                         <Link
@@ -141,7 +144,8 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                             onClick={() => setIsOpen(false)}
                                         >
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100
+                                                transition-opacity"></div>
                                             <span className="font-medium">Convites</span>
                                         </Link>
                                         <Link
@@ -166,7 +170,8 @@ export function MobileMenu({initialAuth}: { initialAuth: boolean }) {
                                             onClick={() => setIsOpen(false)}
                                         >
                                             <div
-                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                className="w-2 h-2 rounded-full bg-gray-900 dark:bg-gray-100 opacity-0 group-hover:opacity-100
+                                                transition-opacity"></div>
                                             <span className="font-medium">Notificações</span>
                                         </Link>
                                         <Link

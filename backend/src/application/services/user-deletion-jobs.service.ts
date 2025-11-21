@@ -28,7 +28,7 @@ export class UserDeletionJobsService {
     ) {
     }
 
-    async createJob(user: CurrentUserPayload, dto: CreateUserDeleteJobDto): Promise<UserDeleteJobMeta> {
+    async createJob(user: CurrentUserPayload, _dto: CreateUserDeleteJobDto): Promise<UserDeleteJobMeta> {
         const jobId = randomUUID();
         const meta: UserDeleteJobMeta = {
             jobId,
@@ -55,9 +55,11 @@ export class UserDeletionJobsService {
 
     async getJob(userId: string, jobId: string): Promise<UserDeleteJobResponseDto> {
         const meta = await this.cache.getMeta(jobId);
+
         if (!meta) {
-            throw new ApplicationError(ErrorCode.USER_NOT_FOUND); // Using existing error code for generic not found
+            throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
         }
+
         if (meta.userId !== userId) {
             throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
         }

@@ -172,22 +172,27 @@ function getNotificationContext(notification: Notification): string {
     if (eventCode === "INVITE_REJECTED" || titleUpper.includes("INVITE_REJECTED") || titleUpper.includes("REJECT_COMPANY_INVITE")) {
         return "Esta é uma resposta sobre um convite rejeitado";
     }
-    if (eventCode === "ROLE_CHANGED" || eventCode === "USER_STATUS_UPDATED" || titleUpper.includes("ROLE_CHANGED") || titleUpper.includes("USER_STATUS_UPDATED") || bodyUpper.includes("CARGO")) {
+    if (eventCode === "ROLE_CHANGED" || eventCode === "USER_STATUS_UPDATED" || titleUpper.includes("ROLE_CHANGED") ||
+        titleUpper.includes("USER_STATUS_UPDATED") || bodyUpper.includes("CARGO")) {
         return "Esta é uma resposta sobre uma mudança de cargo";
     }
-    if (eventCode === "MEMBER_ADDED" || eventCode === "USER_JOINED" || titleUpper.includes("MEMBER_ADDED") || titleUpper.includes("USER_JOINED")) {
+    if (eventCode === "MEMBER_ADDED" || eventCode === "USER_JOINED" || titleUpper.includes("MEMBER_ADDED") ||
+        titleUpper.includes("USER_JOINED")) {
         return "Esta é uma resposta sobre um membro adicionado à empresa";
     }
-    if (eventCode === "MEMBER_REMOVED" || eventCode === "USER_REMOVED" || titleUpper.includes("MEMBER_REMOVED") || titleUpper.includes("USER_REMOVED")) {
+    if (eventCode === "MEMBER_REMOVED" || eventCode === "USER_REMOVED" || titleUpper.includes("MEMBER_REMOVED") ||
+        titleUpper.includes("USER_REMOVED")) {
         return "Esta é uma resposta sobre um membro removido da empresa";
     }
     if (eventCode === "FRIEND_REQUEST_SENT" || titleUpper.includes("FRIEND_REQUEST_SENT")) {
         return "Esta é uma resposta sobre uma solicitação de amizade";
     }
-    if (eventCode === "FRIEND_REQUEST_ACCEPTED" || eventCode === "ACCEPTED_FRIEND" || titleUpper.includes("FRIEND_REQUEST_ACCEPTED") || titleUpper.includes("ACCEPTED_FRIEND")) {
+    if (eventCode === "FRIEND_REQUEST_ACCEPTED" || eventCode === "ACCEPTED_FRIEND" || titleUpper.includes("FRIEND_REQUEST_ACCEPTED") ||
+        titleUpper.includes("ACCEPTED_FRIEND")) {
         return "Esta é uma resposta sobre uma solicitação de amizade aceita";
     }
-    if (eventCode === "FRIEND_REQUEST_REJECTED" || eventCode === "REJECTED_FRIEND" || titleUpper.includes("FRIEND_REQUEST_REJECTED") || titleUpper.includes("REJECTED_FRIEND")) {
+    if (eventCode === "FRIEND_REQUEST_REJECTED" || eventCode === "REJECTED_FRIEND" || titleUpper.includes("FRIEND_REQUEST_REJECTED") ||
+        titleUpper.includes("REJECTED_FRIEND")) {
         return "Esta é uma resposta sobre uma solicitação de amizade rejeitada";
     }
     if (eventCode === "FRIEND_REMOVED" || titleUpper.includes("FRIEND_REMOVED")) {
@@ -311,15 +316,8 @@ interface NotificationCategory {
     filter: (notification: Notification) => boolean;
 }
 
-/**
- *      
- * EN: Notification Page Component
- *
- * PT: Componente da Página de Notificações
- *
- * @returns JSX.Element
- */
-export default function NotificationsPage() {
+function NotificationsPage() {
+
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyBody, setReplyBody] = useState("");
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -335,10 +333,13 @@ export default function NotificationsPage() {
     const queryClient = useQueryClient();
 
     const deletionJob = useNotificationDeletionJob();
-    const notificationsQuery = useNotificationListing(currentPage, itemsPerPage, activeTab); 
-    const notifications = (notificationsQuery.data && "items" in notificationsQuery.data &&
-         Array.isArray(notificationsQuery.data.items)) ?
-     notificationsQuery.data.items as Notification[] : [];
+    const notificationsQuery = useNotificationListing(currentPage, itemsPerPage, activeTab);
+
+    let notifications: Notification[];
+    notifications = (notificationsQuery.data && "items" in notificationsQuery.data &&
+        Array.isArray(notificationsQuery.data.items)) ?
+        notificationsQuery.data.items as Notification[] : [];
+
     const isLoading = notificationsQuery.isLoading;
     const totalNotifications = (notificationsQuery.data && "total" in notificationsQuery.data) ? notificationsQuery.data.total : 0;
     const friendRequestsQuery = useFriendRequests();
@@ -377,30 +378,33 @@ export default function NotificationsPage() {
     }, [queryClient, activeTab, currentPage, itemsPerPage, friendRequestsQuery]);
 
     useEffect(() => {
-        if (deletionJob.jobStatus?.status === 'completed' && deletionJob.jobStatus.done) {
+        const jobStatus = deletionJob.jobStatus;
+        if (!jobStatus) return;
+
+        if (jobStatus.status === 'completed' && jobStatus.done) {
             notificationsQuery.restartJob();
             setSelected([]);
             setDeleteIds([]);
             if (showDeleteModal) setShowDeleteModal(false);
             if (showClearAllModal) setShowClearAllModal(false);
-            
+
             show({
                 type: "success",
                 message: "Notificações excluídas com sucesso"
             });
             deletionJob.reset();
-        } else if (deletionJob.jobStatus?.status === 'failed') {
-             show({
+        } else if (jobStatus.status === 'failed') {
+            show({
                 type: "error",
-                message: deletionJob.jobStatus.error || "Falha ao excluir notificações"
+                message: jobStatus.error || "Falha ao excluir notificações"
             });
         }
-    }, [deletionJob.jobStatus?.status, deletionJob.jobStatus?.done]); 
+    }, [deletionJob.jobStatus, deletionJob, notificationsQuery, showDeleteModal, showClearAllModal, show]);
 
     useEffect(() => {
         setCurrentPage(1);
         notificationsQuery.restartJob();
-    }, [activeTab]); 
+    }, [activeTab, notificationsQuery]);
 
     const handleMarkRead = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -441,7 +445,6 @@ export default function NotificationsPage() {
     const handleBulkDelete = async (ids: string[]) => {
         try {
             await deletionJob.createJobAsync({ ids });
-            // Modal closing and success message will be handled by the useEffect monitoring job status
         } catch (error) {
             show({
                 type: "error",
@@ -453,7 +456,6 @@ export default function NotificationsPage() {
     const handleClearAll = async () => {
         try {
             await deletionJob.createJobAsync({ deleteAll: true });
-             // Modal closing and success message will be handled by the useEffect monitoring job status
         } catch (error) {
             show({
                 type: "error",
@@ -498,7 +500,7 @@ export default function NotificationsPage() {
         }
     };
 
-    const categories: NotificationCategory[] = [
+    const categories: NotificationCategory[] = useMemo(() => [
         {
             id: "all",
             label: "Todas",
@@ -577,14 +579,14 @@ export default function NotificationsPage() {
                     title.toUpperCase().includes("NOTIFICATION");
             }
         }
-    ];
+    ], []);
 
 
-    const filteredNotifications = useMemo(() => {
+    const filteredNotifications = (() => {
         const category = categories.find(c => c.id === activeTab);
         if (!category) return notifications;
         return notifications.filter(category.filter);
-    }, [categories, notifications, activeTab]);
+    })();
 
     const totalPages = Math.ceil(totalNotifications / itemsPerPage);
 
@@ -647,7 +649,7 @@ export default function NotificationsPage() {
 
                 <div className="flex items-center gap-3">
                     {notifications.length > 0 && (
-                         <button
+                        <button
                             onClick={() => setShowClearAllModal(true)}
                             disabled={deletionJob.isLoading || isLoading}
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600
@@ -802,13 +804,15 @@ export default function NotificationsPage() {
                                         </div>
 
                                         <div
-                                            className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-2xl ${style.color} bg-gray-50 dark:bg-gray-700/50`}>
+                                            className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-2xl ${style.color} 
+                                            bg-gray-50 dark:bg-gray-700/50`}>
                                             {style.icon}
                                         </div>
 
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-start justify-between gap-2">
-                                                <h3 className={`text-base font-semibold text-gray-900 dark:text-white mb-1 ${!notification.read ? "font-bold" : ""}`}>
+                                                <h3 className={`text-base font-semibold text-gray-900 dark:text-white mb-1 ${!notification.read ? 
+                                                    "font-bold" : ""}`}>
                                                     {getTranslatedTitle(notification.title)}
                                                 </h3>
                                                 <span
@@ -827,7 +831,8 @@ export default function NotificationsPage() {
                                                 <div
                                                     className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                                                     <div
-                                                        className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center">
+                                                        className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex
+                                                         items-center justify-center">
                                                         {(notification.meta?.sender?.name || notification.sender?.name) ? (
                                                             <span
                                                                 className="font-medium text-[10px]">{(notification.meta?.sender?.name ||
@@ -857,7 +862,8 @@ export default function NotificationsPage() {
                                             {!notification.read && (
                                                 <button
                                                     onClick={(e) => handleMarkRead(notification.id, e)}
-                                                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full transition-colors"
+                                                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50
+                                                    dark:hover:bg-blue-900/30 rounded-full transition-colors"
                                                     title="Marcar como lida"
                                                 >
                                                     <div className="w-2 h-2 rounded-full bg-current" />
@@ -869,7 +875,8 @@ export default function NotificationsPage() {
                                                     setDeleteIds([notification.id]);
                                                     setDeleteConfirm(notification.id);
                                                 }}
-                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full transition-colors"
+                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50
+                                                dark:hover:bg-red-900/30 rounded-full transition-colors"
                                                 title="Excluir"
                                             >
                                                 <MdPersonAdd className="text-lg rotate-45" />
@@ -893,19 +900,23 @@ export default function NotificationsPage() {
                                             </div>
 
                                             <div className="flex gap-3">
-                                                {notification.meta?.inviteId && !notification.title.includes("ACCEPTED") && !notification.title.includes("REJECTED") && (
+                                                {notification.meta?.inviteId && !notification.title.includes("ACCEPTED")
+                                                    && !notification.title.includes("REJECTED") && (
                                                     <Link
                                                         href={`/invites?id=${notification.meta.inviteId}`}
-                                                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                                                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600
+                                                        hover:bg-blue-700 rounded-lg transition-colors"
                                                     >
                                                         <MdMail className="text-lg" /> Ver Convite
                                                     </Link>
                                                 )}
 
-                                                {notification.meta?.friendshipId && (notification.meta.kind === "friend.request.sent" || notification.title.includes("FRIEND_REQUEST_SENT")) && (
+                                                {notification.meta?.friendshipId && (notification.meta.kind === "friend.request.sent" ||
+                                                    notification.title.includes("FRIEND_REQUEST_SENT")) && (
                                                     <Link
                                                         href={`/friends?id=${notification.meta.friendshipId}`}
-                                                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                                                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white
+                                                        bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                                                     >
                                                         <MdPersonAdd className="text-lg" /> Ver Solicitação
                                                     </Link>
@@ -916,7 +927,9 @@ export default function NotificationsPage() {
                                                         e.stopPropagation();
                                                         setReplyingTo(notification.id);
                                                     }}
-                                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium
+                                                    text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border
+                                                    border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                                                 >
                                                     <MdChat className="text-lg" /> Responder
                                                 </button>
@@ -924,7 +937,8 @@ export default function NotificationsPage() {
 
                                             {replyingTo === notification.id && (
                                                 <div
-                                                    className="mt-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm animate-slideDown">
+                                                    className="mt-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4
+                                                     shadow-sm animate-slideDown">
                                                     <div className="flex justify-between items-center mb-2">
                                                         <h4 className="text-sm font-medium text-gray-900 dark:text-white">
                                                             Responder
@@ -944,20 +958,23 @@ export default function NotificationsPage() {
                                                         value={replyBody}
                                                         onChange={(e) => setReplyBody(e.target.value)}
                                                         placeholder="Escreva sua resposta..."
-                                                        className="w-full p-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white min-h-[100px] resize-y mb-3"
+                                                        className="w-full p-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2
+                                                        focus:ring-blue-500 dark:bg-gray-900 dark:text-white min-h-[100px] resize-y mb-3"
                                                         autoFocus
                                                     />
                                                     <div className="flex justify-end gap-2">
                                                         <button
                                                             onClick={() => setReplyingTo(null)}
-                                                            className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                                            className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100
+                                                            dark:hover:bg-gray-700 rounded-lg transition-colors"
                                                         >
                                                             Cancelar
                                                         </button>
                                                         <button
                                                             onClick={() => handleReply(notification)}
                                                             disabled={!replyBody.trim() || replyMutation.isPending}
-                                                            className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                                                            className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-white bg-blue-600
+                                                            hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
                                                         >
                                                             {replyMutation.isPending ? (
                                                                 <div
@@ -998,7 +1015,8 @@ export default function NotificationsPage() {
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1 || isLoading}
-                        className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50
+                        dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         <MdChevronLeft className="text-xl" />
                     </button>
@@ -1023,7 +1041,8 @@ export default function NotificationsPage() {
                     <button
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages || isLoading}
-                        className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50
+                        dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         <MdChevronRight className="text-xl" />
                     </button>
@@ -1051,7 +1070,7 @@ export default function NotificationsPage() {
             >
                 {`Tem certeza que deseja excluir ${deleteIds.length} notificações selecionadas? Esta ação não pode ser desfeita.`}
             </ConfirmModal>
-            
+
             <ConfirmModal
                 open={showClearAllModal}
                 onCancel={() => setShowClearAllModal(false)}
@@ -1065,3 +1084,5 @@ export default function NotificationsPage() {
         </div>
     );
 }
+
+export default NotificationsPage;

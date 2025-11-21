@@ -29,13 +29,15 @@ export class ReplyToNotificationUseCase {
 
     async execute(input: ReplyToNotificationInput) {
         if (!input.replyBody || !input.replyBody.trim()) {
-            this.logger.default(`Reply to notification failed: reply body is required - notification: ${input.notificationId}, user: ${input.userId}`);
+            this.logger.default(`Reply to notification failed: reply body is required - notification:
+             ${input.notificationId}, user: ${input.userId}`);
             throw new ApplicationError(ErrorCode.MISSING_USER_DATA);
         }
 
         const originalNotification = await this.notificationRepo.findById(input.notificationId);
         if (!originalNotification) {
-            this.logger.default(`Reply to notification failed: notification not found - notification: ${input.notificationId}, user: ${input.userId}`);
+            this.logger.default(`Reply to notification failed: notification not found - notification: 
+            ${input.notificationId}, user: ${input.userId}`);
             throw new ApplicationError(ErrorCode.NOTIFICATION_NOT_FOUND);
         }
 
@@ -44,7 +46,9 @@ export class ReplyToNotificationUseCase {
             originalNotification.recipientUserId === input.userId;
 
         if (!canReply) {
-            this.logger.default(`Reply to notification failed: cannot reply - notification: ${input.notificationId}, user: ${input.userId}, sender: ${originalNotification.senderUserId}, recipient: ${originalNotification.recipientUserId}`);
+            this.logger.default(`Reply to notification failed: cannot reply - notification: 
+            ${input.notificationId}, user: ${input.userId}, sender: ${originalNotification.senderUserId}, 
+            recipient: ${originalNotification.recipientUserId}`);
             throw new ApplicationError(ErrorCode.CANNOT_REPLY_TO_NOTIFICATION);
         }
 

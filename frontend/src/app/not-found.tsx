@@ -21,7 +21,8 @@ export default function NotFound() {
                         </span>
                         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">404 — Página não encontrada</h1>
                         <p className="text-gray-600 dark:text-gray-300">
-                            Talvez o link esteja desatualizado ou você não tenha permissão para visualizar. Continue navegando pelos atalhos abaixo ou retorne à página anterior.
+                            Talvez o link esteja desatualizado ou você não tenha permissão para visualizar. Continue navegando pelos
+                            atalhos abaixo ou retorne à página anterior.
                         </p>
 
                         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 pt-2">
@@ -45,7 +46,8 @@ export default function NotFound() {
                             <Link
                                 href="/info"
                                 className="inline-flex items-center justify-center gap-2 rounded-2xl border
-                                border-gray-200 dark:border-white/20 bg-white dark:bg-gray-950 px-4 py-2 text-sm font-medium text-gray-900 dark:text-white shadow-sm
+                                border-gray-200 dark:border-white/20 bg-white dark:bg-gray-950 px-4 py-2 text-sm font-medium
+                                text-gray-900 dark:text-white shadow-sm
                                  hover:border-blue-400 hover:text-blue-600
                                 dark:hover:text-blue-300 transition-colors"
                             >

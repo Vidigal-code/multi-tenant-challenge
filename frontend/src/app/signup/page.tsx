@@ -70,7 +70,8 @@ export default function SignupPage() {
                     </div>
                     <button disabled={loading}
                             className="w-full px-4 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800
-                            dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors">{loading ? 'Registrando...' : 'Registrar'}</button>
+                            dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors">
+                        {loading ? 'Registrando...' : 'Registrar'}</button>
                 </form>
                 <p className="text-center text-sm text-gray-600 dark:text-gray-400">
                     Já tem conta? <a href="/login" className="text-gray-900 dark:text-white font-medium hover:underline">Entrar</a>

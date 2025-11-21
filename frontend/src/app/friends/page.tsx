@@ -13,13 +13,13 @@ import { useParams } from "next/navigation";
 import {
     type Friendship,
     useAcceptFriendRequest,
+    useFriendBroadcastJob,
     useFriendRequests,
     useFriendships,
     useProfile,
     type User,
     useRemoveFriend,
     useSearchUsers,
-    useFriendBroadcastJob,
     useSendFriendRequest
 } from "../../services/api";
 
@@ -133,8 +133,7 @@ export default function FriendsPage() {
 
   const handlePreviousTab = () => {
     setTabIndex(prev => {
-      const newIndex = Math.max(0, prev - 1);
-      return newIndex;
+        return Math.max(0, prev - 1);
     });
   };
 
@@ -284,7 +283,6 @@ export default function FriendsPage() {
     const friendEmails: string[] = [];
     
     if (messageMode === 'global') {
-      // leave list empty to broadcast to all friends
     } else {
       if (selectedFriend) {
         friendEmails.push(selectedFriend.email);

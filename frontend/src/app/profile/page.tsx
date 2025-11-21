@@ -17,7 +17,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useNotificationPreferences } from '../../hooks/useNotificationPreferences';
 import {FaExclamationTriangle} from "react-icons/fa";
-import {MdBusiness, MdPerson, MdMail, MdPersonAdd, MdPersonRemove, MdRefresh, MdNotifications, MdNotificationsActive, MdBadge} from "react-icons/md";
+import {MdBusiness, MdPerson, MdMail, MdPersonAdd, MdRefresh, MdNotifications, MdNotificationsActive, MdBadge} from "react-icons/md";
 import { formatDate, formatDateOnly } from '../../lib/date-utils';
 import { translateMemberCompaniesMessage, translateRole } from '../../lib/messages';
 import Link from 'next/link';

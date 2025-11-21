@@ -6,7 +6,6 @@ import { useParams } from 'next/navigation';
 import { InviteForm } from '../../../components/invites/InviteForm';
 import { MemberList } from '../../../components/members/MemberList';
 import { getErrorMessage } from '../../../lib/error';
-import { getSuccessMessage, getErrorMessage as getErrorMessageByCode } from '../../../lib/messages';
 import { useToast } from '../../../hooks/useToast';
 import { useQueryClient } from '@tanstack/react-query';
 import Skeleton from '../../../components/skeleton/Skeleton';
@@ -112,7 +111,6 @@ export default function CompanyPage() {
         } : null);
     }, [companyQuery.data, publicCompanyInfoQuery.data]);
 
-    const isPublicCompany = company?.is_public ?? false;
 
     const membersQuery = useCompanyMembers(id, isMember);
     const primaryOwnerQuery = useCompanyPrimaryOwner(id, isMember);
@@ -787,7 +785,8 @@ export default function CompanyPage() {
                             type="checkbox"
                             checked={notificationOwnersOnly}
                             onChange={(e) => setNotificationOwnersOnly(e.target.checked)}
-                            className="w-4 h-4 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700 rounded focus:ring-gray-900 dark:focus:ring-white"
+                            className="w-4 h-4 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700 rounded
+                            focus:ring-gray-900 dark:focus:ring-white"
                         />
                         Enviar apenas para Owners/Admins
                     </label>
@@ -856,7 +855,8 @@ export default function CompanyPage() {
                                             type="button"
                                             onClick={() => setMembersPage((p) => Math.max(1, p - 1))}
                                             disabled={currentPage === 1}
-                                            className="px-3 py-1.5 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950
+                                            className="px-3 py-1.5 text-xs sm:text-sm border border-gray-200 dark:border-gray-800 rounded-lg
+                                            bg-white dark:bg-gray-950
                                             text-gray-700 dark:text-gray-300 disabled:opacity-50
                                             disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                                         >

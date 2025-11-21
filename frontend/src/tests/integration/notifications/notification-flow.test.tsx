@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ReduxProvider } from 'react-redux';
 import { store } from '../../../store';
-import NotificationsPage from '../../../app/notifications/page';
+import NotificationsPage from "../../../app/notifications/page";
 import { http } from '../../../lib/http';
 
 jest.mock('../../../lib/http', () => ({

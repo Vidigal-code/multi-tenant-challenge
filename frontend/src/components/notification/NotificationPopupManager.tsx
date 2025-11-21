@@ -123,7 +123,7 @@ function shouldShowNotification(notification: NotificationData, derived: any): b
 export function NotificationPopupManager({ enabled }: NotificationPopupManagerProps) {
     const [currentNotification, setCurrentNotification] = useState<NotificationData | null>(null);
     const queryClient = useQueryClient();
-    const { preferences, derived: notificationDerived } = useNotificationPreferences();
+    const {  derived: notificationDerived } = useNotificationPreferences();
 
     useEffect(() => {
         if (!enabled) {
@@ -157,7 +157,6 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                                 const { emit } = await import('../../lib/realtime');
                                 emit(RT_EVENTS.NOTIFICATION_DELIVERED, { messageId });
                             } catch (error) {
-                                // Ignore
                             }
                         }
                         queryClient.invalidateQueries({ 
@@ -225,7 +224,6 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                             }
                         }
                     } catch (fetchError) {
-                        // Ignore
                     }
 
                     if (messageId) {
@@ -233,7 +231,6 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                             const { emit } = await import('../../lib/realtime');
                             emit(RT_EVENTS.NOTIFICATION_DELIVERED, { messageId });
                         } catch (error) {
-                            // Ignore
                         }
                     }
 
@@ -257,7 +254,6 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                         }).catch(() => {});
                     }
                 } catch (error) {
-                    // Ignore
                 }
             };
 
@@ -288,7 +284,7 @@ export function NotificationPopupManager({ enabled }: NotificationPopupManagerPr
                     queryKey: queryKeys.notifications(),
                 }).catch((error: any) => {
                     if (error?.name !== 'CancelledError') {
-                        console.error('[NotificationPopupManager] Error invalidating queries:', error);
+                        //console.error('[NotificationPopupManager] Error invalidating queries:', error);
                     }
                 });
             }}

@@ -35,12 +35,14 @@ export class ChangeMemberRoleUseCase {
             );
 
         if (!requesterMembership) {
-            this.logger.default(`Change member role failed: requester is not a member - requester: ${input.requesterId}, company: ${input.companyId}`);
+            this.logger.default(`Change member role failed: requester is not a member - requester: 
+            ${input.requesterId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.REQUESTER_NOT_MEMBER);
         }
 
         if (requesterMembership.role !== Role.OWNER) {
-            this.logger.default(`Change member role failed: insufficient role - requester: ${input.requesterId}, company: ${input.companyId}, role: ${requesterMembership.role}`);
+            this.logger.default(`Change member role failed: insufficient role - requester:
+             ${input.requesterId}, company: ${input.companyId}, role: ${requesterMembership.role}`);
             throw new ApplicationError(ErrorCode.INSUFFICIENT_ROLE);
         }
 
@@ -51,17 +53,20 @@ export class ChangeMemberRoleUseCase {
             );
 
         if (!targetMembership) {
-            this.logger.default(`Change member role failed: target is not a member - target: ${input.targetUserId}, company: ${input.companyId}`);
+            this.logger.default(`Change member role failed: target is not a member - target:
+             ${input.targetUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.TARGET_NOT_MEMBER);
         }
 
         if (input.requesterId === input.targetUserId) {
-            this.logger.default(`Change member role failed: cannot change own role - user: ${input.requesterId}, company: ${input.companyId}`);
+            this.logger.default(`Change member role failed: cannot change own role - user: 
+            ${input.requesterId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
         }
 
         if (targetMembership.role === Role.OWNER && requesterMembership.role !== Role.OWNER) {
-            this.logger.default(`Change member role failed: cannot modify owner - target: ${input.targetUserId}, company: ${input.companyId}`);
+            this.logger.default(`Change member role failed: cannot modify owner - target:
+             ${input.targetUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.CANNOT_MODIFY_OWNER);
         }
 
@@ -72,12 +77,14 @@ export class ChangeMemberRoleUseCase {
             input.requesterId === input.targetUserId,
         );
         if (!allowed) {
-            this.logger.default(`Change member role failed: forbidden action - requester: ${input.requesterId}, target: ${input.targetUserId}, company: ${input.companyId}`);
+            this.logger.default(`Change member role failed: forbidden action - requester:
+             ${input.requesterId}, target: ${input.targetUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
         }
 
         if (input.newRole === Role.OWNER && requesterMembership.role !== Role.OWNER) {
-            this.logger.default(`Change member role failed: only owner can invite owner - requester: ${input.requesterId}, company: ${input.companyId}`);
+            this.logger.default(`Change member role failed: only owner can invite owner - requester:
+             ${input.requesterId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.ONLY_OWNER_CAN_INVITE_OWNER);
         }
 
@@ -91,7 +98,8 @@ export class ChangeMemberRoleUseCase {
                 Role.OWNER,
             );
             if (ownerCount <= 1) {
-                this.logger.default(`Change member role failed: last owner cannot be removed - target: ${input.targetUserId}, company: ${input.companyId}`);
+                this.logger.default(`Change member role failed: last owner cannot be removed - target:
+                 ${input.targetUserId}, company: ${input.companyId}`);
                 throw new ApplicationError(ErrorCode.LAST_OWNER_CANNOT_BE_REMOVED);
             }
         }

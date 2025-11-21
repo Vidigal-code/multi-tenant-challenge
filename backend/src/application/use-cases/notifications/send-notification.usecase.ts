@@ -54,11 +54,13 @@ export class SendNotificationUseCase {
                 input.companyId,
             );
             if (!senderMembership) {
-                this.logger.default(`Notification failed: sender is not a member - user: ${input.senderUserId}, company: ${input.companyId}`);
+                this.logger.default(`Notification failed: sender is not a member - user:
+                 ${input.senderUserId}, company: ${input.companyId}`);
                 throw new ApplicationError(ErrorCode.NOT_A_MEMBER);
             }
             if (![Role.OWNER, Role.ADMIN].includes(senderMembership.role)) {
-                this.logger.default(`Notification failed: insufficient role - user: ${input.senderUserId}, company: ${input.companyId}, role: ${senderMembership.role}`);
+                this.logger.default(`Notification failed: insufficient role - user: ${input.senderUserId},
+                 company: ${input.companyId}, role: ${senderMembership.role}`);
                 throw new ApplicationError(ErrorCode.INSUFFICIENT_ROLE);
             }
         }

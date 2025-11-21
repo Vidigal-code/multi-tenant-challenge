@@ -55,9 +55,11 @@ export class NotificationDeletionJobsService {
 
     async getJob(userId: string, jobId: string): Promise<NotificationDeleteJobResponseDto> {
         const meta = await this.cache.getMeta(jobId);
+
         if (!meta) {
-            throw new ApplicationError(ErrorCode.NOTIFICATION_NOT_FOUND); // Or generic not found
+            throw new ApplicationError(ErrorCode.NOTIFICATION_NOT_FOUND);
         }
+
         if (meta.userId !== userId) {
             throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
         }

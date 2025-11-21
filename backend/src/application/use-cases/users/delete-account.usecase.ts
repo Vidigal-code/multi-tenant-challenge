@@ -85,7 +85,8 @@ export class DeleteAccountUseCase {
                     Role.OWNER
                 );
                 if (ownerCount <= 1) {
-                    this.logger.default(`Delete account failed: cannot delete last owner - user: ${input.userId}, company: ${membership.companyId}`);
+                    this.logger.default(`Delete account failed: cannot delete last owner - user:
+                     ${input.userId}, company: ${membership.companyId}`);
                     throw new ApplicationError(ErrorCode.CANNOT_DELETE_LAST_OWNER);
                 }
             }

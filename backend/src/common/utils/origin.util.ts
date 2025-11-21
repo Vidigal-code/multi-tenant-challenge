@@ -65,7 +65,6 @@ export function expandToWebsocketOrigins(origins: string[]): string[] {
                 set.add(`wss://${url.host}`);
             }
         } catch {
-            // ignore invalid URLs
         }
     });
 

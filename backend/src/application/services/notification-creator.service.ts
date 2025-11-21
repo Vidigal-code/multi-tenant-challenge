@@ -128,7 +128,8 @@ export class NotificationCreatorService {
                 case 'invite.created':
                 case 'invites.created':
                     this.logger.notificationCreator(`Handling invite.created, 
-                    inviteId=${payload?.inviteId}, invitedEmail=${payload?.invitedEmail || payload?.receiverEmail || payload?.receiver?.email}`);
+                    inviteId=${payload?.inviteId},
+                     invitedEmail=${payload?.invitedEmail || payload?.receiverEmail || payload?.receiver?.email}`);
                     await this.handleInviteCreated(payload);
                     break;
                 case 'invite.accepted':
@@ -273,7 +274,8 @@ export class NotificationCreatorService {
         const friendshipId = payload?.friendshipId || payload?.additionalData?.friendshipId;
         
         if (!friendshipId) {
-            this.logger.error(`FriendshipId not found in payload for friend request. Payload keys: ${Object.keys(payload).join(', ')}`);
+            this.logger.error(`FriendshipId not found in payload for friend request. Payload keys:
+             ${Object.keys(payload).join(', ')}`);
         } else {
             this.logger.default(`FriendshipId found: ${friendshipId}`);
         }
@@ -413,7 +415,11 @@ export class NotificationCreatorService {
 
     private async handleFriendRemoved(payload: any): Promise<void> {
         const senderId = payload?.sender?.id || payload?.userId;
-        const receiverId = payload?.receiver?.id || (payload?.requesterId && payload?.addresseeId ? (senderId === payload.requesterId ? payload.addresseeId : payload.requesterId) : null);
+
+        const receiverId = payload?.receiver?.id
+            || (payload?.requesterId && payload?.addresseeId ?
+            (senderId === payload.requesterId ? payload.addresseeId : payload.requesterId) : null);
+
         if (!senderId || !receiverId) return;
 
         const sender = payload?.sender || await this.userRepo.findById(senderId);
@@ -455,8 +461,12 @@ export class NotificationCreatorService {
     }
 
     private async handleInviteCreated(payload: any): Promise<void> {
-        this.logger.notificationCreator(`handleInviteCreated: Starting with payload keys: ${Object.keys(payload || {}).join(', ')}`);
-        this.logger.notificationCreator(`handleInviteCreated: Full payload:`, JSON.stringify(payload, null, 2));
+
+        this.logger.notificationCreator(`handleInviteCreated: Starting with payload keys:
+         ${Object.keys(payload || {}).join(', ')}`);
+
+        this.logger.notificationCreator(`handleInviteCreated: Full payload:`,
+            JSON.stringify(payload, null, 2));
         
         const companyId = payload?.companyId || payload?.company?.id;
         const inviteId = payload?.inviteId;
@@ -464,12 +474,18 @@ export class NotificationCreatorService {
         const sender = payload?.sender;
         const companyData = payload?.company;
         
-        this.logger.notificationCreator(`handleInviteCreated: Extracted values - inviteId=${inviteId}, companyId=${companyId}, inviteEmail=${inviteEmail}`);
-        this.logger.notificationCreator(`handleInviteCreated: sender=${!!sender}, companyData=${!!companyData}`);
+        this.logger.notificationCreator(`handleInviteCreated: Extracted values - 
+        inviteId=${inviteId}, companyId=${companyId}, inviteEmail=${inviteEmail}`);
+
+        this.logger.notificationCreator(`handleInviteCreated: sender=${!!sender}, 
+        companyData=${!!companyData}`);
         
         if (!inviteId || !companyId || !inviteEmail) {
-            this.logger.error(`handleInviteCreated: Missing required fields - inviteId=${inviteId}, companyId=${companyId}, inviteEmail=${inviteEmail}`);
+            this.logger.error(`handleInviteCreated: Missing required fields - inviteId=${inviteId},
+             companyId=${companyId}, inviteEmail=${inviteEmail}`);
+
             this.logger.error(`handleInviteCreated: Payload keys: ${Object.keys(payload || {}).join(', ')}`);
+
             this.logger.error(`handleInviteCreated: Payload.receiver:`, JSON.stringify(payload?.receiver));
             this.logger.error(`handleInviteCreated: Payload.company:`, JSON.stringify(payload?.company));
             return;
@@ -479,7 +495,8 @@ export class NotificationCreatorService {
         const company = companyData || await this.companyRepo.findById(companyId);
         const recipient = await this.userRepo.findByEmail(inviteEmail);
         
-        this.logger.notificationCreator(`handleInviteCreated: inviter=${!!inviter}, company=${!!company}, recipient=${!!recipient}, inviteEmail=${inviteEmail}`);
+        this.logger.notificationCreator(`handleInviteCreated: inviter=${!!inviter}, company=${!!company},
+         recipient=${!!recipient}, inviteEmail=${inviteEmail}`);
         
         if (!inviter || !company) {
             this.logger.error(`handleInviteCreated: Missing inviter or company - inviter=${!!inviter}, company=${!!company}`);
@@ -487,7 +504,8 @@ export class NotificationCreatorService {
         }
         
         if (!recipient) {
-            this.logger.notificationCreator(`handleInviteCreated: Recipient not found by email ${inviteEmail}, notification will not be created`);
+            this.logger.notificationCreator(`handleInviteCreated: Recipient not found by email ${inviteEmail},
+             notification will not be created`);
             return;
         }
 
@@ -567,8 +585,10 @@ export class NotificationCreatorService {
                     timestamp: payload?.timestamp || new Date().toISOString(),
                 },
             });
-            this.logger.notificationCreator(`handleInviteCreated: Notification created successfully - id=${notification.id}, title=${notification.title}`);
-            await this.emitNotificationCreated(notification, companyId, recipient.id, inviter.id || payload.inviterId);
+            this.logger.notificationCreator(`handleInviteCreated: Notification created successfully - 
+            id=${notification.id}, title=${notification.title}`);
+            await this.emitNotificationCreated(notification, companyId, recipient.id, inviter.id ||
+                payload.inviterId);
             this.logger.notificationCreator(`handleInviteCreated: Notification event emitted`);
         } else {
             this.logger.notificationCreator(`handleInviteCreated: Recipient not found, skipping notification creation`);

@@ -72,7 +72,6 @@ export function NotificationIconBadge({ enabled }: NotificationIconBadgeProps) {
                     queryClient.invalidateQueries({ 
                         queryKey: queryKeys.notifications(),
                     }).catch(() => {
-                        // Ignore errors on invalidation
                     });
                 }}
                 title={`${unreadCount > 0 ? `${unreadCount} notificação${unreadCount > 1 ? 'ões' : ''} não lida${unreadCount > 1 ? 's' : ''}` : 

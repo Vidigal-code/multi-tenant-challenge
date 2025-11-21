@@ -87,7 +87,7 @@ export function useNotificationListing(
               continue;
             }
             if (error.code !== 'ERR_CANCELED' && error.name !== 'CanceledError') {
-                throw error;
+                //throw error;
             }
             break; 
           }
@@ -119,7 +119,6 @@ export function useNotificationListing(
           setJobId(null);
       }
       
-      // Create new job with debounce
       timeoutId = setTimeout(createJob, 300);
     }
 

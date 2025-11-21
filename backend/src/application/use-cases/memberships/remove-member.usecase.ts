@@ -38,12 +38,14 @@ export class RemoveMemberUseCase {
             );
 
         if (!requesterMembership) {
-            this.logger.default(`Remove member failed: requester is not a member - requester: ${input.requesterId}, company: ${input.companyId}`);
+            this.logger.default(`Remove member failed: requester is not a member - requester: 
+            ${input.requesterId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.REQUESTER_NOT_MEMBER);
         }
 
         if (requesterMembership.role === Role.MEMBER) {
-            this.logger.default(`Remove member failed: insufficient role - requester: ${input.requesterId}, company: ${input.companyId}, role: ${requesterMembership.role}`);
+            this.logger.default(`Remove member failed: insufficient role - requester: 
+            ${input.requesterId}, company: ${input.companyId}, role: ${requesterMembership.role}`);
             throw new ApplicationError(ErrorCode.INSUFFICIENT_ROLE);
         }
 
@@ -54,12 +56,14 @@ export class RemoveMemberUseCase {
             );
 
         if (!targetMembership) {
-            this.logger.default(`Remove member failed: target is not a member - target: ${input.targetUserId}, company: ${input.companyId}`);
+            this.logger.default(`Remove member failed: target is not a member - target: 
+            ${input.targetUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.TARGET_NOT_MEMBER);
         }
 
         if (input.requesterId === input.targetUserId) {
-            this.logger.default(`Remove member failed: forbidden action - user cannot remove self - user: ${input.targetUserId}, company: ${input.companyId}`);
+            this.logger.default(`Remove member failed: forbidden action - user cannot remove self - user: 
+            ${input.targetUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
         }
 
@@ -76,7 +80,8 @@ export class RemoveMemberUseCase {
                 Role.OWNER,
             );
             if (ownerCount <= 1) {
-                    this.logger.default(`Remove member failed: last owner cannot be removed - owner: ${input.targetUserId}, company: ${input.companyId}`);
+                    this.logger.default(`Remove member failed: last owner cannot be removed - owner: 
+                    ${input.targetUserId}, company: ${input.companyId}`);
                 throw new ApplicationError(ErrorCode.LAST_OWNER_CANNOT_BE_REMOVED);
             }
         }
@@ -88,7 +93,8 @@ export class RemoveMemberUseCase {
             false,
         );
         if (!allowed) {
-                this.logger.default(`Remove member failed: forbidden action - requester: ${input.requesterId}, target: ${input.targetUserId}, company: ${input.companyId}`);
+                this.logger.default(`Remove member failed: forbidden action - requester: 
+                ${input.requesterId}, target: ${input.targetUserId}, company: ${input.companyId}`);
             throw new ApplicationError(ErrorCode.FORBIDDEN_ACTION);
             }
         }

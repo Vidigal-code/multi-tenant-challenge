@@ -38,7 +38,11 @@ export class NotificationMessageFormatterService {
     }
 
     formatBody(config: NotificationMessageConfig): string {
-        const {eventCode, senderName, senderEmail, companyName, companyId, companyDescription, companyLogoUrl, companyCreatedAt, companyMemberCount, companyOwnerName, companyOwnerEmail, recipientName, recipientEmail, friendEmail, role, previousRole, oldRole, newRole, inviteId, inviteUrl, inviteEmail, additionalData} = config;
+
+        const {eventCode, senderName, senderEmail, companyName, companyId, companyDescription,
+            companyLogoUrl, companyCreatedAt, companyMemberCount, companyOwnerName,
+            companyOwnerEmail, recipientName, recipientEmail, friendEmail, role,
+            previousRole, oldRole, newRole, inviteId, inviteUrl, inviteEmail, additionalData} = config;
         
         const genericMessage = this.getGenericMessage(eventCode);
         

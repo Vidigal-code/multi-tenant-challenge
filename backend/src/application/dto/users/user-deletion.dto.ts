@@ -10,7 +10,7 @@ export class UserDeleteJobResponseDto {
     status!: 'pending' | 'processing' | 'completed' | 'failed';
 
     @ApiProperty()
-    progress!: number; // 0 to 100
+    progress!: number;
 
     @ApiProperty()
     currentStep!: string;

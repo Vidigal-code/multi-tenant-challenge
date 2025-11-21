@@ -34,8 +34,7 @@ import {NotificationBroadcastJobsService} from "@application/services/notificati
 import {NotificationBroadcastConsumer} from "@interfaces/consumers/notifications/notification-broadcast.consumer";
 import {NotificationFriendBroadcastJobsService} from "@application/services/notification-friend-broadcast-jobs.service";
 import {NotificationFriendBroadcastConsumer} from "@interfaces/consumers/notifications/notification-friend-broadcast.consumer";
-import {NotificationListCacheService} from "@infrastructure/cache/notification-list-cache.service";
-import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
+
 
 @Module({
     imports: [ConfigModule, InfrastructureModule, AuthInfraModule, RabbitMQModule, RealtimeModule],

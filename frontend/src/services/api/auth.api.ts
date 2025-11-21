@@ -123,7 +123,6 @@ function useCompanyListing<T extends PrimaryOwnerCompany | MemberCompany>(
 
     const createJob = async () => {
       try {
-        // Retry mechanism for 429
         let attempts = 0;
         const maxAttempts = 3;
         
@@ -160,7 +159,7 @@ function useCompanyListing<T extends PrimaryOwnerCompany | MemberCompany>(
       }
     };
 
-    timeoutId = setTimeout(createJob, 300); // Debounce job creation
+    timeoutId = setTimeout(createJob, 300);
 
     return () => {
       cancelled = true;

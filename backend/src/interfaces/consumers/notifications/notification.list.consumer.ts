@@ -72,7 +72,6 @@ class NotificationListConsumer extends BaseResilientConsumer<NotificationListing
                 }
 
                 const lastItem = chunk[chunk.length - 1];
-                // Using ID as cursor (number)
                 cursor = Number(lastItem.id);
             }
 

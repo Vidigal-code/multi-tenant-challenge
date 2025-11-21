@@ -60,7 +60,8 @@ export default function HomePage() {
                             <>
                                 <Link
                                     href="/signup"
-                                    className="w-full sm:w-auto px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:bg-gray-800
+                                    className="w-full sm:w-auto px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg
+                                    hover:bg-gray-800
                                     dark:hover:bg-gray-200 transition-colors font-medium text-base sm:text-lg"
                                 >
                                     Começar Grátis

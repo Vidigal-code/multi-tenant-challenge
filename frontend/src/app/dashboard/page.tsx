@@ -1,16 +1,24 @@
 "use client";
-import React, { useState, useEffect, useMemo } from 'react';
-import {CompanyList, Company} from '../../components/companys/CompanyList';
-import Skeleton from '../../components/skeleton/Skeleton';
-import {useRouter} from 'next/navigation';
-import {getErrorMessage} from '../../lib/error';
-import {useToast} from '../../hooks/useToast';
-import { useSelectCompany, useDeleteCompany, useLeaveCompany, useUpdateCompany, useCompany } from '../../services/api';
-import { usePrimaryOwnerCompanies, useMemberCompanies, useProfile } from '../../services/api';
-import { translateMemberCompaniesMessage } from '../../lib/messages';
-import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
-import { ConfirmModal } from '../../components/modals/ConfirmModal';
-import { Modal } from '../../components/modals/Modal';
+import React, { useEffect, useMemo, useState } from "react";
+import { Company, CompanyList } from "../../components/companys/CompanyList";
+import Skeleton from "../../components/skeleton/Skeleton";
+import { useRouter } from "next/navigation";
+import { getErrorMessage } from "../../lib/error";
+import { useToast } from "../../hooks/useToast";
+import {
+    useCompany,
+    useDeleteCompany,
+    useLeaveCompany,
+    useMemberCompanies,
+    usePrimaryOwnerCompanies,
+    useProfile,
+    useSelectCompany,
+    useUpdateCompany
+} from "../../services/api";
+import { translateMemberCompaniesMessage } from "../../lib/messages";
+import { MdChevronLeft, MdChevronRight } from "react-icons/md";
+import { ConfirmModal } from "../../components/modals/ConfirmModal";
+import { Modal } from "../../components/modals/Modal";
 
 export default function DashboardPage() {
 
@@ -113,15 +121,13 @@ export default function DashboardPage() {
 
     const handlePreviousTab = () => {
         setTabIndex(prev => {
-            const newIndex = Math.max(0, prev - 1);
-            return newIndex;
+            return Math.max(0, prev - 1);
         });
     };
 
     const handleNextTab = () => {
         setTabIndex(prev => {
-            const newIndex = Math.min(Math.max(0, allTabs.length - maxVisibleTabs), prev + 1);
-            return newIndex;
+            return Math.min(Math.max(0, allTabs.length - maxVisibleTabs), prev + 1);
         });
     };
 
@@ -233,7 +239,7 @@ export default function DashboardPage() {
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Minhas Empresas</h1>
                 <p className="text-gray-600 dark:text-gray-400">Gerencie suas empresas e organizações</p>
             </div>
-            <a href="/company/new" className="text-sm
+            <a href={"/company/new"} className="text-sm
             text-gray-900 dark:text-white hover:underline font-medium text-center">Criar nova empresa</a>
             <div className="border-b border-gray-200 dark:border-gray-800 w-full">
                 <div className="flex items-center gap-2 w-full justify-center">
