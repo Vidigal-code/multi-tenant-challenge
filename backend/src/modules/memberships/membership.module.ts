@@ -30,6 +30,10 @@ import {EMAIL_VALIDATION_SERVICE} from "@application/ports/email-validation.serv
 import {NotificationListingJobsService} from "@application/services/notification-listing-jobs.service";
 import {NotificationDeletionJobsService} from "@application/services/notification-deletion-jobs.service";
 import {NotificationDeletionConsumer} from "@interfaces/consumers/notifications/notification-deletion.consumer";
+import {NotificationBroadcastJobsService} from "@application/services/notification-broadcast-jobs.service";
+import {NotificationBroadcastConsumer} from "@interfaces/consumers/notifications/notification-broadcast.consumer";
+import {NotificationFriendBroadcastJobsService} from "@application/services/notification-friend-broadcast-jobs.service";
+import {NotificationFriendBroadcastConsumer} from "@interfaces/consumers/notifications/notification-friend-broadcast.consumer";
 import {NotificationListCacheService} from "@infrastructure/cache/notification-list-cache.service";
 import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.service";
 
@@ -40,6 +44,10 @@ import {RabbitMQService} from "@infrastructure/messaging/services/rabbitmq.servi
         NotificationListingJobsService,
         NotificationDeletionJobsService,
         NotificationDeletionConsumer,
+        NotificationBroadcastJobsService,
+        NotificationBroadcastConsumer,
+        NotificationFriendBroadcastJobsService,
+        NotificationFriendBroadcastConsumer,
         {
             provide: InviteUserUseCase,
             useFactory: (

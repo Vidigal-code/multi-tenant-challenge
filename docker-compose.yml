@@ -120,6 +120,28 @@ services:
       - ./backend:/app
       - /app/node_modules
 
+  worker-notifications-broadcast:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:notifications-broadcast"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  worker-notifications-friends-broadcast:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:notifications-friends-broadcast"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
   worker-friendships-list:
     build: ./backend
     env_file: ./backend/.env

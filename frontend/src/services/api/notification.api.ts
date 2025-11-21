@@ -240,3 +240,103 @@ export function useNotificationDeletionJob() {
         reset: () => setJobId(null)
     };
 }
+
+export interface NotificationBroadcastJobResponse {
+    jobId: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    processed: number;
+    totalTargets?: number;
+    done: boolean;
+    error?: string;
+}
+
+export function useNotificationBroadcastJob() {
+    const [jobId, setJobId] = useState<string | null>(null);
+
+    const createJobMutation = useMutation({
+        mutationFn: async (data: {
+            companyId: string;
+            title: string;
+            body: string;
+            recipientsEmails?: string[] | null;
+            onlyOwnersAndAdmins?: boolean;
+        }) => {
+            const response = await http.post<{ jobId: string }>('/notifications/broadcast-jobs', data);
+            return response.data;
+        },
+        onSuccess: (data) => {
+            setJobId(data.jobId);
+        },
+    });
+
+    const jobQuery = useQuery({
+        queryKey: ['notification-broadcast-job', jobId],
+        queryFn: async () => {
+            if (!jobId) throw new Error('No job ID');
+            const response = await http.get<NotificationBroadcastJobResponse>(`/notifications/broadcast-jobs/${jobId}`);
+            return response.data;
+        },
+        enabled: !!jobId,
+        refetchInterval: (query) => {
+            const data = query.state.data;
+            if (data?.done) return false;
+            return 1500;
+        },
+    });
+
+    return {
+        createJob: createJobMutation.mutate,
+        createJobAsync: createJobMutation.mutateAsync,
+        jobStatus: jobQuery.data,
+        isLoading: createJobMutation.isPending,
+        error: createJobMutation.error || jobQuery.error,
+        reset: () => setJobId(null),
+    };
+}
+
+export interface FriendBroadcastJobResponse {
+    jobId: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    processed: number;
+    totalTargets?: number;
+    done: boolean;
+    error?: string;
+}
+
+export function useFriendBroadcastJob() {
+    const [jobId, setJobId] = useState<string | null>(null);
+
+    const createJobMutation = useMutation({
+        mutationFn: async (data: { title: string; body: string; recipientsEmails?: string[] | null }) => {
+            const response = await http.post<{ jobId: string }>('/notifications/friend-broadcast-jobs', data);
+            return response.data;
+        },
+        onSuccess: (data) => {
+            setJobId(data.jobId);
+        },
+    });
+
+    const jobQuery = useQuery({
+        queryKey: ['notification-friend-broadcast-job', jobId],
+        queryFn: async () => {
+            if (!jobId) throw new Error('No job ID');
+            const response = await http.get<FriendBroadcastJobResponse>(`/notifications/friend-broadcast-jobs/${jobId}`);
+            return response.data;
+        },
+        enabled: !!jobId,
+        refetchInterval: (query) => {
+            const data = query.state.data;
+            if (data?.done) return false;
+            return 1500;
+        },
+    });
+
+    return {
+        createJob: createJobMutation.mutate,
+        createJobAsync: createJobMutation.mutateAsync,
+        jobStatus: jobQuery.data,
+        isLoading: createJobMutation.isPending,
+        error: createJobMutation.error || jobQuery.error,
+        reset: () => setJobId(null),
+    };
+}

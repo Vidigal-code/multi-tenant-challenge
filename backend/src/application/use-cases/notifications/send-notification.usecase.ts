@@ -11,10 +11,17 @@ import {ConfigService} from "@nestjs/config";
 import {LoggerService} from "@infrastructure/logging/logger.service";
 import {EventPayloadBuilderService} from "@application/services/event-payload-builder.service";
 
+export interface ResolvedRecipient {
+    userId: string;
+    email: string;
+    via: "company" | "friend";
+}
+
 export interface SendNotificationInput {
     companyId: string;
     senderUserId: string;
     recipientsEmails?: string[];
+    resolvedRecipients?: ResolvedRecipient[];
     title: string;
     body: string;
     onlyOwnersAndAdmins?: boolean;
@@ -65,11 +72,31 @@ export class SendNotificationUseCase {
             throw new ApplicationError(ErrorCode.USER_NOT_FOUND);
         }
 
+        const resolvedTargets = input.resolvedRecipients ?? [];
         const normalizedContacts =
             input.recipientsEmails?.map(
                 (email) => email.trim().toLowerCase()).filter((email) => email.length > 0) ?? [];
 
-        if (normalizedContacts.length === 0) {
+        if (resolvedTargets.length > 0) {
+            resolvedTargets.forEach((recipient) => {
+                if (!recipient?.userId || recipient.userId === input.senderUserId) {
+                    return;
+                }
+
+                recipients.set(recipient.userId, {
+                    userId: recipient.userId,
+                    email: recipient.email,
+                    via: recipient.via,
+                });
+            });
+
+            validationResults.push({
+                email: "*",
+                status: recipients.size > 0 ? "sent" : "failed",
+                code: recipients.size > 0 ? SuccessCode.NOTIFICATION_SENT : ErrorCode.NO_COMPANY_MEMBERS_AVAILABLE,
+                count: recipients.size,
+            });
+        } else if (normalizedContacts.length === 0) {
             const memberships = await this.membershipRepo.listByCompany(input.companyId);
             for (const membership of memberships) {
                 if (membership.userId === input.senderUserId) continue;

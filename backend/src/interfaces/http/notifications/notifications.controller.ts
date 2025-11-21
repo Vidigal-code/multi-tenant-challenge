@@ -26,6 +26,16 @@ import {
     CreateNotificationDeleteJobDto,
     NotificationDeleteJobResponseDto
 } from "@application/dto/notifications/notification-deletion.dto";
+import {
+    CreateNotificationBroadcastJobDto,
+    NotificationBroadcastJobResponseDto
+} from "@application/dto/notifications/notification-broadcast.dto";
+import {NotificationBroadcastJobsService} from "@application/services/notification-broadcast-jobs.service";
+import {
+    CreateFriendBroadcastJobDto,
+    NotificationFriendBroadcastJobResponseDto
+} from "@application/dto/notifications/notification-friend-broadcast.dto";
+import {NotificationFriendBroadcastJobsService} from "@application/services/notification-friend-broadcast-jobs.service";
 
 @ApiTags("notifications")
 @ApiCookieAuth()
@@ -45,6 +55,8 @@ export class NotificationsController {
         private readonly configService: ConfigService,
         private readonly listingJobs: NotificationListingJobsService,
         private readonly deletionJobs: NotificationDeletionJobsService,
+        private readonly broadcastJobs: NotificationBroadcastJobsService,
+        private readonly friendBroadcastJobs: NotificationFriendBroadcastJobsService,
     ) {
         this.logger = new LoggerService(NotificationsController.name, configService);
     }
@@ -65,6 +77,68 @@ export class NotificationsController {
             items: [],
             done: false,
         };
+    }
+
+    @Post("broadcast-jobs")
+    @ApiOperation({summary: "Start a background job to broadcast notifications"})
+    @ApiResponse({
+        status: 201,
+        description: "Broadcast job created",
+        schema: {example: {jobId: "uuid", status: "pending", processed: 0, done: false}},
+    })
+    async createBroadcastJob(
+        @CurrentUser() user: any,
+        @Body() body: CreateNotificationBroadcastJobDto,
+    ) {
+        const meta = await this.broadcastJobs.createJob({sub: user.sub, email: user.email}, body);
+        return {
+            jobId: meta.jobId,
+            status: meta.status,
+            processed: meta.processed,
+            totalTargets: meta.totalTargets,
+            done: false,
+        };
+    }
+
+    @Get("broadcast-jobs/:jobId")
+    @ApiOperation({summary: "Get broadcast job status"})
+    @ApiResponse({status: 200, type: NotificationBroadcastJobResponseDto})
+    async getBroadcastJob(
+        @CurrentUser() user: any,
+        @Param("jobId") jobId: string,
+    ) {
+        return this.broadcastJobs.getJob(user.sub, jobId);
+    }
+
+    @Post("friend-broadcast-jobs")
+    @ApiOperation({summary: "Start a background job to broadcast messages to friends"})
+    @ApiResponse({
+        status: 201,
+        description: "Friend broadcast job created",
+        schema: {example: {jobId: "uuid", status: "pending", processed: 0, done: false}},
+    })
+    async createFriendBroadcastJob(
+        @CurrentUser() user: any,
+        @Body() body: CreateFriendBroadcastJobDto,
+    ) {
+        const meta = await this.friendBroadcastJobs.createJob({sub: user.sub, email: user.email}, body);
+        return {
+            jobId: meta.jobId,
+            status: meta.status,
+            processed: meta.processed,
+            totalTargets: meta.totalTargets,
+            done: false,
+        };
+    }
+
+    @Get("friend-broadcast-jobs/:jobId")
+    @ApiOperation({summary: "Get friend broadcast job status"})
+    @ApiResponse({status: 200, type: NotificationFriendBroadcastJobResponseDto})
+    async getFriendBroadcastJob(
+        @CurrentUser() user: any,
+        @Param("jobId") jobId: string,
+    ) {
+        return this.friendBroadcastJobs.getJob(user.sub, jobId);
     }
 
     @Get("listing/:jobId")

@@ -68,6 +68,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             [ErrorCode.CURRENT_PASSWORD_REQUIRED]: HttpStatus.BAD_REQUEST,
             [ErrorCode.INVALID_EMAIL]: HttpStatus.BAD_REQUEST,
             [ErrorCode.MISSING_USER_DATA]: HttpStatus.BAD_REQUEST,
+            [ErrorCode.INVALID_REQUEST]: HttpStatus.BAD_REQUEST,
 
             // Authentication & Authorization
             [ErrorCode.USER_NOT_AUTHENTICATED]: HttpStatus.UNAUTHORIZED,

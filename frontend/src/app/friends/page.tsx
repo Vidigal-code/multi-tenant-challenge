@@ -19,7 +19,7 @@ import {
     type User,
     useRemoveFriend,
     useSearchUsers,
-    useSendFriendNotification,
+    useFriendBroadcastJob,
     useSendFriendRequest
 } from "../../services/api";
 
@@ -148,7 +148,8 @@ export default function FriendsPage() {
   const sendRequestMutation = useSendFriendRequest();
   const acceptRequestMutation = useAcceptFriendRequest();
   const removeFriendMutation = useRemoveFriend();
-  const sendMessageMutation = useSendFriendNotification();
+  const friendBroadcastJob = useFriendBroadcastJob();
+  const { jobStatus: friendBroadcastStatus, reset: resetFriendBroadcastJob } = friendBroadcastJob;
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -280,60 +281,38 @@ export default function FriendsPage() {
 
   const handleSubmitMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    let friendEmails: string[] = [];
+    const friendEmails: string[] = [];
     
     if (messageMode === 'global') {
-      friendEmails = friends
-        .map(f => {
-          const friend = f.requester.id === currentUserId ? f.addressee : f.requester;
-          return friend?.email;
-        })
-        .filter(Boolean) as string[];
+      // leave list empty to broadcast to all friends
     } else {
       if (selectedFriend) {
-        friendEmails = [selectedFriend.email];
+        friendEmails.push(selectedFriend.email);
       } else if (selectedFriends.length > 0) {
-        friendEmails = selectedFriends.map(f => f.email);
+        friendEmails.push(...selectedFriends.map(f => f.email));
       } else {
         show({ type: 'error', message: 'Selecione pelo menos um amigo' });
         return;
       }
     }
     
-    if (friendEmails.length === 0) {
-      show({ type: 'error', message: 'Nenhum amigo selecionado' });
-      return;
-    }
-    
-    const results = [];
-    for (let i = 0; i < friendEmails.length; i++) {
-      try {
-        await sendMessageMutation.mutateAsync({
-          friendEmail: friendEmails[i],
-          title: messageTitle,
-          body: messageBody,
-        });
-        results.push({ email: friendEmails[i], status: 'sent' });
-        if (i < friendEmails.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      } catch (err: any) {
-        results.push({ email: friendEmails[i], status: 'failed', error: getErrorMessage(err) });
-      }
-    }
-    
-    const sent = results.filter(r => r.status === 'sent').length;
-    const failed = results.filter(r => r.status === 'failed').length;
-    if (failed === 0) {
-      show({ type: 'success', message: `Mensagem enviada para ${sent} amigo(s)` });
-    } else {
-      show({ type: 'warning', message: `Enviado para ${sent}, falhou para ${failed}` });
-    }
-    setShowMessageModal(false);
-    setSelectedFriend(null);
-    setSelectedFriends([]);
-    setMessageTitle('');
-    setMessageBody('');
+    friendBroadcastJob.createJob({
+      title: messageTitle,
+      body: messageBody,
+      recipientsEmails: friendEmails.length > 0 ? friendEmails : undefined,
+    }, {
+      onSuccess: () => {
+        show({ type: 'success', message: 'Envio em lote iniciado. Acompanhe o status.' });
+        setShowMessageModal(false);
+        setSelectedFriend(null);
+        setSelectedFriends([]);
+        setMessageTitle('');
+        setMessageBody('');
+      },
+      onError: (err: any) => {
+        show({ type: 'error', message: getErrorMessage(err, 'Falha ao iniciar envio em lote') });
+      },
+    });
   };
 
   useEffect(() => {
@@ -372,6 +351,24 @@ export default function FriendsPage() {
   }, [queryClient]);
 
   const isLoading = friendsLoading || requestsLoading;
+
+  useEffect(() => {
+    if (!friendBroadcastStatus || !friendBroadcastStatus.done) return;
+
+    if (friendBroadcastStatus.status === 'completed') {
+      show({
+        type: 'success',
+        message: `Mensagens enviadas (${friendBroadcastStatus.processed} destinatários).`,
+      });
+    } else {
+      show({
+        type: 'error',
+        message: friendBroadcastStatus.error || 'Falha durante envio em lote.',
+      });
+    }
+
+    resetFriendBroadcastJob();
+  }, [friendBroadcastStatus, resetFriendBroadcastJob, show]);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 w-full min-w-0">
@@ -773,10 +770,18 @@ export default function FriendsPage() {
             className="w-full sm:w-auto px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900
             rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed
             transition-colors font-medium text-sm sm:text-base"
-            disabled={friends.length === 0 || (messageMode === 'selective' && selectedFriends.length === 0)}
+              disabled={friends.length === 0 || (messageMode === 'selective' && selectedFriends.length === 0)}
           >
             {messageMode === 'global' ? 'Enviar Mensagem Global' : 'Enviar Mensagem Seletiva'}
           </button>
+          {friendBroadcastStatus && (
+            <div className="text-xs text-gray-600 dark:text-gray-400 text-center border border-gray-200 dark:border-gray-800 rounded-lg p-3">
+              Status: {friendBroadcastStatus.status} • Processados: {friendBroadcastStatus.processed}
+              {typeof friendBroadcastStatus.totalTargets === 'number' && (
+                <> / {friendBroadcastStatus.totalTargets}</>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -947,11 +952,11 @@ export default function FriendsPage() {
             </button>
             <button
               type="submit"
-              disabled={sendMessageMutation.isPending || (messageMode === 'selective' && selectedFriends.length === 0 && !selectedFriend)}
+              disabled={friendBroadcastJob.isLoading || (messageMode === 'selective' && selectedFriends.length === 0 && !selectedFriend)}
               className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg
                hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
             >
-              {sendMessageMutation.isPending ? 'Enviando...' : 'Enviar'}
+              {friendBroadcastJob.isLoading ? 'Agendando...' : 'Enviar'}
             </button>
           </div>
         </form>

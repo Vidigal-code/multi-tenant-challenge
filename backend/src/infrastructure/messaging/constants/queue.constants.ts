@@ -23,6 +23,12 @@ export const DLQ_NOTIFICATIONS_LIST_QUEUE = "dlq.notifications.list.requests";
 export const NOTIFICATIONS_DELETE_QUEUE = "notifications.delete.requests";
 export const DLQ_NOTIFICATIONS_DELETE_QUEUE = "dlq.notifications.delete.requests";
 
+export const NOTIFICATIONS_BROADCAST_QUEUE = "notifications.broadcast.requests";
+export const DLQ_NOTIFICATIONS_BROADCAST_QUEUE = "dlq.notifications.broadcast.requests";
+
+export const NOTIFICATIONS_FRIENDS_BROADCAST_QUEUE = "notifications.friends.broadcast.requests";
+export const DLQ_NOTIFICATIONS_FRIENDS_BROADCAST_QUEUE = "dlq.notifications.friends.broadcast.requests";
+
 export const FRIENDSHIPS_LIST_QUEUE = "friendships.list.requests";
 export const DLQ_FRIENDSHIPS_LIST_QUEUE = "dlq.friendships.list.requests";
 

@@ -30,10 +30,11 @@ import {
     useLeaveCompany,
     useTransferOwnership,
     type Member,
+    useProfile,
+    useNotificationBroadcastJob,
+    useFriendships,
+    useSendFriendNotification,
 } from "../../../services/api";
-import { useProfile } from "../../../services/api";
-import { useCreateNotification } from "../../../services/api";
-import { useFriendships, useSendFriendNotification } from "../../../services/api";
 import { MdNotifications, MdSupervisorAccount } from 'react-icons/md';
 import {FiEdit, FiStar, FiTrash2, FiSend} from "react-icons/fi";
 import {BiUser} from "react-icons/bi";
@@ -62,6 +63,7 @@ export default function CompanyPage() {
     const [notificationTitle, setNotificationTitle] = useState('');
     const [notificationBody, setNotificationBody] = useState('');
     const [notificationEmails, setNotificationEmails] = useState('');
+    const [notificationOwnersOnly, setNotificationOwnersOnly] = useState(false);
     const [logoError, setLogoError] = useState(false);
     const [showFullDescription, setShowFullDescription] = useState(false);
     const [showRequestToJoinModal, setShowRequestToJoinModal] = useState(false);
@@ -122,8 +124,9 @@ export default function CompanyPage() {
     const changeRoleMutation = useChangeMemberRole(id);
     const leaveMutation = useLeaveCompany(id);
     const transferOwnershipMutation = useTransferOwnership(id);
-    const sendNotificationMutation = useCreateNotification();
+    const notificationBroadcastJob = useNotificationBroadcastJob();
     const sendFriendMessageMutation = useSendFriendNotification();
+    const { jobStatus: broadcastJobStatus, reset: resetBroadcastJob } = notificationBroadcastJob;
     const { data: friends = [] } = useFriendships('ACCEPTED');
 
     const canEdit = useMemo(() => roleQuery.data?.role === 'OWNER' || roleQuery.data?.role === 'ADMIN', [roleQuery.data]);
@@ -202,6 +205,26 @@ export default function CompanyPage() {
     useEffect(() => {
         setMembersPage(1);
     }, [membersQuery.data?.members?.length]);
+
+    useEffect(() => {
+        if (!broadcastJobStatus || !broadcastJobStatus.done) {
+            return;
+        }
+
+        if (broadcastJobStatus.status === 'completed') {
+            show({
+                type: 'success',
+                message: `Envio em lote concluído (${broadcastJobStatus.processed} destinatários).`,
+            });
+        } else {
+            show({
+                type: 'error',
+                message: broadcastJobStatus.error || 'Falha ao concluir o envio em lote.',
+            });
+        }
+
+        resetBroadcastJob();
+    }, [broadcastJobStatus, resetBroadcastJob, show]);
 
     if (!id || id === 'undefined') {
         return (
@@ -709,33 +732,27 @@ export default function CompanyPage() {
                 onClose={() => setShowNotificationModal(false)}>
                 <form className="space-y-4" onSubmit={async e => {
                     e.preventDefault();
-                    const recipientsEmails = notificationEmails ? notificationEmails.split(',').map(e => e.trim()) : null;
-                    sendNotificationMutation.mutate({
+                    const recipientsEmails = notificationEmails
+                        ? notificationEmails.split(',').map(email => email.trim()).filter(Boolean)
+                        : undefined;
+
+                    notificationBroadcastJob.createJob({
                         companyId: id,
                         title: notificationTitle,
                         body: notificationBody,
                         recipientsEmails,
+                        onlyOwnersAndAdmins: notificationOwnersOnly || undefined,
                     }, {
-                        onSuccess: (result: any) => {
-                            show({ type: 'success', message: 'Mensagem global enviada' });
+                        onSuccess: () => {
+                            show({ type: 'success', message: 'Envio em lote iniciado. Acompanhe o status nas notificações.' });
                             setShowNotificationModal(false);
                             setNotificationTitle('');
                             setNotificationBody('');
                             setNotificationEmails('');
-
-                            if (result?.validationResults && result.validationResults.length > 0) {
-                                result.validationResults.forEach((entry: any) => {
-                                    const tone = entry.status === 'sent' ? 'success' : 'error';
-                                    const label = entry.email === '*' ? 'Membros da empresa' : entry.email;
-                                    const message = entry.status === 'sent'
-                                        ? getSuccessMessage(entry.code, { count: entry.count })
-                                        : getErrorMessageByCode(entry.code);
-                                    show({ type: tone, message: `${label}: ${message}` });
-                                });
-                            }
+                            setNotificationOwnersOnly(false);
                         },
                         onError: (err: any) => {
-                            const m = getErrorMessage(err, 'Não foi possível enviar notificações');
+                            const m = getErrorMessage(err, 'Não foi possível iniciar o envio em lote');
                             setError(m);
                             show({ type: 'error', message: m });
                         },
@@ -765,18 +782,35 @@ export default function CompanyPage() {
                                  focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent
                                   transition-colors" />
                     </div>
+                    <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <input
+                            type="checkbox"
+                            checked={notificationOwnersOnly}
+                            onChange={(e) => setNotificationOwnersOnly(e.target.checked)}
+                            className="w-4 h-4 text-gray-900 dark:text-white border-gray-300 dark:border-gray-700 rounded focus:ring-gray-900 dark:focus:ring-white"
+                        />
+                        Enviar apenas para Owners/Admins
+                    </label>
                     <div className="flex justify-end gap-3">
                         <button type="button" onClick={() => setShowNotificationModal(false)}
                             className="px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white
                                  dark:bg-gray-950 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-900
                                  transition-colors font-medium text-sm">Cancelar</button>
-                        <button type="submit" disabled={sendNotificationMutation.isPending}
+                        <button type="submit" disabled={notificationBroadcastJob.isLoading}
                             className="px-4 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg
                                  hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50
                                  disabled:cursor-not-allowed font-medium text-sm transition-colors">
-                            {sendNotificationMutation.isPending ? 'Enviando...' : 'Enviar'}
+                            {notificationBroadcastJob.isLoading ? 'Agendando...' : 'Enviar'}
                         </button>
                     </div>
+                    {broadcastJobStatus && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400 text-center border border-gray-200 dark:border-gray-800 rounded-lg p-3">
+                            Status: {broadcastJobStatus.status} • Processados: {broadcastJobStatus.processed}
+                            {typeof broadcastJobStatus.totalTargets === 'number' && (
+                                <> / {broadcastJobStatus.totalTargets}</>
+                            )}
+                        </div>
+                    )}
                 </form>
             </Modal>
             {membersQuery.isLoading || roleQuery.isLoading ? (

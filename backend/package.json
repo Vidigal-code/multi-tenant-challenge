@@ -22,6 +22,8 @@
     "worker:realtime": "ts-node -r tsconfig-paths/register src/interfaces/consumers/events/realtime-notifications.consumer.ts",
     "worker:notifications-list": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification.list.consumer.ts",
     "worker:notifications-delete": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification-deletion.consumer.ts",
+    "worker:notifications-broadcast": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification-broadcast.consumer.ts",
+    "worker:notifications-friends-broadcast": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification-friend-broadcast.consumer.ts",
     "worker:friendships-list": "ts-node -r tsconfig-paths/register src/interfaces/consumers/friendships/friendship.list.consumer.ts",
     "worker:users-search": "ts-node -r tsconfig-paths/register src/interfaces/consumers/users/user.search.consumer.ts",
     "worker:users-delete": "ts-node -r tsconfig-paths/register src/interfaces/consumers/users/user-deletion.consumer.ts",
