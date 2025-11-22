@@ -96,75 +96,47 @@ services:
       - api
     command: sh -c "npm run worker:notifications-list"
   worker-realtime:
-    build: ./backend
-    env_file: ./backend/.env
+    <<: *backend-service
     depends_on:
       - rabbitmq
       - api
     command: sh -c "npm run worker:realtime"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
   worker-notifications-delete:
-    build: ./backend
-    env_file: ./backend/.env
+    <<: *backend-service
     depends_on:
       - rabbitmq
       - api
     command: sh -c "npm run worker:notifications-delete"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
   worker-notifications-broadcast:
-    build: ./backend
-    env_file: ./backend/.env
+    <<: *backend-service
     depends_on:
       - rabbitmq
       - api
     command: sh -c "npm run worker:notifications-broadcast"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
   worker-notifications-friends-broadcast:
-    build: ./backend
-    env_file: ./backend/.env
+    <<: *backend-service
     depends_on:
       - rabbitmq
       - api
     command: sh -c "npm run worker:notifications-friends-broadcast"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
   worker-friendships-list:
-    build: ./backend
-    env_file: ./backend/.env
+    <<: *backend-service
     depends_on:
       - rabbitmq
       - api
     command: sh -c "npm run worker:friendships-list"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
   worker-users-search:
-    build: ./backend
-    env_file: ./backend/.env
+    <<: *backend-service
     depends_on:
       - rabbitmq
       - api
     command: sh -c "npm run worker:users-search"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
   worker-users-delete:
-    build: ./backend
-    env_file: ./backend/.env
+    <<: *backend-service
     depends_on:
       - rabbitmq
       - api
     command: sh -c "npm run worker:users-delete"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
 
   web:
     build:
