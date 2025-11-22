@@ -12,7 +12,8 @@ export function middleware(request: NextRequest) {
     const isApi = pathname.startsWith('/api');
     const isHome = pathname === '/';
     const isInfo = pathname.startsWith('/info');
-    const isPublic = isAuthPage || isInvite || isApi || isHome || isInfo;
+    const isDemo = pathname.startsWith('/demo');
+    const isPublic = isAuthPage || isInvite || isApi || isHome || isInfo || isDemo;
 
     if (isAuth && isAuthPage) {
         const url = request.nextUrl.clone();

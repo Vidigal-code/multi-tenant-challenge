@@ -12,6 +12,9 @@ import {
     HiUsers,
     HiShieldCheck,
     HiDevicePhoneMobile,
+    HiServerStack,
+    HiArrowTrendingUp,
+    HiCubeTransparent,
 } from "react-icons/hi2";
 
 export default function HomePage() {
@@ -77,6 +80,12 @@ export default function HomePage() {
                                 </Link>
                             </>
                         )}
+                        <Link
+                            href="/demo/chat"
+                            className="w-full sm:w-auto px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors font-medium text-base sm:text-lg"
+                        >
+                            Abrir  Chat IA
+                        </Link>
                     </div>
                 </div>
             </section>
@@ -129,6 +138,40 @@ export default function HomePage() {
             </section>
 
             <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-950">
+                <div className="max-w-7xl mx-auto">
+                    <div className="text-center mb-12 sm:mb-16">
+                        <p className="text-sm font-semibold tracking-[0.4em] uppercase text-gray-500 dark:text-gray-400">Arquitetura</p>
+                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mt-3">Stack Multi-Tenant de ponta a ponta</h2>
+                        <p className="text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mt-3">
+                            Cada módulo conversa via RabbitMQ, usa Redis para deduplicação e confirmações e expõe tudo em um frontend App Router.
+                        </p>
+                    </div>
+                    <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+                        <ArchitectureCard
+                            icon={<HiServerStack className="w-7 h-7 text-blue-600" />}
+                            title="Eventos + Jobs"
+                            text="Use cases publicam em `events.*` e jobs em `*.list.requests`. Workers dedicados mantêm os fluxos responsivos, mesmo com milhões de notificações."
+                        />
+                        <ArchitectureCard
+                            icon={<HiShieldCheck className="w-7 h-7 text-emerald-500" />}
+                            title="Confirmado no Realtime"
+                            text="Redis controla cada `messageId` até o frontend responder `notifications.delivered`. Sem confirmação, o worker salva e registra timeout."
+                        />
+                        <ArchitectureCard
+                            icon={<HiCubeTransparent className="w-7 h-7 text-purple-500" />}
+                            title="Preferências por usuário"
+                            text="Campos JSON definem popups, badges e categorias. Tudo sincronizado via React Query + Redux para evitar leituras desnecessárias."
+                        />
+                        <ArchitectureCard
+                            icon={<HiArrowTrendingUp className="w-7 h-7 text-amber-500" />}
+                            title="Observabilidade ativa"
+                            text="Endpoints /workers/** auditados por JWT/JWE, métricas Prometheus em /metrics e documentação sincronizada com o Swagger 1.5."
+                        />
+                    </div>
+                </div>
+            </section>
+
+            <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-950">
                 <div className="max-w-4xl mx-auto">
 
                     <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-12 sm:mb-20 text-gray-900 dark:text-gray-50">
@@ -157,6 +200,7 @@ export default function HomePage() {
                         Junte-se a empresas que já utilizam nossa plataforma diariamente
                     </p>
 
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-6">
                         {!isAuth && (
                             <Link
                                 href="/signup"
@@ -166,6 +210,13 @@ export default function HomePage() {
                                 Criar Conta Grátis
                             </Link>
                         )}
+                        <Link
+                            href="/demo/chat"
+                            className="inline-block px-8 py-4 border-2 border-blue-500 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-lg font-medium"
+                        >
+                            Testar o Chat Multi-Tenant
+                        </Link>
+                    </div>
                 </div>
             </section>
         </div>
@@ -191,6 +242,30 @@ function FeatureCard({
             </h3>
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">{text}</p>
         </div>
+    );
+}
+
+function ArchitectureCard({
+    icon,
+    title,
+    text,
+}: {
+    icon: React.ReactNode;
+    title: string;
+    text: string;
+}) {
+    return (
+        <article className="p-6 sm:p-8 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-900">
+                    {icon}
+                </div>
+                <div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{text}</p>
+                </div>
+            </div>
+        </article>
     );
 }
 

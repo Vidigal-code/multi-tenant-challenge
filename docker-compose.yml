@@ -103,6 +103,18 @@ services:
       - /app/node_modules
     profiles: ["workers"]
 
+  worker-generic:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:generic"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    profiles: ["workers"]
+
   worker-notifications-list:
     build: ./backend
     env_file: ./backend/.env
@@ -110,6 +122,18 @@ services:
       - rabbitmq
       - api
     command: sh -c "npm run worker:notifications-list"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    profiles: ["workers"]
+
+  worker-realtime:
+    build: ./backend
+    env_file: ./backend/.env
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:realtime"
     volumes:
       - ./backend:/app
       - /app/node_modules

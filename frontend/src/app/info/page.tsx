@@ -59,7 +59,6 @@ export default function InfoPage() {
     return (
         <div className="max-w-6xl mx-auto px-4 py-12 space-y-12">
             <header className="text-center space-y-4">
-                <p className="text-sm font-semibold tracking-widest text-blue-500 uppercase">Multi-Tenant Challenge</p>
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">Como o sistema funciona</h1>
                 <p className="text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
                     Este painel reúne as principais decisões de arquitetura, como notificações percorrem RabbitMQ + Redis e de que forma o frontend
