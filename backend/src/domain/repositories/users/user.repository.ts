@@ -22,6 +22,8 @@ export interface UserRepository {
 
     findById(id: string): Promise<User | null>;
 
+    findManyByIds(ids: string[]): Promise<User[]>;
+
     update(data: UpdateUserInput): Promise<User>;
 
     deleteById(id: string): Promise<void>;

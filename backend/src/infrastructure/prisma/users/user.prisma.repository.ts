@@ -34,6 +34,20 @@ export class UserPrismaRepository implements UserRepository {
         return user ? this.toDomain(user) : null;
     }
 
+    async findManyByIds(ids: string[]): Promise<User[]> {
+        if (!ids.length) {
+            return [];
+        }
+
+        const uniqueIds = Array.from(new Set(ids));
+        const users = await this.prisma.user.findMany({
+            where: {id: {in: uniqueIds}},
+            include: {memberships: true},
+        });
+
+        return users.map((user) => this.toDomain(user));
+    }
+
     async update(data: UpdateUserInput): Promise<User> {
         const updateData: any = {};
         

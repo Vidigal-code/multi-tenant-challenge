@@ -38,6 +38,20 @@ export class CompanyPrismaRepository implements CompanyRepository {
         return company ? this.toDomain(company) : null;
     }
 
+    async findManyByIds(ids: string[]): Promise<Company[]> {
+        if (!ids.length) {
+            return [];
+        }
+
+        const uniqueIds = Array.from(new Set(ids));
+        const companies = await this.prisma.company.findMany({
+            where: {id: {in: uniqueIds}},
+            include: {memberships: true},
+        });
+
+        return companies.map((company: any) => this.toDomain(company));
+    }
+
     async listByUser(filters: ListCompaniesFilters): Promise<PaginatedCompanies> {
         const {page, pageSize, userId} = filters;
         const skip = (page - 1) * pageSize;

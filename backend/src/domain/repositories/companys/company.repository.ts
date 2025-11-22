@@ -39,6 +39,8 @@ export interface CompanyRepository {
 
     findById(id: string): Promise<Company | null>;
 
+    findManyByIds(ids: string[]): Promise<Company[]>;
+
     listByUser(filters: ListCompaniesFilters): Promise<PaginatedCompanies>;
 
     listPublic(filters: ListPublicCompaniesFilters): Promise<PaginatedCompanies>;
