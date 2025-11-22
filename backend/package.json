@@ -23,10 +23,8 @@
     "worker:notifications-list": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification.list.consumer.ts",
     "worker:notifications-delete": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification-deletion.consumer.ts",
     "worker:notifications-broadcast": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification-broadcast.consumer.ts",
-    "worker:notifications-friends-broadcast": "ts-node -r tsconfig-paths/register src/interfaces/consumers/notifications/notification-friend-broadcast.consumer.ts",
     "worker:friendships-list": "ts-node -r tsconfig-paths/register src/interfaces/consumers/friendships/friendship.list.consumer.ts",
     "worker:users-search": "ts-node -r tsconfig-paths/register src/interfaces/consumers/users/user.search.consumer.ts",
-    "worker:users-delete": "ts-node -r tsconfig-paths/register src/interfaces/consumers/users/user-deletion.consumer.ts",
     "clean:queues": "powershell -ExecutionPolicy Bypass -File ./scripts/clean-queues.ps1",
     "clear:dedup": "powershell -ExecutionPolicy Bypass -File ./scripts/clear-redis-dedup.ps1"
   },

@@ -65,18 +65,18 @@ services:
       - rabbitmq
       - api
     command: sh -c "npm run worker:members"
-  worker-invites-list:
-    <<: *backend-service
-    depends_on:
-      - rabbitmq
-      - api
-    command: sh -c "npm run worker:invites-list"
   worker-companies-list:
     <<: *backend-service
     depends_on:
       - rabbitmq
       - api
     command: sh -c "npm run worker:companies-list"
+  worker-invites-list:
+    <<: *backend-service
+    depends_on:
+      - rabbitmq
+      - api
+    command: sh -c "npm run worker:invites-list"
   worker-invites-bulk:
     <<: *backend-service
     depends_on:
@@ -113,12 +113,6 @@ services:
       - rabbitmq
       - api
     command: sh -c "npm run worker:notifications-broadcast"
-  worker-notifications-friends-broadcast:
-    <<: *backend-service
-    depends_on:
-      - rabbitmq
-      - api
-    command: sh -c "npm run worker:notifications-friends-broadcast"
   worker-friendships-list:
     <<: *backend-service
     depends_on:
@@ -131,12 +125,6 @@ services:
       - rabbitmq
       - api
     command: sh -c "npm run worker:users-search"
-  worker-users-delete:
-    <<: *backend-service
-    depends_on:
-      - rabbitmq
-      - api
-    command: sh -c "npm run worker:users-delete"
 
   web:
     build:
