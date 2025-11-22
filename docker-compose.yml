@@ -66,25 +66,17 @@ services:
       - api
     command: sh -c "npm run worker:members"
   worker-invites-list:
-    build: ./backend
-    env_file: ./backend/.env
+    <<: *backend-service
     depends_on:
       - rabbitmq
       - api
     command: sh -c "npm run worker:invites-list"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
   worker-companies-list:
-    build: ./backend
-    env_file: ./backend/.env
+    <<: *backend-service
     depends_on:
       - rabbitmq
       - api
     command: sh -c "npm run worker:companies-list"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
   worker-invites-bulk:
     build: ./backend
     env_file: ./backend/.env
