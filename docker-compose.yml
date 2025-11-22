@@ -152,6 +152,16 @@ services:
   api-test:
     image: node:20-alpine
     working_dir: /app
+    env_file: ./backend/.env
+    environment:
+      <<: *backend-env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     volumes:
       - ./backend:/app
     command: sh -c "npm ci && npm test"
