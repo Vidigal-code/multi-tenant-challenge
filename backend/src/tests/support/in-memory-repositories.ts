@@ -53,6 +53,12 @@ export class InMemoryUserRepository implements UserRepository {
         return this.items.find((u) => u.id === id) || null;
     }
 
+    async findManyByIds(ids: string[]): Promise<User[]> {
+        if (!ids.length) return [];
+        const idsSet = new Set(ids);
+        return this.items.filter((user) => idsSet.has(user.id));
+    }
+
     async update(data: UpdateUserInput): Promise<User> {
         const user = await this.findById(data.id);
         if (!user) throw new Error("NOT_FOUND");
@@ -131,6 +137,15 @@ export class InMemoryCompanyRepository implements CompanyRepository {
 
     async findById(id: string): Promise<Company | null> {
         return this.items.find((c) => c.id === id) || null;
+    }
+
+    async findManyByIds(ids: string[]): Promise<Company[]> {
+        if (!ids.length) {
+            return [];
+        }
+
+        const idsSet = new Set(ids);
+        return this.items.filter((company) => idsSet.has(company.id));
     }
 
     setMembershipRepo(repo: InMemoryMembershipRepository) {
