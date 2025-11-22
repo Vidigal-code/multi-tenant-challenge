@@ -53,8 +53,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-members:
     build: ./backend
     env_file: ./backend/.env
@@ -65,8 +63,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-invites-list:
     build: ./backend
     env_file: ./backend/.env
@@ -77,8 +73,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-companies-list:
     build: ./backend
     env_file: ./backend/.env
@@ -89,8 +83,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-invites-bulk:
     build: ./backend
     env_file: ./backend/.env
@@ -101,8 +93,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-generic:
     build: ./backend
     env_file: ./backend/.env
@@ -113,8 +103,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-notifications-list:
     build: ./backend
     env_file: ./backend/.env
@@ -125,8 +113,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-realtime:
     build: ./backend
     env_file: ./backend/.env
@@ -137,8 +123,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-notifications-delete:
     build: ./backend
     env_file: ./backend/.env
@@ -149,8 +133,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-notifications-broadcast:
     build: ./backend
     env_file: ./backend/.env
@@ -161,8 +143,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-notifications-friends-broadcast:
     build: ./backend
     env_file: ./backend/.env
@@ -173,8 +153,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-friendships-list:
     build: ./backend
     env_file: ./backend/.env
@@ -185,8 +163,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-users-search:
     build: ./backend
     env_file: ./backend/.env
@@ -197,8 +173,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
-
   worker-users-delete:
     build: ./backend
     env_file: ./backend/.env
@@ -209,7 +183,6 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    profiles: ["workers"]
 
   web:
     build:
@@ -228,7 +201,6 @@ services:
     volumes:
       - ./backend:/app
     command: sh -c "npm ci && npm test"
-    profiles: ["test"]
 
   web-test:
     image: node:20-alpine
@@ -236,7 +208,6 @@ services:
     volumes:
       - ./frontend:/app
     command: sh -c "npm ci && npm test"
-    profiles: ["test"]
 
 volumes:
   db_data:
