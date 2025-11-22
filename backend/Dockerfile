@@ -2,7 +2,7 @@ FROM node:20-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates procps && rm -rf /var/lib/apt/lists/* \
-	&& npm ci --legacy-peer-deps || npm install
+	&& (npm ci --legacy-peer-deps || npm install --legacy-peer-deps)
 
 FROM node:20-slim AS builder
 WORKDIR /app
